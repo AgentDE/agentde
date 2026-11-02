@@ -1,0 +1,23 @@
+{
+  "name": "Hello",
+  "widgets": [
+    { "id": "hello.page", "name": "Hello", "page": "widget.html" },
+    { "id": "hello.disk", "name": "Disk", "command": "df -h / | tail -1 | awk '{print $4 \" free of \" $2}'", "every": 300 }
+  ],
+  "links": [
+    { "pattern": "https://gist\\.github\\.com/[\\w-]+/[0-9a-f]{20,}", "marker": "gist.github.com/" }
+  ],
+  "themes": [
+    {
+      "id": "hello.dusk", "name": "Dusk (always dark)", "alwaysDark": true,
+      "dark": {
+        "window": "#1B1B2F", "sidebar": "#16162A", "text": "#ECEAF6", "secondary": "#B4B0CC", "muted": "#7D7896",
+        "border": "#FFFFFF17", "hover": "#FFFFFF0D", "selected": "#FFFFFF17",
+        "terminalBackground": "#1B1B2F", "terminalForeground": "#E2DFF0", "terminalSelection": "#3A3760"
+      }
+    }
+  ],
+  "palettes": [
+    { "id": "hello.sea", "name": "Sea", "colors": ["#0B7285", "#1098AD", "#15AABF", "#3BC9DB", "#66D9E8", "#99E9F2", "#C5F6FA", "#495057"] }
+  ]
+}

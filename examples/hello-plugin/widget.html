@@ -1,0 +1,13 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font: 12px -apple-system, sans-serif; color: #8F8D86; background: transparent; }
+  .time { font-size: 28px; font-weight: 300; color: #B7B5A9; }
+</style>
+<div class="time" id="time"></div>
+<div>Hello from a plugin. Edit widget.html and pick this widget again.</div>
+<script>
+  const tick = () => { document.getElementById("time").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
+  tick();
+  setInterval(tick, 10000);
+</script>

@@ -1,0 +1,8 @@
+{
+  "extensions": [
+    { "package": "../agentde-widgets", "product": "AgentDEWidgets", "create": "WidgetsExtension()" },
+    { "package": "../agentde-workstreams", "product": "AgentDEWorkstreams", "create": "WorkstreamsExtension()",
+      "helpers": [{ "package": "../workstream-mcp", "product": "workstream-mcp" }] },
+    { "package": "../agentde-linear", "product": "AgentDELinear", "create": "LinearExtension()" }
+  ]
+}
