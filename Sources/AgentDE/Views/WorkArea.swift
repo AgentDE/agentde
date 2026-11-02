@@ -146,7 +146,8 @@ private struct ResizeHandle: View {
         Rectangle()
             .fill(hovering ? theme.border : Color.clear)
             .frame(width: axis == .horizontal ? 5 : nil, height: axis == .vertical ? 5 : nil)
-            .overlay { Rectangle().fill(theme.border).frame(width: axis == .horizontal ? 0.5 : nil, height: axis == .vertical ? 0.5 : nil) }
+            // A full point, so it shows even where both sides are the same black.
+            .overlay { Rectangle().fill(theme.border).frame(width: axis == .horizontal ? 1 : nil, height: axis == .vertical ? 1 : nil) }
             .contentShape(Rectangle())
             .onHover { inside in
                 hovering = inside
