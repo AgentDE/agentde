@@ -4,26 +4,45 @@ Usage: python3 scripts/assemble.py <extensions.json> <out dir>
 Prints one line per helper binary to bundle: "<package dir>\t<product>".
 
 The extensions file lists Swift packages (paths relative to the file) and, for each, its library product, the
-expression that creates its extension, and any helper executables the app bundle needs:
+expression that creates its extension, and any helper executables the app bundle needs. A package that isn't
+there yet is cloned from its `repo`, and so are the sibling packages it depends on (`.package(path: "../x")`),
+from the same owner:
 
-    {"extensions": [{"package": "../agentde-linear", "product": "AgentDELinear", "create": "LinearExtension()",
-                     "helpers": [{"package": "../workstream-mcp", "product": "workstream-mcp"}]}]}
+    {"extensions": [{"package": "../agentde-linear", "repo": "https://github.com/me/agentde-linear",
+                     "product": "AgentDELinear", "create": "LinearExtension()",
+                     "helpers": [{"package": "../workstream-mcp", "repo": "https://github.com/me/workstream-mcp",
+                                  "product": "workstream-mcp"}]}]}
 """
-import json, os, re, sys
+import json, os, re, subprocess, sys
 
 source, out = sys.argv[1], sys.argv[2]
 base = os.path.dirname(os.path.abspath(source))
 agentde = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 spec = json.load(open(source)) if os.path.exists(source) else {"extensions": []}
 
+
 def identity(path):
     return os.path.basename(os.path.normpath(path)).lower()
+
+
+def fetch(package, repo):
+    """Makes sure `package` is there, cloning it from `repo` if not, then its sibling dependencies likewise."""
+    if not os.path.exists(os.path.join(package, "Package.swift")):
+        if not repo:
+            sys.exit(f"No package at {package} (from {source}). Clone it there, or take it out of the extensions file.")
+        print(f"Cloning {repo} into {package}", file=sys.stderr)
+        if subprocess.run(["git", "clone", "--quiet", repo, package], stdout=sys.stderr).returncode != 0:
+            sys.exit(f"Couldn't clone {repo}.")
+    manifest = open(os.path.join(package, "Package.swift")).read()
+    for dependency in re.findall(r'\.package\(path:\s*"(\.\./[^"/]+)"\)', manifest):
+        sibling = os.path.normpath(os.path.join(package, dependency))
+        fetch(sibling, repo and repo.rstrip("/").rsplit("/", 1)[0] + "/" + os.path.basename(sibling))
+
 
 packages, products, imports, creates, helpers = [agentde], [("AgentDE", identity(agentde))], [], [], []
 for ext in spec.get("extensions", []):
     package = os.path.normpath(os.path.join(base, ext["package"]))
-    if not os.path.exists(os.path.join(package, "Package.swift")):
-        sys.exit(f"No package at {package} (from {source}). Clone it there, or take it out of the extensions file.")
+    fetch(package, ext.get("repo"))
     product, create = ext["product"], ext["create"]
     if not re.fullmatch(r"\w+", product) or not re.fullmatch(r"[\w.]+\([^;{}]*\)", create):
         sys.exit(f"Not a product name and an initializer call: {product!r}, {create!r}")
@@ -33,7 +52,9 @@ for ext in spec.get("extensions", []):
     imports.append(product)
     creates.append(create)
     for helper in ext.get("helpers", []):
-        helpers.append((os.path.normpath(os.path.join(base, helper["package"])), helper["product"]))
+        helper_package = os.path.normpath(os.path.join(base, helper["package"]))
+        fetch(helper_package, helper.get("repo"))
+        helpers.append((helper_package, helper["product"]))
 
 os.makedirs(os.path.join(out, "Sources", "AgentDEBuild"), exist_ok=True)
 deps = ",\n        ".join(f'.package(path: {json.dumps(p)})' for p in packages)

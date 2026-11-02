@@ -231,7 +231,7 @@ Terminal titles are kept out of observed state except for shell tabs, which publ
 ## Build notes
 
 **No Xcode.** Everything builds with the Command Line Tools via SwiftPM. `scripts/build-app.sh`:
-1. Runs `scripts/assemble.py` on `EXTENSIONS` (default `extensions.json`), which writes `.build/app-package` (a `Package.swift` with the core and each extension as path dependencies, and a `main.swift`) and prints the helper executables to bundle. Unchanged files aren't rewritten, so SwiftPM's cache stays warm.
+1. Runs `scripts/assemble.py` on `EXTENSIONS` (default `extensions.json`), which writes `.build/app-package` (a `Package.swift` with the core and each extension as path dependencies, and a `main.swift`) and prints the helper executables to bundle. A package folder that isn't there is cloned from the entry's `repo` first, and so are the sibling packages it depends on (`.package(path: "../x")`), from the same owner. Unchanged files aren't rewritten, so SwiftPM's cache stays warm.
 2. Builds that package's `AgentDEBuild` product, then `agentde-pty` and each helper from their own packages.
 3. Assembles the `.app`: the binary (named after the app), helpers in `Contents/MacOS`, the SwiftTerm resource bundle, the icon, `Resources/AppIcons`, a brand's `BRAND_RESOURCES`, and an Info.plist with the brand keys; then signs it.
 

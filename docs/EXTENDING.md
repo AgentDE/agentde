@@ -134,13 +134,13 @@ let package = Package(
 
 ### Adding it to a build
 
-Clone it beside `agentde/` and add an entry to `agentde/extensions.json` (or a copy passed with `make EXTENSIONS=…`):
+Put it beside `agentde/` (or give its `repo`, and the build clones it there) and add an entry to `agentde/extensions.json` (or a copy passed with `make EXTENSIONS=…`):
 
 ```json
 {
   "extensions": [
     { "package": "../agentde-widgets", "product": "AgentDEWidgets", "create": "WidgetsExtension()" },
-    { "package": "../agentde-hello", "product": "AgentDEHello", "create": "HelloExtension()" }
+    { "package": "../agentde-hello", "repo": "https://github.com/you/agentde-hello", "product": "AgentDEHello", "create": "HelloExtension()" }
   ]
 }
 ```
@@ -148,9 +148,10 @@ Clone it beside `agentde/` and add an entry to `agentde/extensions.json` (or a c
 | Field | What |
 |---|---|
 | `package` | The package's folder, relative to the extensions file |
+| `repo` | Optional: a git URL to clone the package from when the folder isn't there. Sibling packages it depends on (`.package(path: "../x")`) are cloned from the same owner |
 | `product` | Its library product; also the module the generated `main.swift` imports |
 | `create` | A Swift expression that creates the extension: an initializer call |
-| `helpers` | Optional: `[{"package": …, "product": …}]`, executables built and copied into `Contents/MacOS` |
+| `helpers` | Optional: `[{"package": …, "repo": …, "product": …}]`, executables built and copied into `Contents/MacOS` |
 
 `scripts/assemble.py` turns the file into a small package (`.build/app-package`) whose `main.swift` calls `AgentDEMain.run(extensions: [...])`, and `scripts/build-app.sh` builds and bundles it. A workspace that builds its own app instead calls `AgentDEMain.run(extensions:)` from its own executable and sets `APP_PACKAGE`, `APP_PRODUCT` and `APP_HELPERS` for `build-app.sh`.
 

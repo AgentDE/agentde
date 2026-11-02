@@ -15,7 +15,7 @@ How it works inside: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Writing exten
 
 ## Install
 
-Clone this repo and the extensions it lists in `extensions.json` side by side (see [Extensions](#extensions)), then:
+Clone this repo, then (the first build clones the extensions in `extensions.json` next to it; see [Extensions](#extensions)):
 
 ```bash
 cd agentde
@@ -82,7 +82,7 @@ An **extension** is a Swift package, built into the app, that adds features thro
 
 Each repo's README has its features and settings.
 
-**Side by side.** Extensions are path dependencies, so clone them next to this repo:
+**Side by side.** Extensions are path dependencies. The build clones any that are missing (and the packages they depend on) next to this repo, from the `repo` each entry names:
 
 ```
 agentde/                (this repo)
@@ -92,10 +92,11 @@ agentde-linear/
 workstream-mcp/         (used by agentde-workstreams)
 ```
 
-**Adding or removing one.** Edit `extensions.json` (or point `EXTENSIONS=` at another file) and rebuild. Each entry names the package folder (relative to the file), its library product, the expression that creates the extension, and any helper executables to bundle:
+**Adding or removing one.** Edit `extensions.json` (or point `EXTENSIONS=` at another file) and rebuild. Each entry names the package folder (relative to the file), the repo to clone it from when it isn't there, its library product, the expression that creates the extension, and any helper executables to bundle:
 
 ```json
-{ "package": "../agentde-linear", "product": "AgentDELinear", "create": "LinearExtension()" }
+{ "package": "../agentde-linear", "repo": "https://github.com/andreykurenkov/agentde-linear",
+  "product": "AgentDELinear", "create": "LinearExtension()" }
 ```
 
 An empty list builds the core alone. Order matters where extensions compete for one slot (the side panel, the sidebar footer): the first that fills it wins. Settings → Extensions shows each loaded extension's own settings. How to write one: [docs/EXTENDING.md](docs/EXTENDING.md).
@@ -261,7 +262,7 @@ Each tab's environment includes `TERM_PROGRAM=AgentDE` and `AGENTDE_TAB_ID=<uuid
 | Hard to see what's active | Settings → Look → High contrast: black and white with orange outlines on the active tab and group |
 | Slow or spinning while agents work | Keep **GPU rendering** off (Settings → Terminal) |
 | Tabs or groups missing after an update | Unreadable parts of the saved state are dropped one by one, and the original is kept as `state.json.unreadable-<time>`; the debug log says what was dropped |
-| `make` stops with "No package at …" | An extension in `extensions.json` isn't cloned beside this repo: clone it, or take it out of the file |
+| `make` stops with "No package at …" or "Couldn't clone …" | An extension in `extensions.json` isn't beside this repo and couldn't be cloned: check its `repo` and your network, clone it yourself, or take it out of the file |
 | Starting fresh | Quit, delete `~/.config/agentde/state.json`, reopen |
 
 **Debug log.** Help → **Open Debug Log** opens `~/Library/Logs/AgentDE/agentde.log`: launches and quits, tabs starting and exiting, agent state changes, failed lookups, and a once-a-minute heartbeat with memory, CPU and any tab producing heavy output.
