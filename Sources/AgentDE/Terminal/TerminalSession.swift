@@ -342,6 +342,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         // Nothing inherited from an older launch names another tab or workstream.
         for key in ["WORKSTREAM_ID", "WORKSTREAM_TAB_ID"] { env.removeValue(forKey: key) }
         env["AGENTDE_TAB_ID"] = tab.id.uuidString
+        if store?.settings.openInViewer ?? true { env.merge(OpenInViewer.environment(tab: tab.id, inherited: env)) { $1 } }
         // What extensions add (the workstream this terminal's agents attach to, say).
         if let store { env.merge(store.launchEnvironment(for: tab.id)) { $1 } }
         if env["LANG"] == nil { env["LANG"] = "en_US.UTF-8" }

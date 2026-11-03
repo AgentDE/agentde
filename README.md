@@ -66,6 +66,8 @@ The **viewer** shows Markdown as a document, local HTML, PDFs, images, diffs, co
 
 **Recent in the viewer.** Each tab remembers the last 10 files and pages its viewer showed. Click the viewer's title for the list, newest first, and pick one to show it again (**Forget** drops one). ⌘[ goes back through the list and ⌘] forward; with the viewer closed, ⌘[ or the clock button in the header reopens the last one.
 
+**`open` in a tab.** `open report.html` or `open https://…` in a tab shows the file or page in that tab's viewer, and so does `! open …` in Claude, or Claude running `open` itself. Anything else (options like `-a`, several items, folders, apps) goes to macOS's own `open`, and `/usr/bin/open` always does. Turn it off in Settings → Terminal; it applies to tabs opened after the change.
+
 **Paths:** relative paths are found in the tab's folder, then the group's, and a `:line:col` suffix is fine. Punctuation right after a path is ignored. A path written from a subfolder, or a bare file name, is found with a Spotlight search of the tab's and group's folders; if several match, the most recently changed opens. AgentDE sets `FORCE_HYPERLINK=1`, so Claude Code prints its paths as proper links.
 
 **Browser above a tab.** ⌘⇧B adds a small browser pane above the active tab. The address bar accepts `5173` or `:5173` for `http://localhost:5173`, a path like `~/report.html`, or any URL. Each tab remembers its last URL.
@@ -233,7 +235,7 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 | Tab | Options |
 |---|---|
 | Look | Light, dark or match system; theme (Claude warm, Graphite cool, Midnight, High contrast, plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); translucent sidebar; density; tabs on top or bottom; sidebar width |
-| Terminal | Font, size, GPU rendering (experimental, off by default), scrollback (default 10,000 lines), startup command, recent sessions (on/off, Codex too, how many days), what kind of tab new tabs start as |
+| Terminal | Font, size, GPU rendering (experimental, off by default), scrollback (default 10,000 lines), startup command, recent sessions (on/off, Codex too, how many days), what kind of tab new tabs start as, `open` shows files and pages in the viewer |
 | Fun | Animated status dots, the finish sparkle, and how long a turn must run to earn one |
 | Agents | Notifications (needs you, done, sound), background mode, PR status (on/off, open in GitHub or Graphite) |
 | Extensions | Each loaded extension's own settings |

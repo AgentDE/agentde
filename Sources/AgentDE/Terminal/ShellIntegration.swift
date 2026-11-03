@@ -51,6 +51,8 @@ enum ShellIntegration {
         [[ -r $ZDOTDIR/.zshrc ]] && source $ZDOTDIR/.zshrc
         # ZDOTDIR stays on the user's directory from here: zsh reads their .zlogin next, and child shells are untouched.
         unset AGENTDE_ZDOTDIR AGENTDE_USER_ZDOTDIR
+        # `open <file>` shows it in the tab's viewer (OpenInViewer.swift): its script comes first on PATH.
+        [[ -n ${AGENTDE_BIN-} ]] && path=($AGENTDE_BIN ${path:#$AGENTDE_BIN})
 
         if [[ -n ${AGENTDE_RUN-} ]]; then
           _agentde_run() {

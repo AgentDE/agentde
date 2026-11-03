@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DebugLog.log("launch \(version), pid \(getpid()), \(store.groups.count) groups, \(store.groups.reduce(0) { $0 + $1.tabs.count }) tabs, renderer=\(store.settings.metalRenderer ? "metal" : "coregraphics")")
         DebugLog.startWatchdog()
         ShellIntegration.install()
+        OpenInViewer.install()
         store.notifier = Notifier(store: store)
         NSApp.activate(ignoringOtherApps: true)
         monitor = AgentMonitor(store: store)

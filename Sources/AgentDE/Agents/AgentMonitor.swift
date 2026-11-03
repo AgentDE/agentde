@@ -145,6 +145,7 @@ final class AgentMonitor {
                 try? FileManager.default.removeItem(at: file)   // unreadable and stale
             }
         }
+        let openRequests = OpenInViewer.pending()
         let backgroundBySession = Dictionary(jobs.values.compactMap { e in e.sessionId.map { ($0, e.jobId ?? "") } },
                                              uniquingKeysWith: { a, _ in a })
         if resolvedJobs == nil { resolvedJobs = Set(jobs.keys) }
@@ -164,6 +165,11 @@ final class AgentMonitor {
             guard let store = self?.store else { return }
             for (tab, job, file) in reported where store.recordAttachedJob(tab: tab, jobId: job) {
                 try? FileManager.default.removeItem(at: file)
+            }
+            // `open` in a tab: show it in that tab's viewer. Another instance's requests wait for it (or a day).
+            for request in openRequests where store.tab(request.tab) != nil {
+                try? FileManager.default.removeItem(at: request.file)
+                store.openInViewer(request.item, tab: request.tab, select: false)
             }
             store.refreshActivePullRequest()
             if backgroundBySession != store.liveBackgroundJobs { store.liveBackgroundJobs = backgroundBySession }

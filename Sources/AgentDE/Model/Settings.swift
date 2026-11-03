@@ -27,6 +27,8 @@ struct AgentDESettings: Codable, Equatable {
     var recentSessionDays: Double = 14
     /// Include named Codex threads in the Recent lists.
     var showCodexSessions: Bool = true
+    /// `open <file or web page>` in a tab (also from Claude's `!` and Bash commands) shows it in the tab's viewer.
+    var openInViewer: Bool = true
     /// Shell commands run in every new tab before its agent starts, e.g. `conda activate myenv`.
     var startupCommand: String = ""
     /// Seconds an agent must have been working for its finish to earn a sparkle.
