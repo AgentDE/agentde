@@ -9,7 +9,8 @@
 #   - Claude Code: `claude mcp add --scope user workstream -- <app>/Contents/MacOS/workstream-mcp`
 #   - ~/.claude/settings.json: permissions.allow += "mcp__workstream__*"; hooks.SessionStart += one entry
 #     (matcher startup|resume|compact → `workstream-mcp context`); hooks.UserPromptSubmit += one entry
-#     (`workstream-mcp prompt-context`); an existing command status line is wrapped in
+#     (`workstream-mcp prompt-context`); hooks.SubagentStart += one entry (`workstream-mcp subagent-context`, so
+#     sub-agents start with the workstream); an existing command status line is wrapped in
 #     `workstream-mcp statusline -- '<command>'` (for the app's Stats; its output is unchanged). Existing
 #     hooks are kept. A backup is written next to it first.
 #   - ~/.codex/config.toml: a [mcp_servers.workstream] table.
@@ -68,6 +69,7 @@ wanted = {
     "SessionStart": {"matcher": "startup|resume|compact",
                      "hooks": [{"type": "command", "command": f'"{binary}" context'}]},
     "UserPromptSubmit": {"hooks": [{"type": "command", "command": f'"{binary}" prompt-context'}]},
+    "SubagentStart": {"hooks": [{"type": "command", "command": f'"{binary}" subagent-context'}]},
 }
 def ours(entry):
     """A hook entry this script added: one whose commands run workstream-mcp."""
