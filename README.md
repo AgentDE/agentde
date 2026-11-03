@@ -64,6 +64,8 @@ The **+** after the last tab opens a new tab of any kind. Closing a tab's proces
 
 The **viewer** shows Markdown as a document, local HTML, PDFs, images, diffs, code and text, and anything else through Quick Look. It refreshes when the file changes. ↻ reloads, the copy button copies the path or link, **Raw** shows a Markdown file's text, **Open in browser** hands a web page to your browser. Drag the divider to resize it; ⤢ fills the tab; × (or Esc, after clicking into it) closes it. Sign-ins inside the viewer are remembered.
 
+**Recent in the viewer.** Each tab remembers the last 10 files and pages its viewer showed. Click the viewer's title for the list, newest first, and pick one to show it again (**Forget** drops one). ⌘[ goes back through the list and ⌘] forward; with the viewer closed, ⌘[ or the clock button in the header reopens the last one.
+
 **Paths:** relative paths are found in the tab's folder, then the group's, and a `:line:col` suffix is fine. Punctuation right after a path is ignored. A path written from a subfolder, or a bare file name, is found with a Spotlight search of the tab's and group's folders; if several match, the most recently changed opens. AgentDE sets `FORCE_HYPERLINK=1`, so Claude Code prints its paths as proper links.
 
 **Browser above a tab.** ⌘⇧B adds a small browser pane above the active tab. The address bar accepts `5173` or `:5173` for `http://localhost:5173`, a path like `~/report.html`, or any URL. Each tab remembers its last URL.
@@ -214,6 +216,7 @@ Background sessions inherit your startup command's environment, but Claude's bac
 | ⌘-click, ⌥⌘-click | Open a path or link from the terminal (in the viewer / in its default app) |
 | ⌥⌘I | Show or hide the side panel |
 | ⌘⇧B | Browser above the tab |
+| ⌘[, ⌘] | Viewer: back and forward through what it showed (⌘[ reopens a closed viewer) |
 | ⌘⇧D | Diff of the tab's folder |
 | ⌘⇧O | Open the tab's folder in Cursor |
 | ⌘⇧N | New group |

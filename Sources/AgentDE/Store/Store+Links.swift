@@ -136,8 +136,14 @@ extension Store {
     /// Shows a file path or local URL in the tab's viewer, above its chat.
     /// `select` brings the tab forward (a click in it does); an agent's request doesn't steal focus.
     func openInViewer(_ item: String, tab id: UUID, select: Bool = true) {
+        openInViewer(item, tab: id, select: select, record: true)
+    }
+
+    /// `record` puts the item first in the tab's history; stepping back and forward through it doesn't.
+    func openInViewer(_ item: String, tab id: UUID, select: Bool, record: Bool) {
         guard let (g, t) = locate(id) else { return }
         groups[g].tabs[t].viewerItem = item
+        if record { groups[g].tabs[t].viewerHistory = ViewerHistory.recording(item, in: groups[g].tabs[t].viewerHistory) }
         groups[g].tabs[t].viewerExpanded = nil
         DebugLog.log("viewer \(id.uuidString.prefix(8)): \((item as NSString).lastPathComponent)", "link")
         if select, groups[g].selectedTabID != id { selectTab(id, focus: false) }
@@ -172,6 +178,21 @@ extension Store {
         if terminals.viewers.existing(tab.id)?.hasFocus == true || tab.viewerExpanded == true { return true }
         let terminal = terminals.session(tab.id)?.view
         return viewerFindTab == tab.id && !(terminal.map { $0.window?.firstResponder === $0 } ?? false)
+    }
+
+    /// ⌘[ (older) and ⌘] (newer): the active tab's viewer history. Going back with the viewer closed reopens the
+    /// last item.
+    func stepViewer(_ step: Int) {
+        guard let tab = activeTab,
+              let item = ViewerHistory.step(from: tab.viewerItem, in: tab.viewerHistory, by: step) else { NSSound.beep(); return }
+        openInViewer(item, tab: tab.id, select: false, record: false)
+    }
+
+    func forgetViewerItem(_ item: String, tab id: UUID) {
+        guard let (g, t) = locate(id) else { return }
+        let rest = (groups[g].tabs[t].viewerHistory ?? []).filter { $0 != item }
+        groups[g].tabs[t].viewerHistory = rest.isEmpty ? nil : rest
+        scheduleSave()
     }
 
     func closeViewer(_ id: UUID) {

@@ -53,6 +53,30 @@ struct ViewerRoutingTests {
     }
 }
 
+@Suite("Viewer history")
+struct ViewerHistoryTests {
+    @Test func reopeningMovesAnItemToTheFrontAndTheListStaysShort() {
+        var history: [String]? = nil
+        for item in ["/a.md", "/b.md", "/c.html", "/a.md"] { history = ViewerHistory.recording(item, in: history) }
+        #expect(history == ["/a.md", "/c.html", "/b.md"])
+        for n in 0..<20 { history = ViewerHistory.recording("/f\(n)", in: history) }
+        #expect(history?.count == ViewerHistory.limit && history?.first == "/f19")
+    }
+
+    @Test func backAndForwardWalkTheListAndStopAtItsEnds() {
+        let history = ["/c", "/b", "/a"]   // newest first
+        #expect(ViewerHistory.step(from: "/c", in: history, by: 1) == "/b")
+        #expect(ViewerHistory.step(from: "/b", in: history, by: 1) == "/a")
+        #expect(ViewerHistory.step(from: "/a", in: history, by: 1) == nil)
+        #expect(ViewerHistory.step(from: "/b", in: history, by: -1) == "/c")
+        #expect(ViewerHistory.step(from: "/c", in: history, by: -1) == nil)
+        // With the viewer closed, back reopens the newest; forward does nothing.
+        #expect(ViewerHistory.step(from: nil, in: history, by: 1) == "/c")
+        #expect(ViewerHistory.step(from: nil, in: history, by: -1) == nil)
+        #expect(ViewerHistory.step(from: nil, in: nil, by: 1) == nil)
+    }
+}
+
 @Suite("Tabs and workstreams")
 struct TabWorkstreamTests {
     @Test func newTabsGetAWorkstreamAndOldOnesLoadWithout() throws {

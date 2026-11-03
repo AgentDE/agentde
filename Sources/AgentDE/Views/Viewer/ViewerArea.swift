@@ -12,7 +12,15 @@ struct ViewerArea: View {
         let expanded = tab.viewerExpanded ?? false
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Text(title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(theme.text).lineLimit(1)
+                ViewerHistoryMenu(tab: tab) {
+                    HStack(spacing: 3) {
+                        Text(title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(theme.text).lineLimit(1)
+                        if (tab.viewerHistory?.count ?? 0) > 1 {
+                            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(theme.muted)
+                        }
+                    }
+                }
+                .hint("Recent in this tab (⌘[ back, ⌘] forward)")
                 Text(item.hasPrefix("http") ? item : item.abbreviatingHome)
                     .font(.system(size: 11, design: .monospaced)).foregroundStyle(theme.muted)
                     .lineLimit(1).truncationMode(.middle)
@@ -119,5 +127,43 @@ private struct ViewerFindBar: View {
     private func close() {
         store.viewerFindTab = nil
         store.terminals.viewers.existing(tabID)?.focusContent()
+    }
+}
+
+/// The tab's viewer history as a menu: pick an item to show it again; the ✕ section forgets one.
+struct ViewerHistoryMenu<Label: View>: View {
+    let tab: TabModel
+    @ViewBuilder let label: () -> Label
+    @Environment(Store.self) private var store
+
+    var body: some View {
+        let history = tab.viewerHistory ?? []
+        Menu {
+            ForEach(history, id: \.self) { item in
+                Button((item == tab.viewerItem ? "✓ " : "    ") + Self.name(item)) {
+                    store.openInViewer(item, tab: tab.id, select: false)
+                }
+            }
+            if !history.isEmpty {
+                Divider()
+                Menu("Forget") {
+                    ForEach(history, id: \.self) { item in Button(Self.name(item)) { store.forgetViewerItem(item, tab: tab.id) } }
+                }
+            }
+        } label: { label() }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .disabled(history.isEmpty)
+    }
+
+    /// "REPORT.md — ~/proj/docs", or a page's title and host.
+    static func name(_ item: String) -> String {
+        if item.hasPrefix("http") {
+            let host = URL(string: item)?.host ?? item
+            return ViewerLinks.isViewerLink(item) ? "\(ViewerLinks.title(for: item)) — \(host)" : host + (URL(string: item)?.path ?? "")
+        }
+        return (item as NSString).lastPathComponent + " — " + ((item as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath
     }
 }

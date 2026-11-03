@@ -36,6 +36,13 @@ struct HeaderBar: View {
             }
             Spacer(minLength: 12)
             let activeTab = store.activeTab
+            if let activeTab, activeTab.viewerItem == nil, !(activeTab.viewerHistory ?? []).isEmpty {
+                ViewerHistoryMenu(tab: activeTab) {
+                    Image(systemName: "clock.arrow.circlepath").font(.system(size: 13, weight: .medium))
+                        .frame(width: 26, height: 24).foregroundStyle(theme.secondary).contentShape(Rectangle())
+                }
+                .hint("Reopen in the viewer (⌘[)")
+            }
             IconButton(symbol: "globe", help: "Browser above tab (⌘⇧B)",
                        active: activeTab?.showBrowser ?? false) { store.toggleBrowser() }
             IconButton(symbol: "plus.forwardslash.minus", help: "Show diff (⌘⇧D)") { store.showDiff() }

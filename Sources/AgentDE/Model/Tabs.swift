@@ -34,6 +34,8 @@ struct TabModel: Identifiable, Codable, Equatable {
     var viewerExpanded: Bool?
     /// The viewer shows a Markdown file's text rather than rendering it.
     var viewerRaw: Bool?
+    /// Files and pages the viewer has shown, newest first (`ViewerHistory`).
+    var viewerHistory: [String]?
     var panelWidth: Double?
     var panelHidden: Bool?
     /// Saved by versions before extensions: the workstream panel's open sections. Moved into `extensionData` at load.

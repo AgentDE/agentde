@@ -116,6 +116,8 @@ struct AgentDECommands: Commands {
         }
         CommandMenu("Layout") {
             Button("Toggle Sidebar") { store.sidebarVisible.toggle() }.keyboardShortcut("0")
+            Button("Viewer Back") { store.stepViewer(1) }.keyboardShortcut("[")
+            Button("Viewer Forward") { store.stepViewer(-1) }.keyboardShortcut("]")
             Button("Side Panel") { store.togglePanel() }.keyboardShortcut("i", modifiers: [.command, .option])
             Button("Browser Above Tab") { store.toggleBrowser() }.keyboardShortcut("b", modifiers: [.command, .shift])
             Button("Show Diff") { store.showDiff() }.keyboardShortcut("d", modifiers: [.command, .shift])
