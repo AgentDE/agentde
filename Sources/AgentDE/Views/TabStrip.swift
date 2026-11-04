@@ -46,6 +46,14 @@ struct TabStrip: View {
             .frame(height: 24)
             .contentShape(Rectangle())
             .hint("New tab: Claude ⌘T, Codex ⌥⌘T, Shell ⇧⌘T, File Explorer ⇧⌘E")
+            // Beside +: what this tab's viewer showed, to reopen once it's closed.
+            if let tab = store.activeTab, tab.viewerItem == nil, !(tab.viewerHistory ?? []).isEmpty {
+                ViewerHistoryMenu(tab: tab) {
+                    Image(systemName: "clock.arrow.circlepath").font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(theme.secondary).padding(.horizontal, 4).frame(height: 24).contentShape(Rectangle())
+                }
+                .hint("Reopen in the viewer (⌘[)")
+            }
             Spacer(minLength: 12)
         }
         .frame(height: store.settings.density == .compact ? 34 : 40)

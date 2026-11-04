@@ -64,7 +64,7 @@ The **+** after the last tab opens a new tab of any kind. Closing a tab's proces
 
 The **viewer** shows Markdown as a document, local HTML, PDFs, images, diffs, code and text, and anything else through Quick Look. It refreshes when the file changes. ↻ reloads, the copy button copies the path or link, **Raw** shows a Markdown file's text, **Open in browser** hands a web page to your browser. Drag the divider to resize it; ⤢ fills the tab; × (or Esc, after clicking into it) closes it. Sign-ins inside the viewer are remembered.
 
-**Recent in the viewer.** Each tab remembers the last 10 files and pages its viewer showed. Click the viewer's title for the list, newest first, and pick one to show it again (**Forget** drops one). ⌘[ goes back through the list and ⌘] forward; with the viewer closed, ⌘[ or the clock button in the header reopens the last one.
+**Recent in the viewer.** Each tab remembers the last 10 files and pages its viewer showed. Click the viewer's title for the list, newest first, and pick one to show it again (**Forget** drops one). ⌘[ goes back through the list and ⌘] forward; with the viewer closed, ⌘[ or the clock button beside the tab strip's + reopens the last one.
 
 **`open` in a tab.** `open report.html` or `open https://…` in a tab shows the file or page in that tab's viewer, and so does `! open …` in Claude, or Claude running `open` itself. Anything else (options like `-a`, several items, folders, apps) goes to macOS's own `open`, and `/usr/bin/open` always does. Turn it off in Settings → Terminal; it applies to tabs opened after the change.
 
