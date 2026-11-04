@@ -77,6 +77,8 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
     private var content: NSView?
     private var web: WKWebView?
     private var fileWatch: DispatchSourceFileSystemObject?
+    /// The reload waiting for a burst of writes to settle.
+    private var pendingReload: DispatchWorkItem?
     private var theme: Theme?
     /// Markdown shown as its text (`TabModel.viewerRaw`).
     private var raw = false
@@ -155,6 +157,12 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
         guard let theme else { return }
         let url = item.hasPrefix("http") ? URL(string: ViewerLinks.openURL(item)) : URL(fileURLWithPath: item)
         guard let url else { return }
+        // A file that's gone (deleted, or caught between the halves of an atomic save) gets a note, not a viewer:
+        // Quick Look in particular aborts the app when handed a missing file.
+        if !item.hasPrefix("http"), !FileManager.default.fileExists(atPath: item) {
+            showMissing(item)
+            return
+        }
         switch ViewerKind.shown(item, raw: raw) {
         case .markdown:
             webView().loadHTMLString(MarkdownView.page(for: url, theme: theme), baseURL: url.deletingLastPathComponent())
@@ -190,10 +198,41 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             install(scroll)
             if keepScroll { scroll.contentView.scroll(to: offset) }
         case .other:
-            let preview = (content as? QLPreviewView) ?? QLPreviewView(frame: .zero, style: .normal)!
-            preview.autostarts = true
-            preview.previewItem = url as NSURL
-            install(preview)
+            // The same file: refresh it in place. Another one: a fresh view, since Quick Look asserts when an item
+            // is swapped while the last one is still loading.
+            if let preview = content as? QLPreviewView, (preview.previewItem as? NSURL) as URL? == url {
+                preview.refreshPreviewItem()
+            } else {
+                (content as? QLPreviewView)?.close()
+                guard let preview = QLPreviewView(frame: .zero, style: .normal) else { return }
+                preview.autostarts = true
+                preview.previewItem = url as NSURL
+                install(preview)
+            }
+        }
+    }
+
+    /// What shows while the viewer's file doesn't exist, checking every 2 seconds for it to come back.
+    private func showMissing(_ item: String) {
+        (content as? QLPreviewView)?.close()
+        let label = NSTextField(wrappingLabelWithString: "\((item as NSString).lastPathComponent) isn't there any more. It was moved or deleted.")
+        label.alignment = .center
+        label.textColor = .secondaryLabelColor
+        let box = NSView()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        box.addSubview(label)
+        NSLayoutConstraint.activate([label.centerXAnchor.constraint(equalTo: box.centerXAnchor), label.centerYAnchor.constraint(equalTo: box.centerYAnchor),
+                                     label.widthAnchor.constraint(lessThanOrEqualTo: box.widthAnchor, constant: -40)])
+        install(box)
+        // A file that's gone can't be watched; look again now and then, and show it once it's back.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self, self.shown?.item == item, self.content === box else { return }
+            if FileManager.default.fileExists(atPath: item) {
+                self.render(item, keepScroll: false)
+                self.watch(item)
+            } else {
+                self.showMissing(item)
+            }
         }
     }
 
@@ -277,11 +316,15 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
         source.setEventHandler { [weak self, weak source] in
             guard let self, let source else { return }
             let replaced = !source.data.intersection([.delete, .rename]).isEmpty
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            // A burst of writes (a video being encoded, say) is one reload, once they pause.
+            self.pendingReload?.cancel()
+            let reload = DispatchWorkItem { [weak self] in
                 guard let self, self.shown?.item == item else { return }
                 self.render(item, keepScroll: true)
                 if replaced { self.watch(item) }
             }
+            self.pendingReload = reload
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: reload)
         }
         source.setCancelHandler { close(fd) }
         source.resume()
