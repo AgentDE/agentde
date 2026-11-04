@@ -1,4 +1,5 @@
 import AppKit
+import AVKit
 import PDFKit
 import QuickLookUI
 import SwiftUI
@@ -7,10 +8,10 @@ import WebKit
 
 /// What kind of content a viewer item is, which decides how it's shown.
 enum ViewerKind: Equatable {
-    case markdown, html, web, pdf, image, diff, text, other
+    case markdown, html, web, pdf, image, media, diff, text, other
 
     /// Whether the find bar can search it.
-    var findable: Bool { ![.image, .other].contains(self) }
+    var findable: Bool { ![.image, .media, .other].contains(self) }
 
     static func of(_ item: String) -> ViewerKind {
         if item.hasPrefix("http://") || item.hasPrefix("https://") { return .web }
@@ -28,6 +29,7 @@ enum ViewerKind: Equatable {
                                   "cc", "rs", "go", "rb", "java", "kt", "sh", "zsh", "bash", "sql", "css", "scss", "xml",
                                   "plist", "r", "lua", "env", "gitignore", "makefile", "dockerfile", "ipynb"]
         if known.contains(ext) { return .text }
+        if UTType(filenameExtension: ext)?.conforms(to: .audiovisualContent) == true { return .media }
         if ext.isEmpty || UTType(filenameExtension: ext)?.conforms(to: .text) == true { return .text }
         return .other
     }
@@ -141,7 +143,7 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             text.scrollRangeToVisible(match)
             text.showFindIndicator(for: match)
             done(true)
-        case .image, .other:
+        case .image, .media, .other:
             done(false)
         }
     }
@@ -197,24 +199,30 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             scroll.backgroundColor = theme.terminalBackground
             install(scroll)
             if keepScroll { scroll.contentView.scroll(to: offset) }
-        case .other:
-            // The same file: refresh it in place. Another one: a fresh view, since Quick Look asserts when an item
-            // is swapped while the last one is still loading.
-            if let preview = content as? QLPreviewView, (preview.previewItem as? NSURL) as URL? == url {
-                preview.refreshPreviewItem()
+        case .media:
+            // The same file again (it changed on disk): a fresh item at the same spot, still paused or playing.
+            if let player = (content as? AVPlayerView)?.player, (player.currentItem?.asset as? AVURLAsset)?.url == url {
+                let time = player.currentTime()
+                player.replaceCurrentItem(with: AVPlayerItem(url: url))
+                player.seek(to: time)
             } else {
-                (content as? QLPreviewView)?.close()
-                guard let preview = QLPreviewView(frame: .zero, style: .normal) else { return }
-                preview.autostarts = true
-                preview.previewItem = url as NSURL
-                install(preview)
+                let view = AVPlayerView()
+                view.controlsStyle = .inline
+                view.player = AVPlayer(url: url)
+                install(view)
             }
+        case .other:
+            // Always a fresh view, and never reloaded as the file changes (see watch): Quick Look aborts the app
+            // when its item changes or goes away while it's still loading.
+            guard let preview = QLPreviewView(frame: .zero, style: .normal) else { return }
+            preview.autostarts = true
+            preview.previewItem = url as NSURL
+            install(preview)
         }
     }
 
     /// What shows while the viewer's file doesn't exist, checking every 2 seconds for it to come back.
     private func showMissing(_ item: String) {
-        (content as? QLPreviewView)?.close()
         let label = NSTextField(wrappingLabelWithString: "\((item as NSString).lastPathComponent) isn't there any more. It was moved or deleted.")
         label.alignment = .center
         label.textColor = .secondaryLabelColor
@@ -298,6 +306,7 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
 
     private func install(_ view: NSView) {
         guard content !== view else { return }
+        (content as? AVPlayerView)?.player?.pause()
         content?.removeFromSuperview()
         view.frame = bounds
         view.autoresizingMask = [.width, .height]
@@ -320,7 +329,8 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             self.pendingReload?.cancel()
             let reload = DispatchWorkItem { [weak self] in
                 guard let self, self.shown?.item == item else { return }
-                self.render(item, keepScroll: true)
+                // Quick Look can't take a file changing under it; its view keeps what it loaded (Reload shows the rest).
+                if ViewerKind.shown(item, raw: self.raw) != .other { self.render(item, keepScroll: true) }
                 if replaced { self.watch(item) }
             }
             self.pendingReload = reload

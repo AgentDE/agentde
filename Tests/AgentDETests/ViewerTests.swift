@@ -38,7 +38,10 @@ struct ViewerRoutingTests {
         #expect(ViewerKind.of("/a/change.diff") == .diff)
         #expect(ViewerKind.of("/a/train.py") == .text)
         #expect(ViewerKind.of("/a/Makefile") == .text)
-        #expect(ViewerKind.of("/a/clip.mov") == .other)
+        #expect(ViewerKind.of("/a/clip.mov") == .media)
+        #expect(ViewerKind.of("/a/trailer.mp4") == .media)
+        #expect(ViewerKind.of("/a/song.mp3") == .media)
+        #expect(ViewerKind.of("/a/model.usdz") == .other)
         // Raw mode shows Markdown as its text, and changes nothing else.
         #expect(ViewerKind.shown("/a/REPORT.md", raw: true) == .text)
         #expect(ViewerKind.shown("/a/REPORT.md", raw: false) == .markdown)
