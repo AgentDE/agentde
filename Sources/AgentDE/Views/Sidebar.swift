@@ -209,7 +209,8 @@ private struct SidebarTabRow: View {
     @State private var hovering = false
 
     var body: some View {
-        let active = group.selectedTabID == tab.id
+        // Only the tab on screen is highlighted; other groups' remembered tabs look like any other row.
+        let active = group.selectedTabID == tab.id && group.id == store.selectedGroupID
         let state = store.state(tab.id)
         HStack(spacing: 7) {
             ZStack {
@@ -224,7 +225,7 @@ private struct SidebarTabRow: View {
             }
             .frame(width: 14)
             Text(store.title(for: tab))
-                .font(.system(size: 12.5))
+                .font(.system(size: 12.5, weight: active ? .medium : .regular))
                 .foregroundStyle(active ? theme.text : theme.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
@@ -232,8 +233,8 @@ private struct SidebarTabRow: View {
         .padding(.leading, 30)
         .padding(.trailing, 8)
         .frame(height: 26)
-        .background(RoundedRectangle(cornerRadius: 6).fill(active ? theme.hover : hovering ? theme.hover.opacity(0.6) : .clear))
-        .activeOutline(active && group.id == store.selectedGroupID, radius: 6, dashed: true)
+        .background(RoundedRectangle(cornerRadius: 6).fill(active ? theme.selected : hovering ? theme.hover.opacity(0.6) : .clear))
+        .activeOutline(active, radius: 6, dashed: true)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture { store.selectTab(tab.id) }
