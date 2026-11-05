@@ -16,13 +16,13 @@ struct HeaderBar: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(theme.text)
                 let dir = store.activeTab?.cwd ?? group.dir
-                Text((dir as NSString).lastPathComponent)
+                Text(Self.folderLabel(group: group.dir, tab: dir))
                     .font(.system(size: 11.5))
                     .foregroundStyle(theme.secondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2.5)
                     .background(RoundedRectangle(cornerRadius: 6).fill(theme.hover))
-                    .help(dir.abbreviatingHome)
+                    .help(dir == group.dir ? dir.abbreviatingHome : "Group: \(group.dir.abbreviatingHome)\nTab: \(dir.abbreviatingHome)")
                 if let branch = GitInfo.branch(at: dir) {
                     Label(branch, systemImage: "arrow.triangle.branch")
                         .font(.system(size: 11.5, design: .monospaced))
@@ -49,6 +49,13 @@ struct HeaderBar: View {
                 WindowDragArea()
             }
         }
+    }
+
+    /// The group's folder, then the tab's when it's somewhere else (a subfolder or worktree): "app › ql-crash".
+    static func folderLabel(group: String, tab: String) -> String {
+        let name = (group as NSString).lastPathComponent
+        let groupPath = (group as NSString).standardizingPath, tabPath = (tab as NSString).standardizingPath
+        return tabPath == groupPath ? name : "\(name) › \((tabPath as NSString).lastPathComponent)"
     }
 }
 
