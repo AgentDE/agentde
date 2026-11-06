@@ -8,7 +8,8 @@ struct OpenInViewerTests {
     let tab = UUID()
 
     /// Runs the script in `root/work` with `arguments`; the real `open` is a stub that records what it got.
-    func run(_ arguments: [String], inTab: Bool = true) throws -> (requests: [(tab: UUID, item: String, file: URL)], fallback: String) {
+    /// `typed` runs it from a shell, as when you type it; otherwise its parent is this test, like a program's.
+    func run(_ arguments: [String], inTab: Bool = true, typed: Bool = true) throws -> (requests: [(tab: UUID, item: String, file: URL)], fallback: String) {
         let work = root.appendingPathComponent("work"), requests = root.appendingPathComponent("open")
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
         let script = root.appendingPathComponent("open.sh"), fallback = root.appendingPathComponent("fallback.txt")
@@ -21,7 +22,8 @@ struct OpenInViewerTests {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = [script.path] + arguments
+        // The trailing `:` keeps sh from exec'ing the script in its own place, so sh stays its parent.
+        process.arguments = typed ? ["-c", "/bin/sh \"$0\" \"$@\"; :", script.path] + arguments : [script.path] + arguments
         process.currentDirectoryURL = work
         process.environment = ["PATH": "/usr/bin:/bin", "AGENTDE_REAL_OPEN": stub.path]
             .merging(inTab ? ["AGENTDE_TAB_ID": tab.uuidString] : [:]) { $1 }
@@ -42,6 +44,17 @@ struct OpenInViewerTests {
 
         let page = try run(["https://example.com/a"])
         #expect(page.requests.first?.item == "https://example.com/a")
+    }
+
+    @Test func aProgramsPageOrASignInGoesToTheBrowser() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let program = try run(["https://example.com/a"], typed: false)
+        #expect(program.requests.isEmpty && program.fallback == "https://example.com/a")
+        for link in ["https://x.cloud.databricks.com/oidc/v1/authorize?client_id=databricks-cli&code_challenge=abc",
+                     "https://example.com/login?redirect_uri=http%3A%2F%2Flocalhost%3A8020", "https://example.com/oauth/start"] {
+            let signIn = try run([link])
+            #expect(signIn.requests.isEmpty && signIn.fallback == link, "\(link)")
+        }
     }
 
     @Test func everythingElseGoesToTheRealOpen() throws {

@@ -17,10 +17,14 @@ enum OpenInViewer {
         #!/bin/sh
         # Written by \(AppBrand.name) at launch; edits are overwritten. In a tab, `open <file or web page>` shows it in
         # the tab's viewer; anything else goes to macOS's open. `/usr/bin/open` always reaches the real one.
+        # A web page goes to the viewer only when a shell ran open (you typed it): a program opening one (a CLI's
+        # sign-in, say) gets the browser, and so does any sign-in link.
         if [ -n "${AGENTDE_TAB_ID-}" ] && [ "$#" -eq 1 ]; then
+          parent=$(ps -o comm= -p "$PPID" 2>/dev/null); parent=${parent##*/}; parent=${parent#-}
           case "$1" in
             -*) ;;
-            http://*|https://*) item=$1 ;;
+            *redirect_uri=*|*code_challenge=*|*/oauth*|*/authorize*) ;;
+            http://*|https://*) case "$parent" in sh|bash|zsh|dash|ksh|fish) item=$1 ;; esac ;;
             /*) [ -f "$1" ] && item=$1 ;;
             *) [ -f "$1" ] && item="$PWD/$1" ;;
           esac

@@ -66,7 +66,7 @@ The **viewer** shows Markdown as a document, local HTML, PDFs, images, video and
 
 **Recent in the viewer.** Each tab remembers the last 10 files and pages its viewer showed. Click the viewer's title for the list, newest first, and pick one to show it again (**Forget** drops one). ⌘[ goes back through the list and ⌘] forward; with the viewer closed, ⌘[ or the clock button beside the tab strip's + reopens the last one.
 
-**`open` in a tab.** `open report.html` or `open https://…` in a tab shows the file or page in that tab's viewer, and so does `! open …` in Claude, or Claude running `open` itself. Anything else (options like `-a`, several items, folders, apps) goes to macOS's own `open`, and `/usr/bin/open` always does. Turn it off in Settings → Terminal; it applies to tabs opened after the change.
+**`open` in a tab.** `open report.html` or `open https://…` in a tab shows the file or page in that tab's viewer, and so does `! open …` in Claude, or Claude running `open` itself. Anything else (options like `-a`, several items, folders, apps) goes to macOS's own `open`, and `/usr/bin/open` always does. So does a web page that a program opens (a CLI's sign-in, such as `databricks auth login`) and any sign-in link: those need your browser. Turn it off in Settings → Terminal; it applies to tabs opened after the change.
 
 **Paths:** relative paths are found in the tab's folder, then the group's, and a `:line:col` suffix is fine. Punctuation right after a path is ignored. A path written from a subfolder, or a bare file name, is found with a Spotlight search of the tab's and group's folders; if several match, the most recently changed opens. AgentDE sets `FORCE_HYPERLINK=1`, so Claude Code prints its paths as proper links.
 
