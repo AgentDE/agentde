@@ -12,6 +12,17 @@ struct ViewerArea: View {
         let expanded = tab.viewerExpanded ?? false
         VStack(spacing: 0) {
             HStack(spacing: 8) {
+                let back = ViewerHistory.step(from: item, in: tab.viewerHistory, by: 1)
+                let forward = ViewerHistory.step(from: item, in: tab.viewerHistory, by: -1)
+                if back != nil || forward != nil {
+                    HStack(spacing: 0) {
+                        IconButton(symbol: "chevron.left", help: "Back (⌘[)") { store.stepViewer(1) }
+                            .disabled(back == nil).opacity(back == nil ? 0.35 : 1)
+                        IconButton(symbol: "chevron.right", help: "Forward (⌘])") { store.stepViewer(-1) }
+                            .disabled(forward == nil).opacity(forward == nil ? 0.35 : 1)
+                    }
+                    .padding(.leading, -8)
+                }
                 ViewerHistoryMenu(tab: tab) {
                     HStack(spacing: 3) {
                         Text(title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(theme.text).lineLimit(1)

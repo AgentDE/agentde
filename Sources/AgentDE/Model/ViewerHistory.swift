@@ -9,6 +9,13 @@ enum ViewerHistory {
         Array(([item] + (history ?? []).filter { $0 != item }).prefix(limit))
     }
 
+    /// `history` after following a link from `current` to `item`: what's newer than `current` is dropped first.
+    static func following(_ item: String, from current: String?, in history: [String]?) -> [String] {
+        let history = history ?? []
+        let ahead = current.flatMap { history.firstIndex(of: $0) } ?? 0
+        return recording(item, in: Array(history.dropFirst(ahead)))
+    }
+
     /// The item `step` places from `current` (+1 older, -1 newer). With nothing shown, going back reopens the
     /// newest. Nil at either end.
     static func step(from current: String?, in history: [String]?, by step: Int) -> String? {

@@ -78,6 +78,13 @@ struct ViewerHistoryTests {
         #expect(ViewerHistory.step(from: nil, in: history, by: -1) == nil)
         #expect(ViewerHistory.step(from: nil, in: nil, by: 1) == nil)
     }
+
+    /// As in a browser: back from /c to /b, then a link to /d drops /c.
+    @Test func followingALinkAfterGoingBackDropsWhatWasAhead() {
+        #expect(ViewerHistory.following("/d", from: "/b", in: ["/c", "/b", "/a"]) == ["/d", "/b", "/a"])
+        #expect(ViewerHistory.following("/d", from: "/c", in: ["/c", "/b", "/a"]) == ["/d", "/c", "/b", "/a"])
+        #expect(ViewerHistory.following("/d", from: nil, in: nil) == ["/d"])
+    }
 }
 
 @Suite("Tabs and workstreams")

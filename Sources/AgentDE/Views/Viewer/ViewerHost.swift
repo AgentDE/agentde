@@ -47,6 +47,8 @@ final class ViewerRegistry {
     private var hosts: [UUID: ViewerHost] = [:]
     private var escapeMonitor: Any?
     var onEscape: ((UUID) -> Void)?
+    /// A link clicked in a local page: the tab's viewer shows it next (Store.followViewerLink).
+    var onOpen: ((UUID, String) -> Void)?
 
     func host(for id: UUID) -> ViewerHost {
         if escapeMonitor == nil {
@@ -59,6 +61,7 @@ final class ViewerRegistry {
         }
         if let existing = hosts[id] { return existing }
         let host = ViewerHost(tabID: id)
+        host.onOpen = { [weak self] item in self?.onOpen?(id, item) }
         hosts[id] = host
         return host
     }
@@ -79,6 +82,7 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
     private var content: NSView?
     private var web: WKWebView?
     private var fileWatch: DispatchSourceFileSystemObject?
+    var onOpen: ((String) -> Void)?
     /// The reload waiting for a burst of writes to settle.
     private var pendingReload: DispatchWorkItem?
     private var theme: Theme?
@@ -352,13 +356,22 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             return decisionHandler(.cancel)
         }
         guard webView === web, action.navigationType == .linkActivated else { return decisionHandler(.allow) }
-        // A web page browses like a browser (sign-in flows cross sites); links out of a local page open in the browser.
-        if let item = shown?.item, ViewerKind.of(item) == .web {
-            decisionHandler(.allow)
+        // A web page browses like a browser (sign-in flows cross sites). A local page's links open in the viewer as
+        // the next item, so ‹ and ⌘[ come back: another file or a web page; a link within the page just scrolls;
+        // a folder or a missing file goes to its app.
+        guard let item = shown?.item, ViewerKind.of(item) != .web else { return decisionHandler(.allow) }
+        if url.isFileURL, url.standardizedFileURL.path == URL(fileURLWithPath: item).standardizedFileURL.path {
+            return decisionHandler(.allow)
+        }
+        var isDirectory: ObjCBool = false
+        if url.isFileURL, FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), !isDirectory.boolValue {
+            onOpen?(url.path)
+        } else if ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
+            onOpen?(url.absoluteString)
         } else {
             NSWorkspace.shared.open(url)
-            decisionHandler(.cancel)
         }
+        decisionHandler(.cancel)
     }
 
     // MARK: WKUIDelegate

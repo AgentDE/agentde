@@ -79,6 +79,16 @@ struct FileLinkTests {
         #expect(Store.resolveFileLink("content-strategy/content-strategy.md", relativeTo: ["/nowhere", root.path]) == doc)
     }
 
+    /// `Files are in /…/renders/thumb/:` — a folder, which opens a File Explorer tab.
+    @Test func resolvesFoldersEndingASentence() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = try makeFile("renders/thumb/a.png")
+        let folder = file.deletingLastPathComponent()
+        let found = Store.resolveFileLink(folder.path + "/:", relativeTo: [])
+        #expect(found?.standardizedFileURL.path == folder.standardizedFileURL.path)
+        #expect(found.map { Store.isFolder($0.path) } == true && !Store.isFolder(file.path))
+    }
+
     @Test func handlesFileURLsAndLineNumbers() throws {
         let file = try makeFile("src/main.swift")
         #expect(Store.resolveFileLink(file.absoluteString, relativeTo: []) == file)

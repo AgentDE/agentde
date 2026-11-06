@@ -52,6 +52,7 @@ final class Store {
     init() {
         terminals.store = self
         terminals.viewers.onEscape = { [weak self] id in self?.closeViewer(id) }
+        terminals.viewers.onOpen = { [weak self] id, item in self?.followViewerLink(item, tab: id) }
         search.store = self
         load()
         attachToLiveBackgroundJobs(Store.liveBackgroundJobs(

@@ -59,12 +59,13 @@ The **+** after the last tab opens a new tab of any kind. Closing a tab's proces
 |---|---|
 | Files and local pages (`localhost`, `127.0.0.1`) | The tab's **viewer**, above the chat |
 | Claude artifact links, and links an extension or plugin claims | The viewer |
+| Folders | A new **File Explorer** tab, rooted there |
 | Other web links | Your browser |
 | ⌥⌘-click on a file or local page | Its default app |
 
-The **viewer** shows Markdown as a document, local HTML, PDFs, images, video and audio, diffs, code and text, and anything else through Quick Look. It refreshes when the file changes, except a Quick Look preview, which ↻ refreshes. ↻ reloads, the copy button copies the path or link, **Raw** shows a Markdown file's text, **Open in browser** hands a web page to your browser. Drag the divider to resize it; ⤢ fills the tab; × (or Esc, after clicking into it) closes it. Sign-ins inside the viewer are remembered.
+The **viewer** shows Markdown as a document, local HTML, PDFs, images, video and audio, diffs, code and text, and anything else through Quick Look. It refreshes when the file changes, except a Quick Look preview, which ↻ refreshes. ↻ reloads, the copy button copies the path or link, **Raw** shows a Markdown file's text, **Open in browser** hands a web page to your browser. Links in a local HTML page open in the viewer too (another file or a web page; folders go to Finder). Drag the divider to resize it; ⤢ fills the tab; × (or Esc, after clicking into it) closes it. Sign-ins inside the viewer are remembered.
 
-**Recent in the viewer.** Each tab remembers the last 10 files and pages its viewer showed. Click the viewer's title for the list, newest first, and pick one to show it again (**Forget** drops one). ⌘[ goes back through the list and ⌘] forward; with the viewer closed, ⌘[ or the clock button beside the tab strip's + reopens the last one.
+**Recent in the viewer.** Each tab remembers the last 10 files and pages its viewer showed. Click the viewer's title for the list, newest first, and pick one to show it again (**Forget** drops one). ‹ and › in the viewer's header (or ⌘[ and ⌘]) go back and forward through it; following a link after going back drops what was ahead, as in a browser; with the viewer closed, ⌘[ or the clock button beside the tab strip's + reopens the last one.
 
 **`open` in a tab.** `open report.html` or `open https://…` in a tab shows the file or page in that tab's viewer, and so does `! open …` in Claude, or Claude running `open` itself. Anything else (options like `-a`, several items, folders, apps) goes to macOS's own `open`, and `/usr/bin/open` always does. So does a web page that a program opens (a CLI's sign-in, such as `databricks auth login`) and any sign-in link: those need your browser. Turn it off in Settings → Terminal; it applies to tabs opened after the change.
 

@@ -25,8 +25,8 @@ enum LinkTarget: Equatable {
     }
 }
 
-/// ⌘-clicked links in terminals: local files, local pages and artifacts open in the tab's viewer, other
-/// websites in the browser; ⌥⌘-click opens them in their default app instead.
+/// ⌘-clicked links in terminals: local files, local pages and artifacts open in the tab's viewer, folders in a
+/// new File Explorer tab, other websites in the browser; ⌥⌘-click opens them in their default app instead.
 extension Store {
     func openLink(_ link: String, fromTab id: UUID) {
         let owner = tab(id)
@@ -44,8 +44,30 @@ extension Store {
                 NSSound.beep()
                 return
             }
-            if defaultApp || !hasViewer { NSWorkspace.shared.open(file) } else { openInViewer(file.path, tab: owner.id) }
+            if defaultApp {
+                NSWorkspace.shared.open(file)
+            } else if Store.isFolder(file.path) {
+                _ = newTab(kind: .files, in: groups[g].id, cwd: file.path)   // a folder: a File Explorer tab there
+            } else if hasViewer {
+                openInViewer(file.path, tab: owner.id)
+            } else {
+                NSWorkspace.shared.open(file)
+            }
         }
+    }
+
+    static func isFolder(_ path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory.boolValue
+    }
+
+    /// A link clicked in the viewer's page: shown next, and, as in a browser, what was ahead of the page (after
+    /// going back) is dropped.
+    func followViewerLink(_ item: String, tab id: UUID) {
+        guard let (g, t) = locate(id) else { return }
+        groups[g].tabs[t].viewerHistory = ViewerHistory.following(item, from: groups[g].tabs[t].viewerItem,
+                                                                  in: groups[g].tabs[t].viewerHistory)
+        openInViewer(item, tab: id, select: false, record: false)
     }
 
     /// Turns a link into an existing file: `file://` URLs, absolute or `~` paths, or paths relative to the
