@@ -12,6 +12,10 @@ final class Store {
     var rateLimits = RateLimits()
     /// Claude sessions active in the last `recentSessionDays`, newest first (filled by AgentMonitor).
     var recentSessions: [RecentSession] = []
+    /// Sessions older than that, scanned when a group's Older list opens; nil until the first scan is in.
+    var olderSessions: [RecentSession]?
+    /// Groups whose Older list is open (not saved).
+    var olderShown: Set<UUID> = []
     /// Session ids currently running anywhere on this Mac, from Claude's registry.
     var liveSessionIds: Set<String> = []
     /// Background sessions running now: session id → job id (what `claude attach` takes).

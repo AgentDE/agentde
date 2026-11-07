@@ -3,9 +3,37 @@ import AppKit
 extension Store {
     /// Recent sessions that ran in exactly this group's folder and aren't already open in a tab.
     func recentSessions(for group: GroupModel) -> [RecentSession] {
+        sessions(recentSessions, for: group)
+    }
+
+    /// The same, from before `recentSessionDays`; nil until they've been scanned.
+    func olderSessions(for group: GroupModel) -> [RecentSession]? {
+        olderSessions.map { sessions($0, for: group) }
+    }
+
+    private func sessions(_ all: [RecentSession], for group: GroupModel) -> [RecentSession] {
         let open = Set(groups.flatMap { $0.tabs.flatMap { [$0.claudeSessionId, $0.codexSessionId].compactMap { $0 } } })
         let dir = Self.normalized(group.dir)
-        return recentSessions.filter { !open.contains($0.sessionId) && Self.normalized($0.cwd) == dir }
+        return all.filter { !open.contains($0.sessionId) && Self.normalized($0.cwd) == dir }
+    }
+
+    /// Opens or closes a group's Older list; opening it rescans (the scanners cache what hasn't changed).
+    func toggleOlderShown(_ id: UUID) {
+        if olderShown.remove(id) == nil {
+            olderShown.insert(id)
+            loadOlderSessions()
+        }
+    }
+
+    private func loadOlderSessions() {
+        let days = settings.recentSessionDays, codex = settings.showCodexSessions
+        OlderSessionScan.queue.async { [weak self] in
+            let cutoff = Date().addingTimeInterval(-days * 86_400)
+            let all = OlderSessionScan.claude.scan(days: OlderSessionScan.days)
+                + (codex ? OlderSessionScan.codex.scan(days: OlderSessionScan.days) : [])
+            let older = all.filter { $0.lastActive < cutoff }.sorted { $0.lastActive > $1.lastActive }
+            DispatchQueue.main.async { self?.olderSessions = older }
+        }
     }
 
     private static func normalized(_ path: String) -> String {
@@ -39,4 +67,13 @@ extension Store {
             groups[g].tabs[t].lastAgentName = session.name
         }
     }
+}
+
+/// The Older lists' own scanners, used only on their queue, so their caches outlive one scan.
+private enum OlderSessionScan {
+    static let queue = DispatchQueue(label: "older-sessions", qos: .utility)
+    static let claude = RecentSessionScanner()
+    static let codex = CodexSessionScanner()
+    /// As far back as transcripts go (Claude Code deletes old ones itself).
+    static let days: Double = 3650
 }

@@ -172,6 +172,9 @@ private struct GroupRow: View {
             Button((group.hideRecent ?? false) ? "Show recent sessions" : "Hide recent sessions") {
                 withAnimation(.snappy(duration: 0.2)) { store.toggleRecentHidden(group.id) }
             }
+            Button(store.olderShown.contains(group.id) ? "Hide older sessions" : "Show older sessions") {
+                withAnimation(.snappy(duration: 0.2)) { store.toggleOlderShown(group.id) }
+            }
             Divider()
             Button("Reveal in Finder") { NSWorkspace.shared.open(URL(fileURLWithPath: group.dir)) }
             Button("Delete group…", role: .destructive) { store.deleteGroup(group.id) }
@@ -291,57 +294,90 @@ struct TabMenu: View {
     }
 }
 
-/// Faded one-click buttons for Claude sessions recently active in this group's folder.
-/// Clicking one resumes it in a new tab. The list folds away from its header and stays folded.
+/// Faded one-click buttons for Claude sessions recently active in this group's folder, then an Older fold for
+/// the ones before that. Clicking one resumes it in a new tab. Recent folds away from its header and stays folded.
 private struct RecentSessionsList: View {
     let group: GroupModel
     @Environment(Store.self) private var store
     @Environment(\.theme) private var theme
     @State private var showAll = false
+    @State private var showAllOlder = false
 
     var body: some View {
         let sessions = store.recentSessions(for: group)
-        if !sessions.isEmpty {
+        let showOlder = store.olderShown.contains(group.id)
+        if !sessions.isEmpty || showOlder {
             let hidden = group.hideRecent ?? false
             let limit = 6
             VStack(alignment: .leading, spacing: 3) {
-                Button {
-                    withAnimation(.snappy(duration: 0.2)) { store.toggleRecentHidden(group.id) }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 7, weight: .bold))
-                            .rotationEffect(.degrees(hidden ? 0 : 90))
-                        Text("Recent").font(.system(size: 10.5, weight: .medium))
-                        Text("\(sessions.count)").font(.system(size: 10.5))
-                        Spacer()
-                    }
-                    .foregroundStyle(theme.muted.opacity(0.8))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .hint(hidden ? "Show sessions from the last \(Int(store.settings.recentSessionDays)) days"
-                             : "Hide recent sessions")
-                .padding(.top, 4)
-
-                if !hidden {
-                    ForEach(showAll ? sessions : Array(sessions.prefix(limit))) { session in
-                        RecentSessionPill(session: session, groupID: group.id)
-                    }
-                    if sessions.count > limit {
-                        Button(showAll ? "Show fewer" : "\(sessions.count - limit) more") {
-                            withAnimation(.snappy(duration: 0.2)) { showAll.toggle() }
-                        }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(theme.muted.opacity(0.8))
-                        .padding(.leading, 4)
-                    }
-                }
+                if !sessions.isEmpty { recent(sessions, hidden: hidden, limit: limit) }
+                if showOlder || (!sessions.isEmpty && !hidden) { older(open: showOlder, limit: limit) }
             }
             .padding(.leading, 30)
             .padding(.trailing, 8)
             .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder private func older(open: Bool, limit: Int) -> some View {
+        let older = store.olderSessions(for: group)
+        fold(title: "Older", count: open ? older?.count : nil, open: open,
+             hint: open ? "Hide older sessions" : "Show sessions from before the last \(Int(store.settings.recentSessionDays)) days") {
+            store.toggleOlderShown(group.id)
+        }
+        if open {
+            if let older, !older.isEmpty {
+                ForEach(showAllOlder ? older : Array(older.prefix(limit))) { session in
+                    RecentSessionPill(session: session, groupID: group.id)
+                }
+                if older.count > limit { moreButton(showAll: $showAllOlder, extra: older.count - limit) }
+            } else {
+                Text(older == nil ? "Looking…" : "None").font(.system(size: 10.5))
+                    .foregroundStyle(theme.muted.opacity(0.8)).padding(.leading, 4)
+            }
+        }
+    }
+
+    private func fold(title: String, count: Int?, open: Bool, hint: String, action: @escaping () -> Void) -> some View {
+        Button {
+            withAnimation(.snappy(duration: 0.2)) { action() }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 7, weight: .bold))
+                    .rotationEffect(.degrees(open ? 90 : 0))
+                Text(title).font(.system(size: 10.5, weight: .medium))
+                if let count { Text("\(count)").font(.system(size: 10.5)) }
+                Spacer()
+            }
+            .foregroundStyle(theme.muted.opacity(0.8))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .hint(hint)
+    }
+
+    private func moreButton(showAll: Binding<Bool>, extra: Int) -> some View {
+        Button(showAll.wrappedValue ? "Show fewer" : "\(extra) more") {
+            withAnimation(.snappy(duration: 0.2)) { showAll.wrappedValue.toggle() }
+        }
+        .buttonStyle(.plain)
+        .font(.system(size: 10.5))
+        .foregroundStyle(theme.muted.opacity(0.8))
+        .padding(.leading, 4)
+    }
+
+    @ViewBuilder private func recent(_ sessions: [RecentSession], hidden: Bool, limit: Int) -> some View {
+        fold(title: "Recent", count: sessions.count, open: !hidden,
+             hint: hidden ? "Show sessions from the last \(Int(store.settings.recentSessionDays)) days" : "Hide recent sessions") {
+            store.toggleRecentHidden(group.id)
+        }
+        .padding(.top, 4)
+        if !hidden {
+            ForEach(showAll ? sessions : Array(sessions.prefix(limit))) { session in
+                RecentSessionPill(session: session, groupID: group.id)
+            }
+            if sessions.count > limit { moreButton(showAll: $showAll, extra: sessions.count - limit) }
         }
     }
 }
