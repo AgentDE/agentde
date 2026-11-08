@@ -1,7 +1,7 @@
 /* The site's one stylesheet: the landing page and the Markdown pages (docs/_layouts/default.html). */
 :root {
-  --bg: #17102A; --surface: #1D1536; --raised: #261C47; --fg: #F4F0FF; --secondary: #C6BCEB; --muted: #8E83B8;
-  --line: rgba(155,107,255,.30); --accent: #3DF2A6; --amber: #EF9F27; --blue: #378ADD; --violet: #9B6BFF;
+  --bg: #0B0D19; --surface: #121526; --raised: #0D0F1C; --fg: #E6E8F2; --secondary: #A3A8C3; --muted: #6E7391;
+  --line: rgba(163,168,195,.30); --accent: #1D9E75; --amber: #EF9F27; --blue: #378ADD; --violet: #7F77DD;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
