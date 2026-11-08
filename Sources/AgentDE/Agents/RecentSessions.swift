@@ -74,6 +74,6 @@ private enum OlderSessionScan {
     static let queue = DispatchQueue(label: "older-sessions", qos: .utility)
     static let claude = RecentSessionScanner()
     static let codex = CodexSessionScanner()
-    /// As far back as transcripts go (Claude Code deletes old ones itself).
+    /// As far back as transcripts go: Claude Code deletes them after `cleanupPeriodDays` (30 unless set).
     static let days: Double = 3650
 }

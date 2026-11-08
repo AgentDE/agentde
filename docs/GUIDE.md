@@ -133,7 +133,7 @@ Under each group's tabs, a faded **Recent** list shows the named sessions you st
 - **Only yours, only named.** Claude sessions count if you started them from the CLI or the desktop app and gave them a title (`/rename`, or the desktop app's), or Claude Code named a background session. Codex threads count if you started and named them in the Codex CLI or desktop app. SDK runs, forks, `codex exec` runs, sub-agent threads and sessions already open in a tab are left out.
 - **Telling them apart.** Codex sessions show the Codex icon. A Claude session live in another terminal shows a radio-waves icon, and AgentDE asks before opening a second copy.
 - **Hiding it.** Click **Recent** to fold the list (remembered per group), right-click the group → **Hide recent sessions**, or turn it off in Settings → Terminal, where you can also leave Codex out and change the number of days.
-- **Older.** Below Recent, **Older** unfolds the group's named sessions from before that (as far back as Claude and Codex keep transcripts); right-click the group → **Show older sessions** works when it has no recent ones.
+- **Older.** Below Recent, **Older** unfolds the group's named sessions from before that (as far back as Claude and Codex keep transcripts: Claude Code deletes them after 30 days unless `cleanupPeriodDays` in `~/.claude/settings.json` says otherwise); right-click the group → **Show older sessions** works when it has no recent ones.
 
 The list refreshes every 30 seconds.
 
