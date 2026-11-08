@@ -433,3 +433,11 @@ public class ImageCell {
         self.image = image
     }
 }
+
+extension CharData {
+    /// Whether two cells are identical in every stored field (AgentDE patch: compact scrollback).
+    func isSameCell(as other: CharData) -> Bool {
+        code == other.code && width == other.width && attribute == other.attribute
+            && payload.code == other.payload.code && semanticContentCode == other.semanticContentCode
+    }
+}

@@ -6599,6 +6599,14 @@ open class Terminal {
                     buffer.yDisp = max (buffer.yDisp - 1, 0)
                 }
             }
+            // AgentDE patch: the row that just left the screen is scrollback now, which rarely
+            // changes, so stop storing its trailing blank cells (see BufferLine.compact).
+            if hasScrollback {
+                let left = buffer.yBase - 1
+                if left >= 0 && left < lines.count {
+                    lines [left].compact ()
+                }
+            }
         } else {
             // scrollTop is non-zero which means no line will be going to the
             // scrollback, instead we can just shift them in-place.

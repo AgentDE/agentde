@@ -55,6 +55,11 @@ public final class BufferLine: CustomDebugStringConvertible {
     private(set) var recycleGeneration: UInt64 = 0
     private var data: UnsafeMutableBufferPointer<CharData>
     private var dataSize: Int
+    /// Cells physically kept in `data` (AgentDE patch: compact scrollback). The rest of the
+    /// logical width, `stored..<dataSize`, all equal `tail`. Equal to `dataSize` unless the
+    /// line was compacted; every mutation expands it back first.
+    private var stored: Int
+    private var tail: CharData = CharData.Null
 
     private var fillCharacter: CharData //used to initialise data
 
@@ -77,12 +82,14 @@ public final class BufferLine: CustomDebugStringConvertible {
         buf.initialize(repeating: fillCharacter)
         data = buf
         dataSize = cols
+        stored = cols
         self.isWrapped = isWrapped
         self.bidiState = bidiState
     }
 
     public init (from other: BufferLine)
     {
+        other.expand()
         fillCharacter = other.fillCharacter
         isWrapped = other.isWrapped
         bidiState = other.bidiState
@@ -105,6 +112,7 @@ public final class BufferLine: CustomDebugStringConvertible {
         
         data = buf
         dataSize = otherSize
+        stored = otherSize
     }
 
     deinit {
@@ -120,7 +128,54 @@ public final class BufferLine: CustomDebugStringConvertible {
     }
 
     public func getData() -> [CharData] {
-        Array(data[0..<dataSize])
+        expand()
+        return Array(data[0..<dataSize])
+    }
+
+    /// The cell at `index` (below `dataSize`), whether kept or implied by compaction.
+    @inline(__always)
+    private func cell(_ index: Int) -> CharData {
+        index < stored ? data[index] : tail
+    }
+
+    /// Makes the whole logical width physical again. Every mutation calls this first, so only
+    /// reads ever see a compacted line.
+    func expand() {
+        guard stored < dataSize else { return }
+        let buf = UnsafeMutableBufferPointer<CharData>.allocate(capacity: dataSize)
+        for i in 0..<dataSize {
+            buf.initializeElement(at: i, to: i < stored ? data[i] : tail)
+        }
+        data.deinitialize()
+        data.deallocate()
+        data = buf
+        stored = dataSize
+    }
+
+    /// True when trailing cells are implied rather than stored.
+    var isCompacted: Bool { stored < dataSize }
+
+    /// Frees the run of identical cells at the end of the line (usually blanks), keeping them
+    /// implied. Reads are unchanged; the next mutation expands the line again. Only worth it for
+    /// lines that rarely change: scrollback.
+    func compact() {
+        guard stored == dataSize, dataSize > 0 else { return }
+        let last = data[dataSize - 1]
+        var keep = dataSize
+        while keep > 0 && data[keep - 1].isSameCell(as: last) {
+            keep -= 1
+        }
+        // Not worth a reallocation for a few cells.
+        guard dataSize - keep >= 16 else { return }
+        let buf = UnsafeMutableBufferPointer<CharData>.allocate(capacity: keep)
+        for i in 0..<keep {
+            buf.initializeElement(at: i, to: data[i])
+        }
+        data.deinitialize()
+        data.deallocate()
+        data = buf
+        stored = keep
+        tail = last
     }
 
     /// Accesses the CharIndex at the specified position
@@ -131,11 +186,12 @@ public final class BufferLine: CustomDebugStringConvertible {
             let dataSize = self.dataSize
             if index >= dataSize {
                 /* print ("Warning: the method \(callingMethod) has not been audited to clamp buffer.x to cols-1; fixing") */
-                return data [dataSize-1]
+                return cell (dataSize-1)
             }
-            return data [index]
+            return cell (index)
         }
         set(value) {
+            expand()
             if index >= dataSize {
                 // All bugs I was aware of have been handled, but keep this message here to
                 // help future refactorings.
@@ -150,12 +206,13 @@ public final class BufferLine: CustomDebugStringConvertible {
 
     /// Returns the number of character cells the element at this position occupies.
     public func getWidth (index: Int) -> Int {
-        return Int (data [index].width)
+        return Int (cell (index).width)
     }
 
     /// Erases the cell contents. Marks are line-level metadata and survive
     /// this: destruction of a recycled line goes through `destroySemanticState`.
     func clear(with attribute: Attribute) {
+        expand()
         let empty = CharData(attribute: attribute)
         data.update(repeating: empty)
         images = nil
@@ -171,7 +228,8 @@ public final class BufferLine: CustomDebugStringConvertible {
     }
     /// Test whether contains any chars.
     public func hasContent (index: Int) -> Bool {
-        data [index].code != 0 || data [index].attribute != CharData.defaultAttr;
+        let c = cell (index)
+        return c.code != 0 || c.attribute != CharData.defaultAttr
     }
 
     /// True if the buffer line has any values stored in it, false otherwise
@@ -191,6 +249,7 @@ public final class BufferLine: CustomDebugStringConvertible {
     ///  - fillData: the data that will be filled into the line
     public func insertCells (pos: Int, n: Int, rightMargin: Int, fillData: CharData)
     {
+        expand()
         let len = rightMargin + 1
         let pos = pos % len
         if n < len - pos {
@@ -212,6 +271,7 @@ public final class BufferLine: CustomDebugStringConvertible {
     /// Removes the cells at the specified position, shifting data leftwards
     public func deleteCells (pos: Int, n: Int, rightMargin: Int, fillData: CharData)
     {
+        expand()
         let len = rightMargin + 1
         let p = pos % len
         if n < len - p {
@@ -273,6 +333,7 @@ public final class BufferLine: CustomDebugStringConvertible {
     /// content).
     public func replaceCells (start: Int, end: Int, fillData : CharData)
     {
+        expand()
         let length = dataSize
         var idx = start
         while idx < end && idx < length {
@@ -286,6 +347,8 @@ public final class BufferLine: CustomDebugStringConvertible {
     /// `fillData` values, if it is smaller, the data is trimmed
     public func resize (cols: Int, fillData: CharData)
     {
+        expand()
+        defer { stored = dataSize }
         let len = dataSize
         if len == cols {
             return
@@ -342,6 +405,7 @@ public final class BufferLine: CustomDebugStringConvertible {
     /// Fills the entire bufferline with the specified ``CharData``
     public func fill (with: CharData)
     {
+        expand()
         data.update(repeating: with)
         bump()
     }
@@ -353,6 +417,7 @@ public final class BufferLine: CustomDebugStringConvertible {
     ///  - len: number of columns to fill
     public func fill (with: CharData, atCol: Int, len: Int)
     {
+        expand()
         for i in 0..<len {
             data [i+atCol] = with
         }
@@ -362,6 +427,8 @@ public final class BufferLine: CustomDebugStringConvertible {
     /// Fills the current BufferLine with the contents of another BufferLine.
     public func copyFrom (line: BufferLine)
     {
+        expand()
+        line.expand()
         let srcSize = line.dataSize
         if data.count < srcSize {
             data.deinitialize()
@@ -381,6 +448,7 @@ public final class BufferLine: CustomDebugStringConvertible {
             }
         }
         dataSize = srcSize
+        stored = srcSize
         isWrapped = line.isWrapped
         semanticMarks = line.semanticMarks
         semanticHardContinuationGroup = line.semanticHardContinuationGroup
@@ -393,8 +461,9 @@ public final class BufferLine: CustomDebugStringConvertible {
     public func getTrimmedLength () -> Int
     {
         for i in (0..<dataSize).reversed() {
-            if data [i].code != 0 {
-                return i + Int(data[i].width)
+            let c = cell (i)
+            if c.code != 0 {
+                return i + Int(c.width)
             }
         }
         return 0
@@ -408,6 +477,8 @@ public final class BufferLine: CustomDebugStringConvertible {
     ///  - len: the number of elements to copy
     public func copyFrom (_ src: BufferLine, srcCol: Int, dstCol: Int, len: Int)
     {
+        expand()
+        src.expand()
         let movesSemanticHardContinuation = srcCol == 0 && dstCol == 0 && len >= count
         let movedSemanticHardContinuationGroup = src.semanticHardContinuationGroup
         if src === self && srcCol > dstCol {
@@ -509,7 +580,8 @@ public final class BufferLine: CustomDebugStringConvertible {
         if !skipNullCellsFollowingWide {
             var result = ""
             for i in startCol..<limit {
-                let character = characterProvider?(data [i]) ?? data [i].getCharacter ()
+                let c = cell (i)
+                let character = characterProvider?(c) ?? c.getCharacter ()
                 result.append (character)
             }
             return result
@@ -517,16 +589,16 @@ public final class BufferLine: CustomDebugStringConvertible {
         var result = ""
         var idx = startCol
         while idx < limit {
-            if idx > 0 && data [idx].code == 0 && data [idx-1].width == 2 {
+            if idx > 0 && cell (idx).code == 0 && cell (idx-1).width == 2 {
                 idx += 1
                 continue
             }
-            let cell = data [idx]
-            let character = characterProvider?(cell) ?? cell.getCharacter ()
+            let here = cell (idx)
+            let character = characterProvider?(here) ?? here.getCharacter ()
             result.append (character)
-            if cell.width == 2 {
+            if here.width == 2 {
                 let nextIndex = idx + 1
-                if nextIndex < limit && data [nextIndex].code == 0 {
+                if nextIndex < limit && cell (nextIndex).code == 0 {
                     idx += 2
                     continue
                 }

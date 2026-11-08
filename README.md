@@ -4,7 +4,7 @@
 
 <p align="center"><img src="docs/images/hero.png" width="760" alt="The AgentDE window: groups and tabs in the sidebar, a viewer above the agent's chat, and the workstream panel on the right"></p>
 
-- **Native and light.** SwiftUI and AppKit, no Electron. About 70 MB with a few groups loaded, under 1% CPU when idle.
+- **Native and light.** SwiftUI and AppKit, no Electron. Under 100 MB of memory (as Activity Monitor shows it) with a few groups loaded, under 1% CPU when idle.
 - **Knows what each agent is doing.** A dot per tab: working, needs you, or done, with no setup. Notifications when an agent waits on you.
 - **Tabs that don't die.** Every tab's shell runs in its own small holder process, so agents keep working when you quit, update or crash.
 - **A viewer above the chat.** ⌘-click any path or link an agent prints to see the file, page, diff, PDF or video right there.

@@ -20,6 +20,6 @@ let package = Package(
         .target(name: "AgentDE", dependencies: ["SwiftTerm", "AgentDEKit"], path: "Sources/AgentDE"),
         // Holds a tab's terminal so it survives the app quitting, updating or crashing (see docs/ARCHITECTURE.md).
         .executableTarget(name: "agentde-pty", path: "Sources/agentde-pty"),
-        .testTarget(name: "AgentDETests", dependencies: ["AgentDE", "agentde-pty"], path: "Tests/AgentDETests"),
+        .testTarget(name: "AgentDETests", dependencies: ["AgentDE", "agentde-pty", "SwiftTerm"], path: "Tests/AgentDETests"),
     ]
 )
