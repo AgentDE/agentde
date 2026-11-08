@@ -1,4 +1,4 @@
-# AgentDE. Everything builds with the Xcode Command Line Tools; see README.md.
+# AgentDE. Everything builds with the Xcode Command Line Tools; see docs/GUIDE.md.
 # EXTENSIONS=path/to/extensions.json picks the native extensions (default extensions.json; scripts/assemble.py),
 # and BRAND=path/to/brand.env builds a renamed app (scripts/brand.sh).
 export EXTENSIONS BRAND

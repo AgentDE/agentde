@@ -18,7 +18,7 @@ Native macOS app (SwiftUI + AppKit) that hosts terminal agents in groups and tab
 - Terminal and web views are owned by registries, never by SwiftUI. Don't create `TerminalSession` or `WKWebView` inside view bodies.
 - Animations that loop belong in Core Animation (see `StatusDot`), not SwiftUI `repeatForever`, to keep idle CPU near zero.
 - Changes to `Vendor/SwiftTerm` must be recorded in `Vendor/SwiftTerm/PATCHES.md`.
-- Keep `README.md` (user-facing: features, keys, settings), `docs/ARCHITECTURE.md` (internals) and `docs/EXTENDING.md` (the API) current when behavior changes.
+- Keep `docs/GUIDE.md` (user-facing: features, keys, settings), `docs/ARCHITECTURE.md` (internals) and `docs/EXTENDING.md` (the API) current when behavior changes. `README.md` is the short front page: change it only when the pitch, install or repo list changes.
 
 ## Testing changes
 

@@ -1,0 +1,7 @@
+# GitHub Pages for agentde.github.io/agentde: index.html is the landing page; the Markdown docs use _layouts/default.html.
+title: AgentDE
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default

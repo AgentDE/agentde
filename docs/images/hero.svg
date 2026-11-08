@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" width="760" height="420" role="img" aria-label="The AgentDE window: groups and tabs in the sidebar, a tab strip, a viewer above the agent's chat, and the workstream panel on the right.">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; font-size: 12px; fill: #F4F0FF; }
+    .mono { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 11px; }
+    .sub { font-size: 11px; fill: #8E83B8; }
+    .label { font-size: 10px; font-weight: 600; letter-spacing: 1px; fill: #8E83B8; }
+    .head { font-size: 13px; font-weight: 600; }
+    .accent { fill: #3DF2A6; }
+    .needs { fill: #EF9F27; }
+    .box { fill: #261C47; stroke: rgba(155,107,255,.30); }
+    .plain { fill: #1D1536; stroke: rgba(155,107,255,.30); }
+    .faint { fill: rgba(155,107,255,.30); }
+  </style>
+  <rect x="0" y="0" width="760" height="420" rx="16" fill="#17102A"/>
+  <g transform="translate(20 15)">
+    <rect x="1" y="1" width="718" height="388" rx="10" class="plain"/>
+    <circle cx="18" cy="16" r="5" class="faint"/><circle cx="34" cy="16" r="5" class="faint"/><circle cx="50" cy="16" r="5" class="faint"/>
+    <!-- sidebar -->
+    <rect x="1" y="30" width="179" height="359" class="box"/>
+    <rect x="14" y="44" width="8" height="8" rx="2" fill="#3DF2A6"/><text x="30" y="52" class="head">acme-app</text>
+    <circle cx="34" cy="72" r="3.5" fill="#3DF2A6"/><text x="44" y="76">fix login bug</text>
+    <circle cx="34" cy="92" r="3.5" fill="#EF9F27"/><text x="44" y="96">release notes</text>
+    <circle cx="34" cy="112" r="3.5" fill="#3DF2A6"/><text x="44" y="116">flaky test hunt</text>
+    <rect x="14" y="138" width="8" height="8" rx="2" fill="#9B6BFF"/><text x="30" y="146" class="head">docs-site</text>
+    <circle cx="34" cy="166" r="3.5" fill="#378ADD"/><text x="44" y="170">landing page</text>
+    <circle cx="34" cy="186" r="3.5" fill="#3DF2A6"/><text x="44" y="190">search index</text>
+    <rect x="14" y="212" width="8" height="8" rx="2" fill="#378ADD"/><text x="30" y="220" class="head">ml-experiments</text>
+    <circle cx="34" cy="240" r="3.5" fill="#EF9F27"/><text x="44" y="244">seed sweep</text>
+    <rect x="10" y="282" width="161" height="96" rx="7" class="plain" stroke-dasharray="4 3"/>
+    <text x="90" y="310" text-anchor="middle" class="head">Widgets</text>
+    <text x="90" y="332" text-anchor="middle" class="sub">Calendar · Usage · Linear</text>
+    <text x="90" y="350" text-anchor="middle" class="sub">or your own, from JSON</text>
+    <!-- tab strip -->
+    <rect x="180" y="30" width="539" height="30" class="box"/>
+    <rect x="190" y="37" width="100" height="17" rx="4" class="plain"/><circle cx="200" cy="45.5" r="3" fill="#3DF2A6"/><text x="208" y="50" class="sub">fix login bug</text>
+    <circle cx="306" cy="45.5" r="3" fill="#EF9F27"/><text x="314" y="50" class="sub">release notes</text>
+    <circle cx="398" cy="45.5" r="3" fill="#3DF2A6"/><text x="406" y="50" class="sub">flaky test hunt</text>
+    <text x="496" y="50" class="sub">+</text>
+    <!-- viewer -->
+    <rect x="180" y="60" width="360" height="150" class="plain"/>
+    <text x="196" y="84" class="label">VIEWER</text>
+    <text x="196" y="104" class="sub">login-flow.md · Markdown, PDF, images, diffs, HTML</text>
+    <rect x="196" y="122" width="230" height="7" rx="3" class="faint"/>
+    <rect x="196" y="138" width="300" height="7" rx="3" class="faint"/>
+    <rect x="196" y="154" width="260" height="7" rx="3" class="faint"/>
+    <text x="196" y="194" class="sub">⌘-click any path the agent prints to open it here</text>
+    <line x1="180" y1="210" x2="540" y2="210" stroke="rgba(155,107,255,.45)"/>
+    <!-- chat -->
+    <rect x="180" y="211" width="360" height="178" class="plain"/>
+    <text x="196" y="234" class="label">CHAT · CLAUDE CODE</text>
+    <text x="196" y="266" class="mono">&gt; the login redirect loops on Safari</text>
+    <text x="196" y="288" class="mono accent">⏺ workstream · set_progress</text>
+    <text x="196" y="310" class="mono">⏺ Edit src/auth/redirect.ts</text>
+    <text x="196" y="332" class="mono">⏺ Bash npm test -- auth</text>
+    <text x="196" y="354" class="mono accent">⏺ workstream · ask_user</text>
+    <text x="196" y="378" class="sub">every tab keeps running when you quit or update</text>
+    <!-- panel -->
+    <rect x="540" y="60" width="179" height="329" fill="#16362B" stroke="#3DF2A6"/>
+    <text x="552" y="84" class="label accent">WORKSTREAM</text>
+    <text x="552" y="104" class="head">login-bug ▾</text>
+    <text x="552" y="130" class="needs">Waiting on you · 1</text>
+    <text x="552" y="148" class="sub">Ship the fix behind a flag?</text>
+    <text x="552" y="174" class="head">Overview</text>
+    <text x="552" y="192" class="sub">Safari drops the state cookie;</text>
+    <text x="552" y="208" class="sub">fix in review.</text>
+    <text x="552" y="234" class="head">Progress</text>
+    <rect x="552" y="244" width="150" height="6" rx="3" class="faint"/>
+    <rect x="552" y="244" width="105" height="6" rx="3" fill="#3DF2A6"/>
+    <text x="552" y="266" class="sub">tests 14 / 20</text>
+    <text x="552" y="292" class="head">Memory · Rules</text>
+    <text x="552" y="310" class="sub">never push to main</text>
+    <text x="552" y="336" class="head">Files</text>
+    <text x="552" y="354" class="sub">login-flow.md</text>
+    <text x="552" y="372" class="sub">redirect.ts</text>
+  </g>
+</svg>

@@ -236,7 +236,7 @@ A plugin is a folder in `~/.config/agentde/plugins/` (a renamed build uses its o
 | `themes` | Each `{id, name, alwaysDark?, dark?, light?}`. `dark` and `light` map `Theme` field names to `"#RRGGBB"` or `"#RRGGBBAA"`; a missing field takes the Claude theme's color, and a missing `light` uses `dark` (and the other way round) |
 | `palettes` | Each `{id, name, colors}`: colors as `"#RRGGBB"` |
 
-A plugin widget's id in the menu is `plugin.<id>`. The example in [`examples/hello-plugin`](../examples/hello-plugin) adds a page widget, a command widget, a link rule, a theme and a palette:
+A plugin widget's id in the menu is `plugin.<id>`. The example in [`examples/hello-plugin`](https://github.com/AgentDE/agentde/tree/main/examples/hello-plugin) adds a page widget, a command widget, a link rule, a theme and a palette:
 
 ```json
 {

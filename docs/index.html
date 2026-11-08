@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentDE · a native macOS home for terminal agents</title>
+<meta name="description" content="Run Claude Code and Codex sessions side by side in a small native macOS app: live agent status, a viewer above the chat, workstreams, tabs that survive quit and crash.">
+<meta property="og:title" content="AgentDE">
+<meta property="og:description" content="A small, native macOS home for your terminal agents.">
+<meta property="og:image" content="https://agentde.github.io/agentde/images/hero.png">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="./">AgentDE</a>
+  <nav><a href="GUIDE.html">Guide</a><a href="EXTENDING.html">Extending</a><a href="ARCHITECTURE.html">Architecture</a><a href="https://github.com/AgentDE">GitHub</a></nav>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>A small, native home<br>for your terminal agents.</h1>
+    <p class="lede">Run a dozen Claude Code and Codex sessions side by side, see at a glance which one needs you, and pick up any of them after a quit, an update or a crash.</p>
+    <div class="cta">
+      <a class="button" href="#install">Install</a>
+      <a class="button ghost" href="https://github.com/AgentDE/agentde">View on GitHub</a>
+    </div>
+    <img class="shot" src="images/hero.png" width="760" alt="The AgentDE window: groups and tabs in the sidebar, a viewer above the agent's chat, and the workstream panel on the right">
+  </section>
+
+  <section class="grid">
+    <div><h3><span class="dot green"></span>Who needs you?</h3><p>Every tab has a dot: working, needs you, or done. A banner when an agent waits on you, and a click takes you straight there. No setup.</p></div>
+    <div><h3><span class="dot amber"></span>Tabs that don't die</h3><p>Each tab's shell runs in its own tiny holder process. Quit, update or crash, and every agent keeps going; the window comes back to them.</p></div>
+    <div><h3><span class="dot blue"></span>A viewer above the chat</h3><p>⌘-click any path or link an agent prints: Markdown, HTML, PDFs, images, video, diffs and code open right above the conversation, with back and forward.</p></div>
+    <div><h3><span class="dot violet"></span>Workstreams</h3><p>Agents keep a shared record of each piece of work through an MCP server: overview, rules, memory, questions for you, progress and files, beside the chat and back after every compaction.</p></div>
+    <div><h3><span class="dot green"></span>Native and light</h3><p>SwiftUI and AppKit, no Electron. About 70 MB with a few groups loaded, under 1% CPU when idle. Builds with just the Command Line Tools.</p></div>
+    <div><h3><span class="dot violet"></span>Make it yours</h3><p>Native extensions in Swift for anything deep; JSON plugins for widgets, link rules, themes and palettes, no build needed.</p></div>
+  </section>
+
+  <section id="install" class="install">
+    <h2>Install</h2>
+    <p>macOS 14 or later, the Xcode Command Line Tools (<code>xcode-select --install</code>) and <code>claude</code> or <code>codex</code> on your <code>PATH</code>.</p>
+<pre><code>git clone https://github.com/AgentDE/agentde && cd agentde
+make signing    # once, so macOS remembers your permission answers
+make install    # about 4 minutes the first time</code></pre>
+    <p class="muted">The first build clones the extensions next to the repo. Run <code>make install</code> again to update; your tabs keep running.</p>
+  </section>
+
+  <section class="repos">
+    <h2>The pieces</h2>
+    <table>
+      <tr><td><a href="https://github.com/AgentDE/agentde">agentde</a></td><td>The app: groups, tabs, agent status, the viewer, search, the extension API</td></tr>
+      <tr><td><a href="https://github.com/AgentDE/workstream-mcp">workstream-mcp</a></td><td>The MCP server behind workstreams. Works with plain Claude Code or Codex too, no app needed</td></tr>
+      <tr><td><a href="https://github.com/AgentDE/agentde-workstreams">agentde-workstreams</a></td><td>The workstream panel beside each chat, and the Usage widget</td></tr>
+      <tr><td><a href="https://github.com/AgentDE/agentde-widgets">agentde-widgets</a></td><td>The sidebar widget spot, the Calendar widget, and widgets from JSON plugins</td></tr>
+      <tr><td><a href="https://github.com/AgentDE/agentde-linear">agentde-linear</a></td><td>Linear tickets in workstreams, and a widget with your open issues</td></tr>
+    </table>
+  </section>
+</main>
+
+<footer>MIT licensed · <a href="https://github.com/AgentDE">github.com/AgentDE</a></footer>
+</body>
+</html>

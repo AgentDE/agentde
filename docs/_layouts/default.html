@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.title | default: "AgentDE" }} · AgentDE</title>
+<link rel="stylesheet" href="{{ "/site.css" | relative_url }}">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="{{ "/" | relative_url }}">AgentDE</a>
+  <nav><a href="{{ "/GUIDE.html" | relative_url }}">Guide</a><a href="{{ "/EXTENDING.html" | relative_url }}">Extending</a><a href="{{ "/ARCHITECTURE.html" | relative_url }}">Architecture</a><a href="https://github.com/AgentDE">GitHub</a></nav>
+</header>
+<main class="doc">
+{{ content }}
+</main>
+<footer>MIT licensed · <a href="https://github.com/AgentDE">github.com/AgentDE</a></footer>
+</body>
+</html>

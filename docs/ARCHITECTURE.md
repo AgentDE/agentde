@@ -249,7 +249,7 @@ A workspace with its own app target skips step 1 by setting `APP_PACKAGE` (its f
 
 **macOS 26 SDK on purpose.** In the macOS 27 CLT SDK, SwiftUI's `@State` is a macro whose compiler plugin (`SwiftUIMacros`) ships only with Xcode. The 26 SDK still has the property wrapper. `scripts/env.sh` sets `SDKROOT`; override with `AGENTDE_SDK=/path/to/sdk`. `@Observable` is fine because the Observation macro plugin does ship with the CLT.
 
-**Vendored SwiftTerm.** `Vendor/SwiftTerm` is SwiftTerm v1.20.0 (MIT) with small patches, listed in [Vendor/SwiftTerm/PATCHES.md](../Vendor/SwiftTerm/PATCHES.md). The important one: `Shaders.metal` ships as a plain resource rather than being compiled at build time (which needs Xcode's `metal` tool). SwiftTerm already compiles it from source at runtime when no precompiled library exists, so GPU rendering still works.
+**Vendored SwiftTerm.** `Vendor/SwiftTerm` is SwiftTerm v1.20.0 (MIT) with small patches, listed in [Vendor/SwiftTerm/PATCHES.md](https://github.com/AgentDE/agentde/blob/main/Vendor/SwiftTerm/PATCHES.md). The important one: `Shaders.metal` ships as a plain resource rather than being compiled at build time (which needs Xcode's `metal` tool). SwiftTerm already compiles it from source at runtime when no precompiled library exists, so GPU rendering still works.
 
 **Why SwiftTerm rather than libghostty.** libghostty (Ghostty's engine) is the stronger renderer, but building it needs Zig and full Xcode for Metal. The terminal is isolated to `TerminalSession`, `TerminalRegistry` and `TerminalPane`. Swapping engines means re-implementing those three against a different view while keeping the same public surface: start, focus, terminate, appearance, title and exit callbacks, and the shell pid.
 
