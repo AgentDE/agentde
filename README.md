@@ -100,7 +100,7 @@ workstream-mcp/         (used by agentde-workstreams)
 **Adding or removing one.** Edit `extensions.json` (or point `EXTENSIONS=` at another file) and rebuild. Each entry names the package folder (relative to the file), the repo to clone it from when it isn't there, its library product, the expression that creates the extension, and any helper executables to bundle:
 
 ```json
-{ "package": "../agentde-linear", "repo": "https://github.com/andreykurenkov/agentde-linear",
+{ "package": "../agentde-linear", "repo": "https://github.com/AgentDE/agentde-linear",
   "product": "AgentDELinear", "create": "LinearExtension()" }
 ```
 

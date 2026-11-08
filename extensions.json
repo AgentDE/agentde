@@ -1,11 +1,11 @@
 {
   "extensions": [
-    { "package": "../agentde-widgets", "repo": "https://github.com/andreykurenkov/agentde-widgets",
+    { "package": "../agentde-widgets", "repo": "https://github.com/AgentDE/agentde-widgets",
       "product": "AgentDEWidgets", "create": "WidgetsExtension()" },
-    { "package": "../agentde-workstreams", "repo": "https://github.com/andreykurenkov/agentde-workstreams",
+    { "package": "../agentde-workstreams", "repo": "https://github.com/AgentDE/agentde-workstreams",
       "product": "AgentDEWorkstreams", "create": "WorkstreamsExtension()",
-      "helpers": [{ "package": "../workstream-mcp", "repo": "https://github.com/andreykurenkov/workstream-mcp", "product": "workstream-mcp" }] },
-    { "package": "../agentde-linear", "repo": "https://github.com/andreykurenkov/agentde-linear",
+      "helpers": [{ "package": "../workstream-mcp", "repo": "https://github.com/AgentDE/workstream-mcp", "product": "workstream-mcp" }] },
+    { "package": "../agentde-linear", "repo": "https://github.com/AgentDE/agentde-linear",
       "product": "AgentDELinear", "create": "LinearExtension()" }
   ]
 }
