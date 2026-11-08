@@ -134,6 +134,7 @@ Under each group's tabs, a faded **Recent** list shows the named sessions you st
 - **Telling them apart.** Codex sessions show the Codex icon. A Claude session live in another terminal shows a radio-waves icon, and AgentDE asks before opening a second copy.
 - **Hiding it.** Click **Recent** to fold the list (remembered per group), right-click the group → **Hide recent sessions**, or turn it off in Settings → Terminal, where you can also leave Codex out and change the number of days.
 - **Older.** Below Recent, **Older** unfolds the group's named sessions from before that (as far back as Claude and Codex keep transcripts: Claude Code deletes them after 30 days unless `cleanupPeriodDays` in `~/.claude/settings.json` says otherwise); right-click the group → **Show older sessions** works when it has no recent ones.
+- **Pinned.** Right-click a session → **Pin to Top** keeps it at the top of the group's list, whatever its age; right-click → **Unpin** puts it back. Pins are saved with the group.
 
 The list refreshes every 30 seconds.
 

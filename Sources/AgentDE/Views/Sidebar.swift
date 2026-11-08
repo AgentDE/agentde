@@ -305,11 +305,17 @@ private struct RecentSessionsList: View {
 
     var body: some View {
         let sessions = store.recentSessions(for: group)
+        let pinned = store.pinnedSessions(for: group)
         let showOlder = store.olderShown.contains(group.id)
-        if !sessions.isEmpty || showOlder {
+        if !sessions.isEmpty || showOlder || !pinned.isEmpty {
             let hidden = group.hideRecent ?? false
             let limit = 6
             VStack(alignment: .leading, spacing: 3) {
+                // Pinned sessions sit at the top, always shown, whatever their age.
+                ForEach(pinned) { session in
+                    RecentSessionPill(session: session, groupID: group.id, pinned: true)
+                }
+                .padding(.top, pinned.first.map { _ in 4 } ?? 0)
                 if !sessions.isEmpty { recent(sessions, hidden: hidden, limit: limit) }
                 if showOlder || (!sessions.isEmpty && !hidden) { older(open: showOlder, limit: limit) }
             }
@@ -385,6 +391,7 @@ private struct RecentSessionsList: View {
 private struct RecentSessionPill: View {
     let session: RecentSession
     let groupID: UUID
+    var pinned = false
     @Environment(Store.self) private var store
     @Environment(\.theme) private var theme
     @State private var hovering = false
@@ -394,6 +401,7 @@ private struct RecentSessionPill: View {
         Button { store.resumeRecentSession(session, in: groupID) } label: {
             HStack(spacing: 5) {
                 Image(systemName: live ? "dot.radiowaves.left.and.right"
+                      : pinned ? "pin.fill"
                       : session.agent == .codex ? TabKind.codex.symbol : "arrow.counterclockwise")
                     .font(.system(size: 8.5, weight: .semibold))
                 Text(session.name)
@@ -415,6 +423,11 @@ private struct RecentSessionPill: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        .contextMenu {
+            Button(pinned ? "Unpin" : "Pin to Top") {
+                withAnimation(.snappy(duration: 0.2)) { store.togglePinned(session, in: groupID) }
+            }
+        }
         .help("Resume \(session.agent == .codex ? "Codex" : "Claude") session \(session.name) in a new tab"
               + (live ? " (it's running somewhere else right now)" : ""))
     }

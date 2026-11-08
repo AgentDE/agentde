@@ -68,6 +68,9 @@ struct GroupModel: Identifiable, Codable, Equatable {
     var startupCommand: String?
     /// Whether the sidebar folds away this group's recent-session list.
     var hideRecent: Bool?
+    /// Past sessions pinned to the top of the group's session list, newest pin first. Saved whole, so a
+    /// pinned session stays listed after it ages out of Recent.
+    var pinnedSessions: [RecentSession]?
     /// Whether the sidebar hides this group's tabs. Sticky: independent of which group is selected.
     var collapsed: Bool?
 }

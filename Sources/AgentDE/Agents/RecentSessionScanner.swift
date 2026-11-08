@@ -1,8 +1,8 @@
 import Foundation
 
 /// A session you started and named that was active recently, offered as a one-click resume under its group.
-struct RecentSession: Identifiable, Equatable {
-    enum Agent: String { case claude, codex }
+struct RecentSession: Identifiable, Equatable, Codable {
+    enum Agent: String, Codable { case claude, codex }
     var id: String { sessionId }
     let sessionId: String
     let name: String

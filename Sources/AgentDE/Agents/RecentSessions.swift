@@ -1,7 +1,7 @@
 import AppKit
 
 extension Store {
-    /// Recent sessions that ran in exactly this group's folder and aren't already open in a tab.
+    /// Recent sessions that ran in exactly this group's folder and aren't already open in a tab or pinned.
     func recentSessions(for group: GroupModel) -> [RecentSession] {
         sessions(recentSessions, for: group)
     }
@@ -11,10 +11,40 @@ extension Store {
         olderSessions.map { sessions($0, for: group) }
     }
 
+    /// The group's pinned sessions that aren't open in a tab, each with its latest name and time if a
+    /// scan has seen it since it was pinned.
+    func pinnedSessions(for group: GroupModel) -> [RecentSession] {
+        let open = openSessionIds
+        let latest = Dictionary((recentSessions + (olderSessions ?? [])).map { ($0.sessionId, $0) }) { a, _ in a }
+        return (group.pinnedSessions ?? []).filter { !open.contains($0.sessionId) }.map { latest[$0.sessionId] ?? $0 }
+    }
+
+    func isPinned(_ session: RecentSession, in groupID: UUID) -> Bool {
+        groups.first { $0.id == groupID }?.pinnedSessions?.contains { $0.sessionId == session.sessionId } ?? false
+    }
+
+    /// Pins a session to the top of the group's list, or unpins it.
+    func togglePinned(_ session: RecentSession, in groupID: UUID) {
+        guard let g = groups.firstIndex(where: { $0.id == groupID }) else { return }
+        let pinned = Self.togglingPin(session, in: groups[g].pinnedSessions ?? [])
+        groups[g].pinnedSessions = pinned.isEmpty ? nil : pinned
+        scheduleSave()
+    }
+
+    /// `pinned` with `session` removed if it's there, otherwise added at the top.
+    static func togglingPin(_ session: RecentSession, in pinned: [RecentSession]) -> [RecentSession] {
+        pinned.contains { $0.sessionId == session.sessionId }
+            ? pinned.filter { $0.sessionId != session.sessionId } : [session] + pinned
+    }
+
+    private var openSessionIds: Set<String> {
+        Set(groups.flatMap { $0.tabs.flatMap { [$0.claudeSessionId, $0.codexSessionId].compactMap { $0 } } })
+    }
+
     private func sessions(_ all: [RecentSession], for group: GroupModel) -> [RecentSession] {
-        let open = Set(groups.flatMap { $0.tabs.flatMap { [$0.claudeSessionId, $0.codexSessionId].compactMap { $0 } } })
+        let hidden = openSessionIds.union((group.pinnedSessions ?? []).map(\.sessionId))
         let dir = Self.normalized(group.dir)
-        return all.filter { !open.contains($0.sessionId) && Self.normalized($0.cwd) == dir }
+        return all.filter { !hidden.contains($0.sessionId) && Self.normalized($0.cwd) == dir }
     }
 
     /// Opens or closes a group's Older list; opening it rescans (the scanners cache what hasn't changed).
