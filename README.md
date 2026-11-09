@@ -20,6 +20,7 @@ Run a dozen Claude Code and Codex sessions side by side, see at a glance which o
 - **A viewer above the chat.** ⌘-click any path or link an agent prints to see the file, page, diff, PDF or video right there.
 - **Workstreams.** Agents keep a shared record of each piece of work (overview, rules, memory, questions for you, progress, files) through an MCP server, shown beside the chat.
 - **Extensible.** Native extensions in Swift, or JSON plugins for widgets, links and themes.
+- **Built for vibe coding.** Yours to change however you want: point your agent at the source. It comes with notes for agents (`CLAUDE.md`) and a map of the code (`docs/ARCHITECTURE.md`).
 
 ## Install
 
