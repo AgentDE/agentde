@@ -154,7 +154,7 @@ Every word must appear, in any order, ignoring case. Results stream in per sessi
 Under each group's tabs, a faded **Recent** list shows the named sessions you started in exactly that group's folder in the last 2 weeks. Click one to resume it in a new tab: Claude with `claude --resume`, Codex with `codex resume`.
 
 - **Only yours, only named.** Claude sessions count if you started them from the CLI or the desktop app and gave them a title (`/rename`, or the desktop app's), or Claude Code named a background session. Codex threads count if you started and named them in the Codex CLI or desktop app. SDK runs, forks, `codex exec` runs, sub-agent threads and sessions already open in a tab are left out.
-- **Telling them apart.** Codex sessions show the Codex icon. A Claude session live in another terminal shows a radio-waves icon, and AgentDE asks before opening a second copy.
+- **Telling them apart.** Codex sessions show the Codex icon. A Claude session live in another terminal shows a radio-waves icon, and AgentDE asks before opening a second copy. Right-click one of those running sessions → **Stop Agent** to stop it without opening it (it asks first; the conversation is kept).
 - **Hiding it.** Click **Recent** to fold the list (remembered per group), right-click the group → **Hide recent sessions**, or turn it off in Settings → Terminal, where you can also leave Codex out and change the number of days.
 - **Older.** **Older** unfolds the group's named sessions from before that (as far back as Claude and Codex keep transcripts: Claude Code deletes them after 30 days unless `cleanupPeriodDays` in `~/.claude/settings.json` says otherwise). It shows under any group that has older sessions, with their count, even when Recent is empty; they're scanned in the background shortly after launch.
 - **Pinned.** Right-click a session, or an open Claude or Codex tab, → **Pin to Top**. A pinned tab moves to the top of its group with a pin; once closed, its session stays at the top of the group's session list, whatever its age. Right-click → **Unpin** to take it back. Pins are saved with the group.
@@ -170,7 +170,7 @@ Tabs run a normal interactive login zsh with your dotfiles. The startup command 
 ## Forking a Claude session
 
 - **Type `/fork` in Claude.** Claude copies the conversation into a new background session and keeps working in the current tab. AgentDE opens the new session as a tab after the last tab you used in that folder, running `claude attach <id>`. The fork keeps running whether or not its tab is open. Any other named background session in a group's folder (say, from `claude --bg`) opens the same way.
-- **Or press ⌘⌥F** (also in the tab's right-click menu and ⌘K): forks the active tab's conversation into a new interactive tab with `claude --resume <id> --fork-session`.
+- **Or press ⌘⌥F** (also **Fork Session** in the tab's right-click menu, and ⌘K): forks the active tab's conversation into a new interactive tab with `claude --resume <id> --fork-session`.
 
 A fork is an independent tab: renaming or closing either one doesn't affect the other.
 
@@ -193,6 +193,17 @@ AgentDE reads Claude Code's registry of running sessions (`~/.claude/sessions/`)
 
 Codex tabs don't show status.
 
+### Claude Code updates
+
+Claude Code updates itself on disk, but each running `claude` keeps its old version until it restarts, and AgentDE tabs outlive app restarts. When some tabs run an older Claude Code than the one installed, the status bar shows **Claude update · N tabs**.
+
+| Action | What it does |
+|---|---|
+| Right-click a Claude tab → **Restart Claude (keeps the session)** | Restarts that tab's Claude on the installed version and resumes its session. Enabled only when Claude is idle (not working, not waiting on you) |
+| **Claude update · N tabs**, or **AgentDE → Restart Idle Claude Tabs (N)** | Restarts every idle outdated Claude tab, one after another, skips busy ones, then shows a summary ("Restarted 9, skipped 3 busy") |
+
+The tab keeps its place, name, workstream and viewer. An interactive tab gets Ctrl-C (which clears anything typed but not sent), `/exit`, then `claude --resume <id>` at the same prompt. A background-session tab has its job stopped (`claude stop`) and a new background session resuming the conversation attached in a fresh shell, which runs the startup command again. Sleeping tabs need nothing: they start on the installed version when opened.
+
 ## Pull requests
 
 The header shows the group's name and folder (then the tab's folder, when the tab is in a subfolder or worktree: `app › ql-crash`), the branch, and the branch's open PR: its number and a summary of checks (✓ passing, a clock while running, ✗ failing). Click it to open the PR on GitHub, or Graphite (Settings → Agents). When checks fail and Claude is idle, **Fix with Claude** types a prompt naming the failing checks and the `gh run view … --log-failed` commands for their logs, and asks Claude to explain before pushing.
@@ -214,7 +225,7 @@ Quitting saves groups, tabs, colors, names, browser URLs and settings. Closing a
 
 ### Background mode
 
-Turn on **Settings → Agents → Run Claude as background sessions**. New Claude tabs then start as Claude background sessions (`claude --bg`) and attach with `claude attach <id>`. Closing a tab stops its agent (`claude stop`); the conversation is kept, so you can resume it from Recent. To close the tab and leave the agent working, right-click it → **Close, keep agent running**; reattach from Claude's Agent View (⌘K → **Open Agent View**).
+Turn on **Settings → Agents → Run Claude as background sessions**. New Claude tabs then start as Claude background sessions (`claude --bg`) and attach with `claude attach <id>`. Closing a tab stops its agent (`claude stop`); the conversation is kept, so you can resume it from Recent. To close the tab and leave the agent working, right-click it → **Close, Keep Agent Running**; reattach from Claude's Agent View (⌘K → **Open Agent View**).
 
 Background sessions inherit your startup command's environment, but Claude's background service reorders `PATH`, so a conda env's `python` may not come first.
 

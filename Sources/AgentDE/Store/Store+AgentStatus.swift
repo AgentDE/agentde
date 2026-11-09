@@ -45,6 +45,8 @@ extension Store {
                 rt.agentPresent = true
                 rt.missedPolls = 0
                 rt.agentName = entry.name
+                rt.agentPid = entry.pid
+                rt.claudeVersion = entry.version
                 switch entry.status {
                 case "busy", "shell":
                     if rt.state != .working { rt.busySince = Date() }
@@ -87,13 +89,16 @@ extension Store {
                 if rt.missedPolls >= 3 {
                     rt.agentPresent = false
                     rt.agentName = nil
+                    rt.agentPid = nil
+                    rt.claudeVersion = nil
                     rt.missedPolls = 0
                     if rt.state == .working || rt.state == .needsYou { rt.state = .none }
                 }
             }
             if rt.state != .needsYou { rt.waitingFor = nil }
             if rt.state != before.state || rt.agentName != before.agentName || rt.sparkleToken != before.sparkleToken
-                || rt.waitingFor != before.waitingFor || rt.agentPresent != before.agentPresent || rt.missedPolls != before.missedPolls {
+                || rt.waitingFor != before.waitingFor || rt.agentPresent != before.agentPresent || rt.missedPolls != before.missedPolls
+                || rt.agentPid != before.agentPid || rt.claudeVersion != before.claudeVersion {
                 runtime[tabID] = rt
                 notifyTransition(tabID, from: before.state, to: rt)
             }

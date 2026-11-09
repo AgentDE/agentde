@@ -26,6 +26,18 @@ struct StatusBar: View {
                 }
             }
             Spacer()
+            let outdated = store.outdatedClaudeTabs.count
+            if let note = store.claudeRestartNote {
+                Text(note).foregroundStyle(Theme.doneUnseen)
+            } else if outdated > 0 {
+                Button { store.restartIdleClaudeTabs() } label: {
+                    Label("Claude update · \(outdated) tab\(outdated == 1 ? "" : "s")", systemImage: "arrow.triangle.2.circlepath")
+                        .foregroundStyle(Theme.doneUnseen)
+                }
+                .buttonStyle(.plain)
+                .hint("Claude Code \(store.installedClaudeVersion ?? "") is installed, but \(outdated) tab\(outdated == 1 ? " runs" : "s run") an older version. "
+                      + "Click to restart the idle ones; each keeps its session.")
+            }
             if let version = store.updateInstalled {
                 Button { AppRestart.restart() } label: {
                     Label("Update installed · Restart", systemImage: "arrow.triangle.2.circlepath")

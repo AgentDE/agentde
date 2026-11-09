@@ -277,6 +277,8 @@ struct TabMenu: View {
     let tab: TabModel
     @Environment(Store.self) private var store
 
+    /// Three groups: the tab, its agent, closing. The agent group always has Show Browser Above, so no group is
+    /// ever empty and dividers never double up.
     var body: some View {
         Button("Rename") { store.selectTab(tab.id, focus: false); store.renamingTabID = tab.id }
         if store.pinnableSession(tab) != nil, let group = store.groups.first(where: { $0.tabs.contains { $0.id == tab.id } }) {
@@ -284,21 +286,25 @@ struct TabMenu: View {
                 withAnimation(.snappy(duration: 0.2)) { store.togglePinnedTab(tab.id) }
             }
         }
-        Divider()
-        if tab.claudeSessionId != nil {
-            Button("Fork into new tab") { store.forkTab(tab.id) }
-        }
-        if tab.attachJobId != nil {
-            Button("Close, keep agent running") { store.closeTab(tab.id, keepAgent: true) }
-        }
-        Button((tab.showBrowser ?? false) ? "Hide browser" : "Show browser above") { store.toggleBrowser(tab.id) }
-        Menu("Move to group") {
+        Menu("Move to Group") {
             ForEach(store.groups) { group in
                 Button(group.name) { store.moveTab(tab.id, toGroup: group.id) }
             }
         }
         Divider()
-        Button("Close tab") { store.closeTab(tab.id) }
+        if tab.kind == .claude {
+            if tab.claudeSessionId != nil {
+                Button("Fork Session") { store.forkTab(tab.id) }
+            }
+            Button("Restart Claude (keeps the session)") { store.restartClaude(tab.id) }
+                .disabled(store.claudeRestartCheck(tab.id) != .eligible)
+        }
+        Button((tab.showBrowser ?? false) ? "Hide Browser" : "Show Browser Above") { store.toggleBrowser(tab.id) }
+        Divider()
+        Button("Close Tab") { store.closeTab(tab.id) }
+        if tab.attachJobId != nil {
+            Button("Close, Keep Agent Running") { store.closeTab(tab.id, keepAgent: true) }
+        }
     }
 }
 
@@ -436,6 +442,11 @@ private struct RecentSessionPill: View {
         .contextMenu {
             Button(pinned ? "Unpin" : "Pin to Top") {
                 withAnimation(.snappy(duration: 0.2)) { store.togglePinned(session, in: groupID) }
+            }
+            // A session running as a background agent with no tab: stop it here (the conversation is kept).
+            if let job = store.liveBackgroundJobs[session.sessionId] {
+                Divider()
+                Button("Stop Agent") { store.stopLiveBackgroundSession(session, job: job) }
             }
         }
         .help("Resume \(session.agent == .codex ? "Codex" : "Claude") session \(session.name) in a new tab"

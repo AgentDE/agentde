@@ -26,6 +26,10 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     let view: AgentDETerminalView
     private(set) var started = false
     weak var store: Store?
+    /// A replacement session waits for the old holder to go before starting (`TerminalRegistry.replaceTerminal`).
+    var held = false
+    /// Start Claude as a background session even if background mode is off (a background tab's restart).
+    var launchInBackground = false
 
     private var connection: PtyConnection?
     /// The tab's shell, as its holder reports it; 0 until connected.
@@ -90,7 +94,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     /// Connects the tab the first time it is shown: to its running holder if there is one (after a relaunch,
     /// the shell and agent are still going), else to a new holder running a fresh shell.
     func startIfNeeded(_ tab: TabModel) {
-        guard !started, store != nil else { return }
+        guard !started, !held, store != nil else { return }
         started = true
         markStarted()
         let id = tabID
@@ -243,7 +247,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             args = ["-l", "-i", "-c", tab.command ?? "true"]
         } else {
             // Startup command first (e.g. `conda activate myenv`), then the agent, if any.
-            let background = store.settings.backgroundAgents && tab.kind == .claude && tab.attachJobId == nil
+            let background = (store.settings.backgroundAgents || launchInBackground) && tab.kind == .claude && tab.attachJobId == nil
             if background { store.pendingBackgroundLaunches[tab.id] = Date() }
             let run = [store.startupCommand(for: tab), TerminalSession.agentCommand(for: tab, background: background)]
                 .compactMap { $0 }
@@ -468,6 +472,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
 
     private func processTerminated(exitCode: Int32?) {
+        // Ended on purpose (closed, or replaced by a restart): a tab still there isn't this session's any more.
+        if terminating { return }
         DebugLog.log("tab \(tabID.uuidString.prefix(8)) process exited code=\(exitCode.map(String.init) ?? "?")", "tab")
         DispatchQueue.main.async { [weak self] in
             guard let self, let store = self.store else { return }

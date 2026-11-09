@@ -17,6 +17,9 @@ struct ClaudeSessionEntry: Decodable {
     /// A spare: an idle session Claude's daemon keeps started so the next resume or `--bg` is instant. It
     /// registers as a background session named after its job id.
     var spare: Bool?
+    /// The Claude Code version this session runs ("2.1.318"). Filled from the process's executable when the
+    /// registry leaves it out (`ClaudeVersion.running(pid:)`).
+    var version: String?
 }
 
 /// Reads Claude's session registry, decoding only the files that changed since the last read.
@@ -86,6 +89,8 @@ final class AgentMonitor {
     /// Which tab's shell each Claude process descends from, kept until the tabs' shells change.
     private var owners: [pid_t: UUID?] = [:]
     private var ownersFor: [pid_t: UUID] = [:]
+    /// Versions read from processes' executables, for registry entries without one.
+    private var versionsByPid: [pid_t: String] = [:]
 
     init(store: Store) {
         self.store = store
@@ -114,8 +119,12 @@ final class AgentMonitor {
         var jobs: [String: ClaudeSessionEntry] = [:]
         var liveIds = Set<String>()
         var livePids = Set<pid_t>()
-        for entry in registry.read() where kill(entry.pid, 0) == 0 {
+        for var entry in registry.read() where kill(entry.pid, 0) == 0 {
             livePids.insert(entry.pid)
+            if ClaudeVersion.valid(entry.version) == nil {
+                if versionsByPid[entry.pid] == nil { versionsByPid[entry.pid] = ClaudeVersion.running(pid: entry.pid) ?? "" }
+                entry.version = versionsByPid[entry.pid].flatMap { $0.isEmpty ? nil : $0 }
+            }
             if let id = entry.sessionId { liveIds.insert(id) }
             // Background sessions run under Claude's daemon, which lives in the process tree of whichever
             // tab's `claude` started it, so they're matched by job id, never by ancestry.
@@ -128,6 +137,7 @@ final class AgentMonitor {
             }
         }
         owners = owners.filter { livePids.contains($0.key) }
+        versionsByPid = versionsByPid.filter { livePids.contains($0.key) }
         // Job ids that background-mode tabs reported for themselves.
         // Receipts are written to `.tmp` and renamed, so a file here is complete. Each is left in place until
         // this instance confirms the tab is its own and the job id is valid (see Store.recordAttachedJob).
@@ -157,6 +167,8 @@ final class AgentMonitor {
         ticks += 1
         if ticks % 60 == 0 { DispatchQueue.main.async { [weak self] in self?.heartbeat() } }
         let limits = ticks % 15 == 1 ? readRateLimits() : nil
+        // The installed Claude Code, every 3 minutes: the target of ~/.local/bin/claude, else `claude --version`.
+        let installed = ticks % 180 == 1 ? ClaudeVersion.installed() : nil
         let recent = inputs.showRecent && ticks % 30 == 1
             ? (recentScanner.scan(days: inputs.recentDays) + (inputs.showCodex ? codexScanner.scan(days: inputs.recentDays) : []))
                 .sorted { $0.lastActive > $1.lastActive }
@@ -183,6 +195,10 @@ final class AgentMonitor {
             }
             store.applyClaudeSessions(matches, jobs: jobs, trackedTabs: Set(shellPids.values))
             if let limits, limits != store.rateLimits { store.rateLimits = limits }
+            if let installed, installed != store.installedClaudeVersion {
+                DebugLog.log("installed Claude Code: \(installed)", "agent")
+                store.installedClaudeVersion = installed
+            }
             if let recent, recent != store.recentSessions { store.recentSessions = recent }
             store.updateLiveSessions(liveIds)
             self?.refreshInputs(from: store)

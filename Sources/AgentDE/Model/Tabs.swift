@@ -91,6 +91,9 @@ struct TabRuntime {
     var started = false
     /// Consecutive polls without the tab's session, so one failed read doesn't count as Claude exiting.
     var missedPolls = 0
+    /// The tab's Claude process (for a background tab, its job's process) and the Claude Code version it runs.
+    var agentPid: pid_t?
+    var claudeVersion: String?
 }
 
 struct RateLimits: Equatable {

@@ -24,6 +24,16 @@ extension Store {
     }
 
     /// Pins a session to the top of the group's list, or unpins it.
+    /// Stops a session that's running as a background agent with no tab (Recent's radio-waves entries), after
+    /// asking: it may be mid-task. `claude stop` keeps the conversation, so it can be resumed later.
+    func stopLiveBackgroundSession(_ session: RecentSession, job: String) {
+        guard confirm("Stop \(session.name)?",
+                      detail: "This background agent will stop, even if it's in the middle of a task. The conversation is kept, so you can resume it later.",
+                      button: "Stop Agent") else { return }
+        DebugLog.log("stopping background session \(session.sessionId.prefix(8)) (job \(job)) from Recent", "agent")
+        stopBackgroundJob(job)
+    }
+
     func togglePinned(_ session: RecentSession, in groupID: UUID) {
         guard let g = groups.firstIndex(where: { $0.id == groupID }) else { return }
         let pinned = Self.togglingPin(session, in: groups[g].pinnedSessions ?? [])

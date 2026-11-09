@@ -27,6 +27,12 @@ final class Store {
     var searchOpen = false
     /// The version installed on disk, when it's newer than the one running ("0.2.0 (41)").
     var updateInstalled: String?
+    /// The Claude Code version installed on disk (`ClaudeVersion.installed`), refreshed every few minutes.
+    var installedClaudeVersion: String?
+    /// Progress, then the summary, of Restart Idle Claude Tabs, shown in the status bar for a while.
+    var claudeRestartNote: String?
+    /// Tabs whose Claude is restarting now.
+    var restartingClaude: Set<UUID> = []
     var sidebarVisible = true
     var renamingTabID: UUID?
     var renamingGroupID: UUID?

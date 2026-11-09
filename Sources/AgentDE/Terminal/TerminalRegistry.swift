@@ -54,6 +54,27 @@ final class TerminalRegistry {
         explorers[id] = nil
     }
 
+    /// Ends a tab's shell (like closing it) but keeps the tab's browser, viewer and explorer, and puts a new,
+    /// held terminal session in its place. It starts only once `held` is cleared, after the old holder is gone,
+    /// so it can't reconnect to the dying one.
+    func replaceTerminal(_ id: UUID) -> TerminalSession {
+        if let old = sessions[id] {
+            retiring[id] = old
+            old.onRetired = { [weak self] in self?.retiring[id] = nil }
+            old.terminate()
+            old.view.removeFromSuperview()
+        }
+        let session = TerminalSession(tabID: id, store: store!)
+        session.held = true
+        sessions[id] = session
+        return session
+    }
+
+    /// Sends raw bytes (a control key, say) to a tab's program, as if typed.
+    func sendKey(_ id: UUID, _ bytes: [UInt8]) {
+        sessions[id]?.view.send(data: bytes[...])
+    }
+
     func applyAppearance() {
         for session in sessions.values { session.applyAppearance() }
     }

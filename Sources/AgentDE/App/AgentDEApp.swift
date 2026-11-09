@@ -126,6 +126,9 @@ struct AgentDECommands: Commands {
         }
         CommandGroup(after: .appTermination) {
             Button("Restart \(AppBrand.name)") { AppRestart.restart() }
+            let outdated = store.outdatedClaudeTabs.count
+            Button("Restart Idle Claude Tabs" + (outdated > 0 ? " (\(outdated))" : "")) { store.restartIdleClaudeTabs() }
+                .disabled(outdated == 0)
         }
         CommandGroup(replacing: .help) {
             Button("Open Debug Log") { DebugLog.openLog() }
