@@ -70,6 +70,10 @@ final class AgentMonitor {
     private var firstSeen: [String: Date] = [:]
     private let recentScanner = RecentSessionScanner()
     private let codexScanner = CodexSessionScanner()
+    /// The slow scans (recent transcripts, Codex's threads, the installed Claude Code) run here, so a status
+    /// tick never waits on them: at launch they can take many seconds, and the dots would wait too.
+    private let scanQueue = DispatchQueue(label: "agentde.agent-monitor.scans", qos: .utility)
+    private var scanning = false
     private let attachDir = URL(fileURLWithPath: AppBrand.configDirectory).appendingPathComponent("attach")
 
     /// What a tick needs from the main thread. The main thread refreshes it at the end of each tick, so the
@@ -177,12 +181,30 @@ final class AgentMonitor {
         ticks += 1
         if ticks % 60 == 0 { DispatchQueue.main.async { [weak self] in self?.heartbeat() } }
         let limits = ticks % 15 == 1 ? readRateLimits() : nil
-        // The installed Claude Code, every 3 minutes: the target of ~/.local/bin/claude, else `claude --version`.
-        let installed = ticks % 180 == 1 ? ClaudeVersion.installed() : nil
-        let recent = inputs.showRecent && ticks % 30 == 1
-            ? (recentScanner.scan(days: inputs.recentDays) + (inputs.showCodex ? codexScanner.scan(days: inputs.recentDays) : []))
-                .sorted { $0.lastActive > $1.lastActive }
-            : nil
+        // The installed Claude Code every 3 minutes (the target of ~/.local/bin/claude, else `claude --version`)
+        // and recent sessions every 30 s, both on the scan queue.
+        let wantInstalled = ticks % 180 == 1
+        let wantRecent = inputs.showRecent && ticks % 30 == 1
+        if (wantInstalled || wantRecent), !scanning {
+            scanning = true
+            let days = inputs.recentDays, codex = inputs.showCodex
+            let recentScanner = self.recentScanner, codexScanner = self.codexScanner
+            scanQueue.async { [weak self] in
+                let installed = wantInstalled ? ClaudeVersion.installed() : nil
+                let recent = wantRecent
+                    ? (recentScanner.scan(days: days) + (codex ? codexScanner.scan(days: days) : [])).sorted { $0.lastActive > $1.lastActive }
+                    : nil
+                self?.queue.async { self?.scanning = false }
+                DispatchQueue.main.async {
+                    guard let store = self?.store else { return }
+                    if let installed, installed != store.installedClaudeVersion {
+                        DebugLog.log("installed Claude Code: \(installed)", "agent")
+                        store.installedClaudeVersion = installed
+                    }
+                    if let recent, recent != store.recentSessions { store.recentSessions = recent }
+                }
+            }
+        }
         DispatchQueue.main.async { [weak self] in
             guard let store = self?.store else { return }
             for (tab, job, file) in reported where store.recordAttachedJob(tab: tab, jobId: job) {
@@ -206,11 +228,6 @@ final class AgentMonitor {
             }
             store.applyClaudeSessions(matches, jobs: jobs, trackedTabs: Set(shellPids.values))
             if let limits, limits != store.rateLimits { store.rateLimits = limits }
-            if let installed, installed != store.installedClaudeVersion {
-                DebugLog.log("installed Claude Code: \(installed)", "agent")
-                store.installedClaudeVersion = installed
-            }
-            if let recent, recent != store.recentSessions { store.recentSessions = recent }
             store.updateLiveSessions(liveIds)
             self?.refreshInputs(from: store)
         }
