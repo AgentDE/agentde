@@ -35,6 +35,7 @@ struct TabStrip: View {
                         Label(kind == .files ? "File Explorer" : kind.label, systemImage: kind.symbol)
                     }
                 }
+                Button { store.newWorktreeTab() } label: { Label("Tab in Worktree…", systemImage: "arrow.triangle.branch") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 12, weight: .medium))
             }

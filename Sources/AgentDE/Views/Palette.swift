@@ -38,6 +38,7 @@ struct CommandPalette: View {
             ("New shell tab", "terminal", { store.newTab(kind: .shell) }),
             ("New Codex tab", "chevron.left.forwardslash.chevron.right", { store.newTab(kind: .codex) }),
             ("New File Explorer tab", "folder", { store.newTab(kind: .files) }),
+            ("New tab in worktree…", "arrow.triangle.branch", { store.newWorktreeTab() }),
             ("New group…", "folder.badge.plus", { store.newGroup() }),
             ("Toggle browser above tab", "globe", { store.toggleBrowser() }),
             ("Show diff", "plus.forwardslash.minus", { store.showDiff() }),

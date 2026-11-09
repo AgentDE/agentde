@@ -18,9 +18,22 @@ Run a dozen Claude Code and Codex sessions side by side, see at a glance which o
 - **Knows what each agent is doing.** A dot per tab: working, needs you, or done, with no setup. Notifications when an agent waits on you.
 - **Tabs that don't die.** Every tab's shell runs in its own small holder process, so agents keep working when you quit, update or crash.
 - **A viewer above the chat.** ⌘-click any path or link an agent prints to see the file, page, diff, PDF or video right there.
-- **Workstreams.** Agents keep a shared record of each piece of work (overview, rules, memory, questions for you, progress, files) through an MCP server, shown beside the chat.
+- **A side panel to see what's going on.** The tab's files, its uncommitted changes and recent commits (click one for its diff), and the workstream: agents keep a shared record of each piece of work (overview, rules, memory, questions for you, progress, files) through an MCP server.
 - **Extensible.** Native extensions in Swift, or JSON plugins for widgets, links and themes.
 - **Built for vibe coding.** Yours to change however you want: point your agent at the source. It comes with notes for agents (`CLAUDE.md`) and a map of the code (`docs/ARCHITECTURE.md`).
+
+## What AgentDE isn't
+
+AgentDE assumes your agents do the low-level work (editing files, running git) and focuses on how you work with them. So it's just the basics, nothing fancy: no account, no cloud backend, no phone app, no elaborate workflows. Your code, sessions and keys stay on your Mac. It lets you talk to your agents efficiently, and what else does one need?
+
+**But what if I want…**
+
+| … | Use |
+|---|---|
+| To edit files or run git myself | Your editor or IDE. AgentDE shows files, changes and commits, read-only |
+| To reach my sessions from my phone or another computer | Claude Code's and Codex's own remote features |
+| VS Code's extensions | VS Code |
+| Windows or Linux | Sorry: macOS only for now. Maybe in the future |
 
 ## Install
 

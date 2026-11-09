@@ -264,7 +264,14 @@ extension Store {
 
     func togglePanel(_ id: UUID? = nil) {
         guard let id = id ?? activeTab?.id, let (g, t) = locate(id) else { return }
-        groups[g].tabs[t].panelHidden = (groups[g].tabs[t].panelHidden ?? false) ? nil : true
+        groups[g].tabs[t].panelHidden = panelVisible(groups[g].tabs[t])
+        scheduleSave()
+    }
+
+    /// Which of the side panel's tabs shows (`SidePanelTab.id`).
+    func setPanelTab(_ id: UUID, _ panelTab: String) {
+        guard let (g, t) = locate(id), groups[g].tabs[t].panelTab != panelTab else { return }
+        groups[g].tabs[t].panelTab = panelTab
         scheduleSave()
     }
 

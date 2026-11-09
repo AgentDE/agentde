@@ -184,6 +184,7 @@ final class AgentMonitor {
                 store.openInViewer(request.item, tab: request.tab, select: false)
             }
             store.refreshActivePullRequest()
+            store.refreshTabPullRequests()
             if backgroundBySession != store.liveBackgroundJobs { store.liveBackgroundJobs = backgroundBySession }
             for job in newJobs.sorted(by: { ($0.jobId ?? "") < ($1.jobId ?? "") }) {
                 guard let id = job.jobId else { continue }

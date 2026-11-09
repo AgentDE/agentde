@@ -108,9 +108,22 @@ extension Store: AgentDEHost {
         return extensions.reduce(into: [:]) { env, ext in env.merge(ext.launchEnvironment(for: info)) { $1 } }
     }
 
-    func panel(for tab: TabModel) -> AnyView? {
-        guard let info = tabInfo(tab.id) else { return nil }
-        return extensions.lazy.compactMap { $0.panel(for: info) }.first
+    /// The side panel's tabs for a terminal tab: the extensions' (Workstream, say), then Files and Changes.
+    func sidePanelTabs(for tab: TabModel) -> [SidePanelTab] {
+        guard tab.kind != .files, tab.kind != .command, let info = tabInfo(tab.id) else { return [] }
+        return extensions.flatMap { $0.sidePanelTabs(for: info) } + [
+            SidePanelTab(id: "files", title: "Files", symbol: "folder", view: AnyView(FilesPanel(tab: tab))),
+            SidePanelTab(id: "changes", title: "Changes", symbol: "plusminus", view: AnyView(ChangesPanel(tab: tab))),
+        ]
+    }
+
+    /// Whether a tab shows its side panel: what the user chose (⌥⌘I), else shown when an extension adds a tab
+    /// to it (the workstream), else hidden.
+    func panelVisible(_ tab: TabModel) -> Bool {
+        guard tab.kind != .files, tab.kind != .command else { return false }
+        if let hidden = tab.panelHidden { return !hidden }
+        guard let info = tabInfo(tab.id) else { return false }
+        return extensions.contains { !$0.sidePanelTabs(for: info).isEmpty }
     }
 
     var linkRules: [LinkRule] { extensions.flatMap(\.linkRules) }

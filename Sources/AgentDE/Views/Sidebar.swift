@@ -150,6 +150,7 @@ private struct GroupRow: View {
                         Label(kind == .files ? "File Explorer" : kind.label, systemImage: kind.symbol)
                     }
                 }
+                Button { store.newWorktreeTab(in: group.id) } label: { Label("Tab in Worktree…", systemImage: "arrow.triangle.branch") }
                 let items = store.extensions.flatMap { $0.newMenuItems(for: GroupInfo(id: group.id, name: group.name, folder: group.dir)) }
                 if !items.isEmpty { Divider() }
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
@@ -232,6 +233,9 @@ private struct SidebarTabRow: View {
                 .foregroundStyle(active ? theme.text : theme.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
+            if store.settings.showPullRequests, store.onOwnBranch(tab, in: group), let pr = store.pullRequest(forDir: tab.cwd) {
+                PullRequestBadge(pr: pr)
+            }
             if store.isPinned(tab: tab, in: group.id) {
                 Image(systemName: "pin.fill").font(.system(size: 8.5)).foregroundStyle(theme.muted)
             }

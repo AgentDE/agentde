@@ -89,7 +89,7 @@ The **viewer** shows Markdown as a document, local HTML, PDFs, images, video and
 
 **Browser above a tab.** ⌘⇧B adds a small browser pane above the active tab. The address bar accepts `5173` or `:5173` for `http://localhost:5173`, a path like `~/report.html`, or any URL. Each tab remembers its last URL.
 
-**Side panel.** An extension can add a panel beside an agent tab's chat (the Workstreams extension does). Layout → Side Panel (⌥⌘I) hides or shows it for the tab.
+**Side panel.** Beside a tab's chat, with a tab for each thing it shows: **Workstream** (from the Workstreams extension), **Files** (the tab folder's tree; click a file to see it in the viewer) and **Changes** (the repository's uncommitted changes with lines added and removed, then the last 30 commits; click one to see its diff in the viewer). Changes is read-only: committing and pushing are your agent's job. It refreshes when the agent's status changes, or with ↻. Layout → Side Panel (⌥⌘I) hides or shows it for the tab; it shows by default when an extension adds a tab to it.
 
 ## Extensions
 
@@ -120,7 +120,7 @@ workstream-mcp/         (used by agentde-workstreams)
   "product": "AgentDELinear", "create": "LinearExtension()" }
 ```
 
-An empty list builds the core alone. Order matters where extensions compete for one slot (the side panel, the sidebar footer): the first that fills it wins. Settings → Extensions shows each loaded extension's own settings. How to write one: [docs/EXTENDING.md](EXTENDING.md).
+An empty list builds the core alone. Order matters where extensions compete for one slot (the sidebar footer): the first that fills it wins. Their side panel tabs come in this order too. Settings → Extensions shows each loaded extension's own settings. How to write one: [docs/EXTENDING.md](EXTENDING.md).
 
 ## Plugins
 
@@ -205,6 +205,8 @@ Claude Code updates itself on disk, but each running `claude` keeps its old vers
 The tab keeps its place, name, workstream and viewer. An interactive tab gets Ctrl-C (which clears anything typed but not sent), `/exit`, then `claude --resume <id>` at the same prompt. A background-session tab has its job stopped (`claude stop`) and a new background session resuming the conversation attached in a fresh shell, which runs the startup command again. Sleeping tabs need nothing: they start on the installed version when opened.
 
 ## Pull requests
+
+**Worktree tabs.** Right-click a group → New → **Tab in Worktree…** (also in the tab strip's + and the palette): name a branch and pick Claude or Codex. AgentDE makes the branch from the remote's default branch, checks it out in `<repo>-worktrees/<name>` beside the repository, and starts the agent there in a tab named after the branch. A tab on another branch than its group's folder shows its PR's checks in the sidebar (✓, a clock, ✗; hover for the PR). Worktrees are never removed for you: your agent cleans up after itself.
 
 The header shows the group's name and folder (then the tab's folder, when the tab is in a subfolder or worktree: `app › ql-crash`), the branch, and the branch's open PR: its number and a summary of checks (✓ passing, a clock while running, ✗ failing). Click it to open the PR on GitHub, or Graphite (Settings → Agents). When checks fail and Claude is idle, **Fix with Claude** types a prompt naming the failing checks and the `gh run view … --log-failed` commands for their logs, and asks Claude to explain before pushing.
 

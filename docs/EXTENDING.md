@@ -38,7 +38,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `tabClosing(_:keepAgent:)` | A tab is closing; with `keepAgent` its background agent keeps running |
 | `backgroundSessionOpened(_:session:forkParent:)` | The app opened a tab for a background session (`/fork`, `claude --bg`); `forkParent` is the session it was forked from, when known |
 | `wantsAttention(_:)` | Whether a tab gets a soft attention ring without its agent being stopped |
-| `panel(for:)` | The side panel beside an agent tab's chat; the first extension that returns one owns it |
+| `sidePanelTabs(for:)` | Tabs in the side panel beside a terminal tab (`SidePanelTab`: id, title, SF Symbol, view). They come before the core's Files and Changes, in extension order |
 | `sidebarFooter()` | The area at the bottom of the sidebar; the first extension that returns one owns it |
 | `windowOverlay()` | A view drawn over the whole window that passes clicks through |
 | `viewerAccessory(for:item:)` | Controls in the viewer's header for the file path or link it shows |

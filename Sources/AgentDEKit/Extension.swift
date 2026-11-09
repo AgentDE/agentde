@@ -36,8 +36,9 @@ public protocol AgentDEExtension: AnyObject {
 
     // MARK: UI slots
 
-    /// The panel beside an agent tab's chat. The first extension that returns one owns the slot.
-    func panel(for tab: TabInfo) -> AnyView?
+    /// Tabs this extension adds to the side panel beside a terminal tab (Workstream, say). They come before
+    /// the core's Files and Changes, in extension order.
+    func sidePanelTabs(for tab: TabInfo) -> [SidePanelTab]
     /// The area at the bottom of the sidebar. The first extension that returns one owns it.
     func sidebarFooter() -> AnyView?
     /// Something drawn over the whole window, passing clicks through (an animation, say).
@@ -73,7 +74,7 @@ public extension AgentDEExtension {
     func tabClosing(_ tab: TabInfo, keepAgent: Bool) {}
     func backgroundSessionOpened(_ tab: TabInfo, session: String?, forkParent: String?) {}
     func wantsAttention(_ tab: TabInfo) -> Bool { false }
-    func panel(for tab: TabInfo) -> AnyView? { nil }
+    func sidePanelTabs(for tab: TabInfo) -> [SidePanelTab] { [] }
     func sidebarFooter() -> AnyView? { nil }
     func windowOverlay() -> AnyView? { nil }
     func viewerAccessory(for tab: TabInfo, item: String) -> AnyView? { nil }
@@ -185,6 +186,21 @@ public struct GroupInfo: Identifiable, Equatable {
 }
 
 /// A menu item an extension adds.
+/// One tab of the side panel: a short title and SF Symbol for its header, and what it shows.
+public struct SidePanelTab: Identifiable {
+    /// Stable across launches: the tab remembers which one was showing.
+    public var id: String
+    public var title: String
+    public var symbol: String
+    public var view: AnyView
+    public init(id: String, title: String, symbol: String, view: AnyView) {
+        self.id = id
+        self.title = title
+        self.symbol = symbol
+        self.view = view
+    }
+}
+
 public struct ExtensionAction {
     public var title: String
     public var symbol: String?

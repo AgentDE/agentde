@@ -46,3 +46,25 @@ struct PullRequestChip: View {
         }
     }
 }
+
+/// A sidebar tab row's PR mark: the checks' state (✓, a clock, ✗), or the PR glyph when it has no checks.
+struct PullRequestBadge: View {
+    let pr: PullRequestStatus
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Group {
+            if pr.failing > 0 {
+                Image(systemName: "xmark.circle.fill").foregroundStyle(Color(hex: 0xE24B4A))
+            } else if pr.pending > 0 {
+                Image(systemName: "clock").foregroundStyle(theme.muted)
+            } else if pr.passing > 0 {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(Color(hex: 0x1D9E75))
+            } else {
+                Image(systemName: pr.isDraft ? "circle.dashed" : "arrow.triangle.pull").foregroundStyle(theme.muted)
+            }
+        }
+        .font(.system(size: 10))
+        .help("#\(pr.number) \(pr.title)" + (pr.failing > 0 ? "\nFailing: \(pr.failingNames.joined(separator: ", "))" : ""))
+    }
+}

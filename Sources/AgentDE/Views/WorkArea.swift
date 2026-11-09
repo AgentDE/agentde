@@ -29,7 +29,7 @@ private struct TabPane: View {
             terminalStack
         } else {
             GeometryReader { geo in
-                let showPanel = tab.panelHidden != true && store.panel(for: tab) != nil
+                let showPanel = store.panelVisible(tab)
                 let narrow = geo.size.width < 760
                 HStack(spacing: 0) {
                     mainColumn(height: geo.size.height)
@@ -64,10 +64,7 @@ private struct TabPane: View {
         }
     }
 
-    /// The side panel an extension shows for this tab.
-    @ViewBuilder private var panel: some View {
-        if let panel = store.panel(for: tab) { panel }
-    }
+    private var panel: some View { SidePanel(tab: tab) }
 
     private func clampPanel(_ width: Double, available: CGFloat) -> Double {
         min(max(width, 240), max(240, min(560, Double(available) * 0.5)))

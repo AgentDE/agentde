@@ -123,7 +123,7 @@ struct FileExplorerView: View {
     }
 }
 
-private struct FileRow: View {
+struct FileRow: View {
     let name: String
     let url: URL
     let depth: Int
@@ -167,7 +167,7 @@ private struct FileRow: View {
 }
 
 /// Actions for a file or folder: open it, show it elsewhere, or hand its path to Claude.
-private struct FileMenu: View {
+struct FileMenu: View {
     let url: URL
     let root: URL
     let tab: TabModel

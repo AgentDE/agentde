@@ -38,6 +38,8 @@ struct TabModel: Identifiable, Codable, Equatable {
     var viewerHistory: [String]?
     var panelWidth: Double?
     var panelHidden: Bool?
+    /// Which side panel tab shows (`SidePanelTab.id`); the first when unset or gone.
+    var panelTab: String?
     /// Saved by versions before extensions: the workstream panel's open sections. Moved into `extensionData` at load.
     var panelSections: [String: Bool]?
     /// Values native extensions keep with the tab, keyed "<extension id>.<key>" (`AgentDEHost.value`).
