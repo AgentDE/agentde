@@ -183,10 +183,9 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             pdf.document = PDFDocument(url: url)
             install(pdf)
         case .image:
-            let view = (content as? NSImageView) ?? NSImageView()
-            view.imageScaling = .scaleProportionallyDown
-            view.imageAlignment = .alignCenter
-            view.image = NSImage(contentsOf: url)
+            let existing = content as? ZoomableImageView
+            let view = existing ?? ZoomableImageView()
+            view.show(NSImage(contentsOf: url), keepZoom: existing != nil && keepScroll)
             install(view)
         case .diff, .text:
             let scroll = (content as? NSScrollView) ?? NSTextView.scrollableTextView()

@@ -96,3 +96,13 @@ struct TabWorkstreamTests {
         #expect(old.viewerItem == nil && old.panelWidth == nil)
     }
 }
+
+@Suite("Image zoom")
+struct ImageZoomTests {
+    @Test func fittingNeverEnlargesAndShrinksToTheTighterSide() {
+        #expect(ZoomableImageView.fitMagnification(image: NSSize(width: 200, height: 100), in: NSSize(width: 800, height: 600)) == 1)
+        #expect(ZoomableImageView.fitMagnification(image: NSSize(width: 1600, height: 800), in: NSSize(width: 800, height: 600)) == 0.5)
+        #expect(ZoomableImageView.fitMagnification(image: NSSize(width: 800, height: 1200), in: NSSize(width: 800, height: 600)) == 0.5)
+        #expect(ZoomableImageView.fitMagnification(image: .zero, in: NSSize(width: 800, height: 600)) == 1)
+    }
+}
