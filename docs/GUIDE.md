@@ -161,6 +161,9 @@ Under each group's tabs, a faded **Recent** list shows the named sessions you st
 
 The list refreshes every 30 seconds.
 
+
+**Only active tabs.** The filter button beside **Groups** hides every tab without a status dot, Recent and Older, and groups with nothing left, leaving the agents that are working, waiting on you or done (and the tab on screen). Click it again for everything.
+
 ## Startup command (conda and friends)
 
 Set **Settings → Terminal → Startup command** to something like `conda activate myenv`, and every new tab runs it before Claude or Codex starts. Override it per group with right-click → **Startup command…**: empty uses the default, `:` runs nothing.

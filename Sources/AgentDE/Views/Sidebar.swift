@@ -40,6 +40,13 @@ struct Sidebar: View {
             HStack {
                 Text("Groups").font(.system(size: 11.5, weight: .medium)).foregroundStyle(theme.muted)
                 Spacer()
+                let activeOnly = store.settings.sidebarActiveOnly
+                Button { withAnimation(.snappy(duration: 0.2)) { store.settings.sidebarActiveOnly.toggle() } } label: {
+                    Image(systemName: activeOnly ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                        .font(.system(size: 12)).foregroundStyle(activeOnly ? theme.text : theme.muted)
+                }
+                .buttonStyle(.plain)
+                .hint(activeOnly ? "Show every tab and Recent" : "Show only tabs that are working, waiting on you or done")
                 Button { store.newGroup() } label: {
                     Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).foregroundStyle(theme.muted)
                 }
@@ -51,16 +58,26 @@ struct Sidebar: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
+                    let activeOnly = store.settings.sidebarActiveOnly
                     ForEach(store.groups) { group in
-                        GroupRow(group: group)
-                        if !(group.collapsed ?? false) {
-                            ForEach(group.tabs) { tab in SidebarTabRow(group: group, tab: tab) }
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            if store.settings.showRecentSessions {
-                                RecentSessionsList(group: group)
+                        // Active only: tabs with a dot, plus the one on screen so you can see where you are.
+                        let tabs = activeOnly ? group.tabs.filter { store.state($0.id) != .none || $0.id == store.activeTab?.id } : group.tabs
+                        if !activeOnly || !tabs.isEmpty {
+                            GroupRow(group: group)
+                            if !(group.collapsed ?? false) {
+                                ForEach(tabs) { tab in SidebarTabRow(group: group, tab: tab) }
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                                if store.settings.showRecentSessions, !activeOnly {
+                                    RecentSessionsList(group: group)
+                                }
+                                Spacer().frame(height: 4)
                             }
-                            Spacer().frame(height: 4)
                         }
+                    }
+                    if activeOnly, !store.groups.contains(where: { g in g.tabs.contains { store.state($0.id) != .none } }) {
+                        Text("No agent is working, waiting or done")
+                            .font(.system(size: 11.5)).foregroundStyle(theme.muted)
+                            .padding(.horizontal, 8).padding(.top, 6)
                     }
                 }
                 .padding(.horizontal, 8)

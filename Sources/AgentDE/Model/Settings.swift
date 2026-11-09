@@ -24,6 +24,8 @@ struct AgentDESettings: Codable, Equatable {
     var defaultTabKind: TabKind = .claude
     /// Show recently active Claude sessions under each group, one click to resume.
     var showRecentSessions: Bool = true
+    /// The sidebar shows only tabs with a status (working, waiting on you, done) and hides Recent.
+    var sidebarActiveOnly: Bool = false
     var recentSessionDays: Double = 14
     /// Include named Codex threads in the Recent lists.
     var showCodexSessions: Bool = true
