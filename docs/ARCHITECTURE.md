@@ -251,7 +251,7 @@ A workspace with its own app target skips step 1 by setting `APP_PACKAGE` (its f
 
 **Tests with the Command Line Tools.** Swift Testing works, but SwiftPM sometimes drops the macro plugin from incremental test builds, so `scripts/test.sh` passes `-plugin-path …/host/plugins/testing` explicitly. It also sets `AGENTDE_LOG_DIR` to a scratch folder, so tests never write the real log.
 
-**macOS 26 SDK on purpose.** In the macOS 27 CLT SDK, SwiftUI's `@State` is a macro whose compiler plugin (`SwiftUIMacros`) ships only with Xcode. The 26 SDK still has the property wrapper. `scripts/env.sh` sets `SDKROOT`; override with `AGENTDE_SDK=/path/to/sdk`. `@Observable` is fine because the Observation macro plugin does ship with the CLT.
+**macOS 26 SDK on purpose.** In the macOS 27 CLT SDK, SwiftUI's `@State` is a macro whose compiler plugin (`SwiftUIMacros`) ships only with Xcode. The 26 SDK still has the property wrapper. It comes with CLT 26 (installs on macOS 15.6 or later) and also ships beside the 27 SDK in CLT 27, so building needs macOS 15.6 or later even though the app runs on 14. `scripts/env.sh` sets `SDKROOT`; override with `AGENTDE_SDK=/path/to/sdk`. `@Observable` is fine because the Observation macro plugin does ship with the CLT.
 
 **Vendored SwiftTerm.** `Vendor/SwiftTerm` is SwiftTerm v1.20.0 (MIT) with small patches, listed in [Vendor/SwiftTerm/PATCHES.md](https://github.com/AgentDE/agentde/blob/main/Vendor/SwiftTerm/PATCHES.md). The important one: `Shaders.metal` ships as a plain resource rather than being compiled at build time (which needs Xcode's `metal` tool). SwiftTerm already compiles it from source at runtime when no precompiled library exists, so GPU rendering still works.
 

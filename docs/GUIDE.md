@@ -2,29 +2,52 @@
 
 Everything AgentDE does, and every key and setting. The [README](https://github.com/AgentDE/agentde#readme) is the short version.
 
-**Contents:** [Install](#install) · [The basics](#the-basics) · [Extensions](#extensions) · [Plugins](#plugins) · [File Explorer](#file-explorer) · [Search](#search) · [Recent sessions](#recent-sessions) · [Startup command](#startup-command-conda-and-friends) · [Forking](#forking-a-claude-session) · [Agent status](#agent-status) · [Pull requests](#pull-requests) · [Restoring](#restoring) · [Keys](#keys) · [Settings](#settings) · [Files](#files) · [Troubleshooting](#troubleshooting) · [Building](#building) · [Development](#development) · [License](#license)
+**Contents:** [Install](#install) · [Uninstall](#uninstall) · [The basics](#the-basics) · [Extensions](#extensions) · [Plugins](#plugins) · [File Explorer](#file-explorer) · [Search](#search) · [Recent sessions](#recent-sessions) · [Startup command](#startup-command-conda-and-friends) · [Forking](#forking-a-claude-session) · [Agent status](#agent-status) · [Pull requests](#pull-requests) · [Restoring](#restoring) · [Keys](#keys) · [Settings](#settings) · [Files](#files) · [Troubleshooting](#troubleshooting) · [Building](#building) · [Development](#development) · [License](#license)
 
 How it works inside: [ARCHITECTURE.md](ARCHITECTURE.md). Writing extensions and plugins: [EXTENDING.md](EXTENDING.md). Notes for agents working on this repo: [CLAUDE.md](https://github.com/AgentDE/agentde/blob/main/CLAUDE.md).
 
 ## Install
 
-Clone this repo, then (the first build clones the extensions in `extensions.json` next to it; see [Extensions](#extensions)):
-
 ```bash
-cd agentde
-make signing        # once: a local signing identity, so macOS keeps your permission answers across builds
-make install        # test, build, install to /Applications, and add an `agentde` command
+git clone https://github.com/AgentDE/agentde && cd agentde
+make signing                    # once: a local signing identity, so macOS keeps your permission answers across builds
+make install                    # test, build (about 4 minutes the first time), install to /Applications, add an `agentde` command
+make register-workstream        # once: shows what registering the workstream MCP server would change
+make register-workstream YES=1  # ...and makes those changes
 ```
 
-Open AgentDE like any app, or run `agentde` from any terminal. Run `make install` again to update: it replaces the installed app, and a running copy keeps working until you restart it (**Update installed · Restart** in the status bar). Restarting keeps every tab running. `make uninstall` removes the app and the command, and keeps your saved state.
+The first build clones the extensions in `extensions.json` next to this repo (see [Extensions](#extensions)).
+
+**Registering workstreams** adds the `workstream` MCP server, an allow rule for its tools, and its hooks to Claude Code (`~/.claude/settings.json`, backed up first) and Codex (`~/.codex/config.toml`). It does nothing outside AgentDE tabs. Run it again after moving the app; `scripts/register-workstream.sh --uninstall --yes` takes it back.
+
+Open AgentDE like any app, or run `agentde` from any terminal (the command is in `~/.local/bin`, which must be on your `PATH`). Run `make install` again to update: it replaces the installed app, and a running copy keeps working until you restart it (**Update installed · Restart** in the status bar). Restarting keeps every tab running.
 
 | Requirement | Notes |
 |---|---|
-| macOS 14 or later | |
-| Xcode Command Line Tools | `xcode-select --install`; full Xcode isn't needed |
+| macOS 14 or later | To run the app |
+| macOS 15.6 or later, with Xcode Command Line Tools 26 or newer | To build it: the build uses their macOS 26 SDK. `xcode-select --install`, or Software Update; full Xcode isn't needed |
 | `claude` on your login shell's `PATH` | For Claude tabs; `codex` for Codex tabs |
 
 **Why `make signing`.** macOS ties privacy permissions (Documents, Downloads, Desktop and so on) to an app's code signature, and terminals inherit AgentDE's. An ad hoc signature changes with every build, so macOS would ask again after each install. `make signing` creates a self-signed identity, "AgentDE Local Signing", in your login keychain, usable only for code signing; builds use it automatically. `scripts/setup-signing.sh --remove` deletes it.
+
+### Permission prompts
+
+| Prompt | When | Why |
+|---|---|---|
+| Keychain password | `make signing` | Adding the signing identity to your login keychain |
+| Notifications | First launch | Alerts when an agent needs you or is done |
+| Calendar | The Calendar widget's first showing | Reading today's and tomorrow's events |
+| Documents, Desktop, Downloads… | A tab first touches one of those folders | macOS asks for the app; with `make signing` it asks once |
+
+### Uninstall
+
+| Step | Removes |
+|---|---|
+| Close every tab, or `pkill agentde-pty` (ends every tab's shell and agent) | The running tabs |
+| `scripts/register-workstream.sh --uninstall --yes` | The workstream MCP server, allow rule, hooks and status-line wrapper from Claude Code and Codex |
+| `scripts/setup-signing.sh --remove` | The signing identity |
+| `make uninstall` | The app and the `agentde` command |
+| Delete `~/.config/agentde`, `~/.config/workstreams`, `~/Library/Logs/AgentDE`, `~/Library/Caches/workstreams` | Saved state, workstreams, logs and caches |
 
 ## The basics
 
@@ -101,7 +124,7 @@ An empty list builds the core alone. Order matters where extensions compete for 
 
 ## Plugins
 
-A **JSON plugin** is a folder in `~/.config/agentde/plugins/` with a `plugin.json`. It can add sidebar widgets (an HTML page, or a shell command's output), links that open in the viewer, themes and group palettes, with nothing to build. Plugins are read at launch, so restart AgentDE after changing one. Widgets need the Widgets extension. An example is in [examples/hello-plugin](examples/hello-plugin); the format is in [docs/EXTENDING.md](EXTENDING.md#json-plugins).
+A **JSON plugin** is a folder in `~/.config/agentde/plugins/` with a `plugin.json`. It can add sidebar widgets (an HTML page, or a shell command's output), links that open in the viewer, themes and group palettes, with nothing to build. Plugins are read at launch, so restart AgentDE after changing one. Widgets need the Widgets extension. An example is in [examples/hello-plugin](https://github.com/AgentDE/agentde/tree/main/examples/hello-plugin); the format is in [docs/EXTENDING.md](EXTENDING.md#json-plugins).
 
 ## File Explorer
 
@@ -265,6 +288,9 @@ Each tab's environment includes `TERM_PROGRAM=AgentDE` and `AGENTDE_TAB_ID=<uuid
 | Tabs or groups missing after an update | Unreadable parts of the saved state are dropped one by one, and the original is kept as `state.json.unreadable-<time>`; the debug log says what was dropped |
 | `make` stops with "No package at …" or "Couldn't clone …" | An extension in `extensions.json` isn't beside this repo and couldn't be cloned: check its `repo` and your network, clone it yourself, or take it out of the file |
 | Starting fresh | Quit, delete `~/.config/agentde/state.json`, reopen |
+| `make` stops with "Missing SDK at …/MacOSX26.sdk" | The build needs the macOS 26 SDK from Command Line Tools 26 or newer, which install on macOS 15.6 or later: update them in Software Update (or `xcode-select --install`), or point `AGENTDE_SDK` at a macOS 26 SDK |
+| Plain `swift build` or `swift test` fails with macro plugin errors (`@State`, `TestingMacros`) | Use `make` and `make test`: they set the SDK and the plugin path that the Command Line Tools need |
+| `make install` stops before installing | It runs the tests first, and a failing test stops it. `make test` shows which; `make` builds without testing |
 
 **Debug log.** Help → **Open Debug Log** opens `~/Library/Logs/AgentDE/agentde.log`: launches and quits, tabs starting and exiting, agent state changes, failed lookups, and a once-a-minute heartbeat with memory, CPU and any tab producing heavy output.
 
@@ -319,7 +345,7 @@ Vendor/SwiftTerm/     the terminal emulator (MIT), with local changes in PATCHES
 Resources/            app icon
 scripts/              build, assemble, brand, install, test, signing, icon and test-instance scripts
 examples/             a JSON plugin
-docs/                 ARCHITECTURE.md, EXTENDING.md
+docs/                 GUIDE.md, ARCHITECTURE.md, EXTENDING.md, and the website (index.html, site.css, _layouts/, images/)
 ```
 
 Read [docs/ARCHITECTURE.md](ARCHITECTURE.md) before changing anything substantial, especially the build notes about SDKs and the vendored terminal library.

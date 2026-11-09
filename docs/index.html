@@ -40,11 +40,12 @@
 
   <section id="install" class="install">
     <h2>Install</h2>
-    <p>macOS 14 or later, the Xcode Command Line Tools (<code>xcode-select --install</code>) and <code>claude</code> or <code>codex</code> on your <code>PATH</code>.</p>
+    <p>Runs on macOS 14 or later. Building needs macOS 15.6 or later with the Xcode Command Line Tools 26 or newer (<code>xcode-select --install</code>), and tabs need <code>claude</code> or <code>codex</code> on your <code>PATH</code>.</p>
 <pre><code>git clone https://github.com/AgentDE/agentde && cd agentde
-make signing    # once, so macOS remembers your permission answers
-make install    # about 4 minutes the first time</code></pre>
-    <p class="muted">The first build clones the extensions next to the repo. Run <code>make install</code> again to update; your tabs keep running.</p>
+make signing                    # once, so macOS remembers your permission answers
+make install                    # about 4 minutes the first time
+make register-workstream YES=1  # once: the workstream MCP server and hooks</code></pre>
+    <p class="muted">The full steps, what each one changes, and uninstalling: <a href="GUIDE.html#install">Guide → Install</a>.</p>
   </section>
 
   <section class="repos">

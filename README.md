@@ -23,15 +23,16 @@ Run a dozen Claude Code and Codex sessions side by side, see at a glance which o
 
 ## Install
 
-Needs macOS 14 or later, the Xcode Command Line Tools (`xcode-select --install`; full Xcode isn't needed) and `claude` or `codex` on your `PATH`.
+Runs on macOS 14 or later. Building needs macOS 15.6 or later with the Xcode Command Line Tools 26 or newer (`xcode-select --install`; full Xcode isn't needed), and tabs need `claude` or `codex` on your `PATH`.
 
 ```bash
 git clone https://github.com/AgentDE/agentde && cd agentde
-make signing        # once: a local signing identity, so macOS remembers your permission answers
-make install        # build (about 4 minutes the first time), install to /Applications, add an `agentde` command
+make signing                    # once: so macOS remembers your permission answers
+make install                    # about 4 minutes the first time
+make register-workstream YES=1  # once: the workstream MCP server and hooks (run without YES=1 to see the changes first)
 ```
 
-The first build clones the extensions next to this folder. Run `make install` again to update; your tabs keep running.
+The full steps, what each one changes, and uninstalling: [Guide → Install](docs/GUIDE.md#install).
 
 ## The repos
 
