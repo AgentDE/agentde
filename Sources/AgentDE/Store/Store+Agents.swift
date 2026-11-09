@@ -25,6 +25,9 @@ extension Store {
         groups[g].tabs.insert(fork, at: t + 1)
         selectTab(fork.id)
         scheduleSave()
+        if let parent = tabInfo(source.id), let child = tabInfo(fork.id) {
+            for ext in extensions { ext.tabForked(child, from: parent) }
+        }
     }
 
     /// `notYet`: not a session to open as things stand (a spare, or no name yet); the monitor asks again each poll.

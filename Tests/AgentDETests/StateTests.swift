@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import Testing
 @testable import AgentDE
 
@@ -45,6 +45,27 @@ struct SavedStateTests {
         let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(UUID().uuidString)", "kind": "shell", "cwd": "/tmp"}]}]}"#)
         #expect(probe.host != nil)
         #expect(store.wantsAttention(store.groups[0].tabs[0]) == false)
+    }
+
+    /// Right-click → Fork Session tells extensions which tab it came from, and the fork claims no session (not
+    /// its parent's) until Claude gives it its own.
+    @Test func forksAreAnnouncedWithoutTheirParentsSession() throws {
+        final class Probe: AgentDEExtension {
+            let id = "fork-probe", name = "Fork probe"
+            var forks: [(tab: TabInfo, parent: TabInfo)] = []
+            func tabForked(_ tab: TabInfo, from parent: TabInfo) { forks.append((tab, parent)) }
+        }
+        _ = NSApplication.shared   // selecting the new tab asks NSApp whether the app is active
+        let probe = Probe()
+        AgentDEMain.extensions = [probe]
+        defer { AgentDEMain.extensions = [] }
+        let session = "0b4c6a2e-1d2f-4e5a-9b8c-7d6e5f4a3b2c", parentID = UUID()
+        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(parentID.uuidString)", "kind": "claude", "cwd": "/tmp", "claudeSessionId": "\#(session)"}]}]}"#)
+        store.forkTab(parentID)
+        let fork = try #require(probe.forks.first)
+        #expect(probe.forks.count == 1)
+        #expect(fork.parent.id == parentID && fork.parent.agentSession == session)
+        #expect(fork.tab.id != parentID && fork.tab.agentSession == nil)
     }
 
     @Test func unreadableEntriesAreDroppedOneByOneAndTheOriginalKept() throws {

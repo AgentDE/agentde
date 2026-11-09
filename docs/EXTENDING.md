@@ -37,6 +37,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `agentWentIdle(_:)` | A tab's agent finished a turn or is waiting |
 | `tabClosing(_:keepAgent:)` | A tab is closing; with `keepAgent` its background agent keeps running |
 | `backgroundSessionOpened(_:session:forkParent:)` | The app opened a tab for a background session (`/fork`, `claude --bg`); `forkParent` is the session it was forked from, when known |
+| `tabForked(_:from:)` | The user forked a tab's Claude session into a new tab (right-click → Fork Session). The new tab has no `agentSession` until Claude gives the fork its own id |
 | `wantsAttention(_:)` | Whether a tab gets a soft attention ring without its agent being stopped |
 | `sidePanelTabs(for:)` | Tabs in the side panel beside a terminal tab (`SidePanelTab`: id, title, SF Symbol, view). They come before the core's Files and Changes, in extension order |
 | `sidebarFooter()` | The area at the bottom of the sidebar; the first extension that returns one owns it |

@@ -19,9 +19,11 @@ extension Store: AgentDEHost {
                        viewerItem: tab.viewerItem)
     }
 
-    /// The agent session a tab runs (Claude, or Codex).
+    /// The agent session a tab runs (Claude, or Codex). None yet for a fork that hasn't started: it holds its
+    /// parent's id until Claude gives it its own.
     func agentSession(of tab: TabModel) -> String? {
-        (tab.kind == .codex ? tab.codexSessionId : tab.claudeSessionId).flatMap(SafeID.session)
+        if tab.forkOnStart == true { return nil }
+        return (tab.kind == .codex ? tab.codexSessionId : tab.claudeSessionId).flatMap(SafeID.session)
     }
 
     var activeTabID: UUID? { activeTab?.id }

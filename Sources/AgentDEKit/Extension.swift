@@ -30,6 +30,8 @@ public protocol AgentDEExtension: AnyObject {
     /// The app opened a tab for a background session (a `/fork`, or `claude --bg`); `forkParent` is the
     /// session it was forked from, when Claude recorded one.
     func backgroundSessionOpened(_ tab: TabInfo, session: String?, forkParent: String?)
+    /// The user forked `parent`'s session into a new tab (right-click → Fork Session).
+    func tabForked(_ tab: TabInfo, from parent: TabInfo)
     /// Whether a tab wants the user's attention without its agent being stopped (an open question, say):
     /// the tab gets a soft ring.
     func wantsAttention(_ tab: TabInfo) -> Bool
@@ -75,6 +77,7 @@ public extension AgentDEExtension {
     func agentWentIdle(_ tab: TabInfo) {}
     func tabClosing(_ tab: TabInfo, keepAgent: Bool) {}
     func backgroundSessionOpened(_ tab: TabInfo, session: String?, forkParent: String?) {}
+    func tabForked(_ tab: TabInfo, from parent: TabInfo) {}
     func wantsAttention(_ tab: TabInfo) -> Bool { false }
     func sidePanelTabs(for tab: TabInfo) -> [SidePanelTab] { [] }
     func sidebarFooter() -> AnyView? { nil }
