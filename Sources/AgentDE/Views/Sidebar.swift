@@ -232,6 +232,9 @@ private struct SidebarTabRow: View {
                 .foregroundStyle(active ? theme.text : theme.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
+            if store.isPinned(tab: tab, in: group.id) {
+                Image(systemName: "pin.fill").font(.system(size: 8.5)).foregroundStyle(theme.muted)
+            }
         }
         .padding(.leading, 30)
         .padding(.trailing, 8)
@@ -276,6 +279,11 @@ struct TabMenu: View {
 
     var body: some View {
         Button("Rename") { store.selectTab(tab.id, focus: false); store.renamingTabID = tab.id }
+        if store.pinnableSession(tab) != nil, let group = store.groups.first(where: { $0.tabs.contains { $0.id == tab.id } }) {
+            Button(store.isPinned(tab: tab, in: group.id) ? "Unpin" : "Pin to Top") {
+                withAnimation(.snappy(duration: 0.2)) { store.togglePinnedTab(tab.id) }
+            }
+        }
         Divider()
         if tab.claudeSessionId != nil {
             Button("Fork into new tab") { store.forkTab(tab.id) }

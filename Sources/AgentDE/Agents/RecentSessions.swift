@@ -31,6 +31,31 @@ extension Store {
         scheduleSave()
     }
 
+    /// The Claude or Codex session a tab runs, as a session to pin; nil for tabs without one (shells).
+    func pinnableSession(_ tab: TabModel) -> RecentSession? {
+        guard let id = tab.claudeSessionId ?? tab.codexSessionId else { return nil }
+        return RecentSession(sessionId: id, name: title(for: tab), cwd: tab.cwd, lastActive: Date(),
+                             agent: tab.claudeSessionId == nil ? .codex : .claude)
+    }
+
+    func isPinned(tab: TabModel, in groupID: UUID) -> Bool {
+        pinnableSession(tab).map { isPinned($0, in: groupID) } ?? false
+    }
+
+    /// Pins an open tab's session: the tab moves up, below any tabs already pinned, and once closed the
+    /// session stays at the top of the group's session list. Unpinning drops the pin and leaves the tab in place.
+    func togglePinnedTab(_ id: UUID) {
+        guard let (g, t) = locate(id), let session = pinnableSession(groups[g].tabs[t]) else { return }
+        let groupID = groups[g].id
+        let pinning = !isPinned(session, in: groupID)
+        togglePinned(session, in: groupID)
+        guard pinning else { return }
+        let tab = groups[g].tabs.remove(at: t)
+        let pinnedAbove = groups[g].tabs.prefix { isPinned(tab: $0, in: groupID) }.count
+        groups[g].tabs.insert(tab, at: pinnedAbove)
+        scheduleSave()
+    }
+
     /// `pinned` with `session` removed if it's there, otherwise added at the top.
     static func togglingPin(_ session: RecentSession, in pinned: [RecentSession]) -> [RecentSession] {
         pinned.contains { $0.sessionId == session.sessionId }
