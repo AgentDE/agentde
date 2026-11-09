@@ -45,7 +45,14 @@ struct ReviewFixTests {
         // flock locks belong to an open file description, so a second open in this process conflicts too.
         #expect(InstanceLock.acquire(statePath: state) == .held)
         close(fd)
-        guard case .acquired(let again) = InstanceLock.acquire(statePath: state) else {
+        // Other tests fork processes in parallel, and a child holds a copy of every open descriptor (this lock's
+        // too) for the instant between fork and exec, so the lock can stay held a moment after close. Allow 2 s.
+        var again: Int32?
+        let deadline = Date().addingTimeInterval(2)
+        while again == nil, Date() < deadline {
+            if case .acquired(let fd) = InstanceLock.acquire(statePath: state) { again = fd } else { usleep(20_000) }
+        }
+        guard let again else {
             Issue.record("the lock should be free once the holder closes it")
             return
         }
