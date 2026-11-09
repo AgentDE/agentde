@@ -9,6 +9,8 @@ struct TabModel: Identifiable, Codable, Equatable {
     /// Codex tabs: the Codex thread to resume (`codex resume <id>`).
     var codexSessionId: String?
     var command: String?
+    /// Agent tabs: which `AgentDefinition` they run.
+    var agentID: String?
     var browserURL: String?
     var showBrowser: Bool?
     /// Background Claude session (job id) this tab attaches to, e.g. one created by `/fork`.

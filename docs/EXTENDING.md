@@ -5,7 +5,7 @@ Two ways to add to AgentDE:
 | Kind | What it is | Can do | Needs a build |
 |---|---|---|---|
 | Native extension | A Swift package with a class conforming to `AgentDEExtension` | Every hook below: panels, widgets, tab environment, menus, settings, tickets, links, themes | Yes: listed in `extensions.json`, compiled into the app |
-| JSON plugin | A folder with a `plugin.json` in `~/.config/agentde/plugins/` | Widgets (an HTML page or a command's output), viewer links, themes, palettes | No: read at launch |
+| JSON plugin | A folder with a `plugin.json` in `~/.config/agentde/plugins/` | Widgets (an HTML page or a command's output), viewer links, themes, palettes, agents | No: read at launch |
 
 **Contents:** [Native extensions](#native-extensions) · [Hooks](#hooks) · [The host](#the-host) · [Saving data](#per-tab-values-and-settings) · [Example](#an-example-extension) · [Adding it to a build](#adding-it-to-a-build) · [Widgets](#widgets) · [Ticket providers](#ticket-providers) · [Link rules](#link-rules) · [Themes and palettes](#themes-and-palettes) · [JSON plugins](#json-plugins)
 
@@ -49,6 +49,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `themes` | Themes added to Settings → Look; read once at launch |
 | `palettes` | Group color palettes added to Settings → Look; read once at launch |
 | `ticketProviders` | Trackers whose tickets this extension can look up |
+| `agents` | Terminal agents (`AgentDefinition`: id, name, command) added to the New menus beside Claude and Codex. Their tabs run the command; their status dot comes from their own hooks (see [Agent status](GUIDE.md#agent-status)) |
 
 `TabInfo` is a tab as extensions see it: `id`, `groupID`, `kind` (`claude`, `codex`, `shell`, `command`, `files`), `folder`, `groupFolder`, `title`, `agentSession` (Claude's session id or Codex's thread id), `agentPresent`, `state` (`none`, `working`, `needsYou`, `doneUnseen`), `viewerItem`, and `isAgent`.
 
@@ -235,8 +236,9 @@ A plugin is a folder in `~/.config/agentde/plugins/` (a renamed build uses its o
 | `links` | Viewer links, each `{pattern, marker}` (see [Link rules](#link-rules)) |
 | `themes` | Each `{id, name, alwaysDark?, dark?, light?}`. `dark` and `light` map `Theme` field names to `"#RRGGBB"` or `"#RRGGBBAA"`; a missing field takes the Claude theme's color, and a missing `light` uses `dark` (and the other way round) |
 | `palettes` | Each `{id, name, colors}`: colors as `"#RRGGBB"` |
+| `agents` | Each `{id, name, command}`: a terminal agent in the New menus (tab strip +, a group's New, the palette's list). Its tabs run `command` through the login shell in the tab's folder. Give it hooks that write `$AGENTDE_STATUS_FILE` for a status dot ([Agent status](GUIDE.md#agent-status)) |
 
-A plugin widget's id in the menu is `plugin.<id>`. The example in [`examples/hello-plugin`](https://github.com/AgentDE/agentde/tree/main/examples/hello-plugin) adds a page widget, a command widget, a link rule, a theme and a palette:
+A plugin widget's id in the menu is `plugin.<id>`. The example in [`examples/hello-plugin`](https://github.com/AgentDE/agentde/tree/main/examples/hello-plugin) adds a page widget, a command widget, a link rule, a theme, a palette and an agent:
 
 ```json
 {
@@ -254,6 +256,9 @@ A plugin widget's id in the menu is `plugin.<id>`. The example in [`examples/hel
   ],
   "palettes": [
     { "id": "hello.sea", "name": "Sea", "colors": ["#0B7285", "#1098AD", "#15AABF", "#3BC9DB", "#66D9E8", "#99E9F2", "#C5F6FA", "#495057"] }
+  ],
+  "agents": [
+    { "id": "hello.gemini", "name": "Gemini", "command": "gemini" }
   ]
 }
 ```

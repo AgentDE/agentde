@@ -18,6 +18,15 @@ extension Store {
         return tab.id
     }
 
+    /// A new tab running an added agent (`AgentDefinition`).
+    @discardableResult
+    func newAgentTab(_ agent: AgentDefinition, in groupID: UUID? = nil) -> UUID? {
+        guard let id = newTab(kind: .agent, in: groupID), let (g, t) = locate(id) else { return nil }
+        groups[g].tabs[t].agentID = agent.id
+        DebugLog.log("tab \(id.uuidString.prefix(8)) runs agent \(agent.id)", "tab")
+        return id
+    }
+
     /// Closes a tab. A background agent's tab stops its agent too, unless `keepAgent` (right-click → Close,
     /// keep agent running).
     func closeTab(_ id: UUID, confirmIfBusy: Bool = true, keepAgent: Bool = false) {

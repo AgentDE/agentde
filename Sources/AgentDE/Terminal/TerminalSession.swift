@@ -320,6 +320,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         case .shell:
             // A shell tab that was running Claude when AgentDE quit picks that session back up.
             return session.map { "claude --resume \($0)" }
+        case .agent:
+            return AgentCatalog.definition(tab.agentID)?.command
         case .command, .files:
             return nil
         }
@@ -359,6 +361,9 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         // Nothing inherited from an older launch names another tab or workstream.
         for key in ["WORKSTREAM_ID", "WORKSTREAM_TAB_ID"] { env.removeValue(forKey: key) }
         env["AGENTDE_TAB_ID"] = tab.id.uuidString
+        // Where any agent's hooks report its state (`HookStatus`; Codex's are set up by register-agent-status.sh).
+        try? FileManager.default.createDirectory(at: HookStatus.directory, withIntermediateDirectories: true)
+        env["AGENTDE_STATUS_FILE"] = HookStatus.file(for: tab.id).path
         if store?.settings.openInViewer ?? true { env.merge(OpenInViewer.environment(tab: tab.id, inherited: env)) { $1 } }
         // What extensions add (the workstream this terminal's agents attach to, say).
         if let store { env.merge(store.launchEnvironment(for: tab.id)) { $1 } }

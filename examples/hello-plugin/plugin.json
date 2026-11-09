@@ -19,5 +19,8 @@
   ],
   "palettes": [
     { "id": "hello.sea", "name": "Sea", "colors": ["#0B7285", "#1098AD", "#15AABF", "#3BC9DB", "#66D9E8", "#99E9F2", "#C5F6FA", "#495057"] }
+  ],
+  "agents": [
+    { "id": "hello.gemini", "name": "Gemini", "command": "gemini" }
   ]
 }

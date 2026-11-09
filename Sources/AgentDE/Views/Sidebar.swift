@@ -151,6 +151,9 @@ private struct GroupRow: View {
                         Label(kind == .files ? "File Explorer" : kind.label, systemImage: kind.symbol)
                     }
                 }
+                ForEach(AgentCatalog.all, id: \.id) { agent in
+                    Button { store.newAgentTab(agent, in: group.id) } label: { Label(agent.name, systemImage: TabKind.agent.symbol) }
+                }
                 Button { store.newWorktreeTab(in: group.id) } label: { Label("Tab in Worktree…", systemImage: "arrow.triangle.branch") }
                 let items = store.extensions.flatMap { $0.newMenuItems(for: GroupInfo(id: group.id, name: group.name, folder: group.dir)) }
                 if !items.isEmpty { Divider() }
@@ -307,7 +310,7 @@ struct TabMenu: View {
         Button((tab.showBrowser ?? false) ? "Hide Browser" : "Show Browser Above") { store.toggleBrowser(tab.id) }
         Divider()
         // Named by what happens to the agent: closing an agent tab stops it (the conversation is kept).
-        Button([.claude, .codex].contains(tab.kind) ? "Close & Stop Agent" : "Close Tab") { store.closeTab(tab.id) }
+        Button([.claude, .codex, .agent].contains(tab.kind) ? "Close & Stop Agent" : "Close Tab") { store.closeTab(tab.id) }
         if tab.attachJobId != nil {
             Button("Close, Keep Agent Running") { store.closeTab(tab.id, keepAgent: true) }
         }

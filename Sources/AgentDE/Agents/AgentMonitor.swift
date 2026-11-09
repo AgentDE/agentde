@@ -136,6 +136,16 @@ final class AgentMonitor {
                 if let owner { matches[owner] = entry }
             }
         }
+        // Agents that report through their own hooks (`HookStatus`): counted only while the reporting pid runs
+        // inside that tab, and never over what Claude's registry says for it.
+        for (tab, report) in HookStatus.read() where matches[tab] == nil {
+            let owner = owners[report.pid] ?? owningTab(of: report.pid, shellPids: shellPids)
+            owners.updateValue(owner, forKey: report.pid)
+            livePids.insert(report.pid)
+            guard owner == tab else { continue }
+            matches[tab] = ClaudeSessionEntry(pid: report.pid, sessionId: nil, name: nil, status: report.registryStatus,
+                                              cwd: nil, kind: nil, jobId: nil, waitingFor: report.detail, spare: nil, version: nil)
+        }
         owners = owners.filter { livePids.contains($0.key) }
         versionsByPid = versionsByPid.filter { livePids.contains($0.key) }
         // Job ids that background-mode tabs reported for themselves.

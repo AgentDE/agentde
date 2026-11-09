@@ -17,4 +17,5 @@ final class JSONPlugins: AgentDEExtension {
     var linkRules: [LinkRule] { loaded.flatMap(\.manifest.linkRules) }
     var themes: [ThemeDefinition] { loaded.flatMap { $0.manifest.themeDefinitions { Theme.resolve("claude", dark: $0) } } }
     var palettes: [PaletteDefinition] { loaded.flatMap(\.manifest.paletteDefinitions) }
+    var agents: [AgentDefinition] { loaded.flatMap { $0.manifest.agents ?? [] } }
 }

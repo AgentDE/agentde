@@ -68,6 +68,8 @@ The core is a library so that the app's `main` can live in a package that also s
 | | `ClaudeVersion.swift` | `ClaudeVersion` (running and installed Claude Code versions, outdated rule) and `ClaudeRestart` (who may restart, and the resume commands) |
 | | `ClaudeJobs.swift` | A `/fork`'s parent session, from its job record |
 | | `Notifications.swift` | `Notifier` (macOS banners, click to jump) and `TranscriptPeek` (the last reply, for Done banners) |
+| | `AgentCatalog.swift` | Agents beyond Claude and Codex from extensions and JSON plugins (`AgentDefinition`); `.agent` tabs keep its id in `TabModel.agentID` and run its `command` (`TerminalSession.agentCommand`). They have no resume or Recent list; status comes from `HookStatus` |
+| | `HookStatus.swift` | Status any agent reports through its hooks: `AGENTDE_STATUS_FILE` per tab (`~/.config/<data folder>/status/<tab id>`), one line `<working|needs-you|idle> <pid> [detail]`. `AgentMonitor` turns a line into a registry-like entry when its pid runs inside that tab and Claude's registry has nothing for it, so the same state rules, notifications and sparkles apply; files of exited pids are removed |
 | | `RecentSessionScanner.swift`, `CodexSessionScanner.swift`, `RecentSessions.swift` | Named recent Claude sessions (transcript heads and tails) and Codex threads (Codex's thread database), and the per-group Recent and Older lists |
 | | `PullRequests.swift` | `PullRequestMonitor` (`gh pr view <branch>`, rolled-up checks) and Fix with Claude |
 | `Search/` | `SessionSearchIndex.swift` | `TranscriptIndex` (incremental index of conversational text) and `SearchMatch`. Foundation-only, so it can be tested on its own |
@@ -268,7 +270,7 @@ A workspace with its own app target skips step 1 by setting `APP_PACKAGE` (its f
 
 ## Known limitations
 
-- Codex tabs have no status. Codex supports `SessionStart`, `Stop`, `UserPromptSubmit` and `PermissionRequest` hooks in `~/.codex/config.toml`. The plan is hooks that write a small status file keyed by `AGENTDE_TAB_ID`, read by `AgentMonitor`.
+- Codex tabs have a status only once its hooks are registered (`make register-agent-status`) and trusted in Codex (`/hooks`). The hook reports the pid of whatever ran it (`$PPID`); that's Codex as long as Codex runs hook commands directly with a shell.
 - Restored attach tabs re-run `claude attach <jobId>`. If that background session was removed in the meantime, the tab shows Claude's error and leaves you in the shell.
 - Renaming a tab doesn't rename the Claude session. AgentDE owns the PTY, so it could type `/rename` into an idle Claude.
 - One window. Groups are the unit of organization; multiple windows aren't supported.

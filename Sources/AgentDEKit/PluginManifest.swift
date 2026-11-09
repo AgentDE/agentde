@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// A JSON plugin: a folder in `<config>/plugins/` with a `plugin.json` that adds widgets, viewer links, themes
-/// or palettes without building anything. Every field but `name` is optional. See docs/EXTENDING.md.
+/// palettes or agents without building anything. Every field but `name` is optional. See docs/EXTENDING.md.
 ///
 ///     {
 ///       "name": "Hello",
@@ -10,7 +10,8 @@ import SwiftUI
 ///                   {"id": "load", "name": "Load", "command": "uptime", "every": 60}],
 ///       "links": [{"pattern": "https://wiki\\.example\\.com/page/\\w+", "marker": "wiki.example.com/page/"}],
 ///       "themes": [{"id": "dusk", "name": "Dusk", "alwaysDark": true, "dark": {"window": "#1B1B2F", …}}],
-///       "palettes": [{"id": "sea", "name": "Sea", "colors": ["#0B7285", "#1098AD", …]}]
+///       "palettes": [{"id": "sea", "name": "Sea", "colors": ["#0B7285", "#1098AD", …]}],
+///       "agents": [{"id": "gemini", "name": "Gemini", "command": "gemini"}]
 ///     }
 public struct PluginManifest: Decodable, Equatable {
     public var name: String
@@ -18,6 +19,8 @@ public struct PluginManifest: Decodable, Equatable {
     public var links: [Link]?
     public var themes: [ThemeColors]?
     public var palettes: [Palette]?
+    /// Terminal agents for the New menus.
+    public var agents: [AgentDefinition]?
 
     public struct Widget: Decodable, Equatable {
         public var id: String

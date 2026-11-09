@@ -2,7 +2,7 @@
 # EXTENSIONS=path/to/extensions.json picks the native extensions (default extensions.json; scripts/assemble.py),
 # and BRAND=path/to/brand.env builds a renamed app (scripts/brand.sh).
 export EXTENSIONS BRAND
-.PHONY: app debug test install uninstall run run-test icons signing register-workstream clean
+.PHONY: app debug test install uninstall run run-test icons signing register-workstream clean register-agent-status
 
 app:            ## Build build/<app>.app (release)
 	scripts/build-app.sh release
@@ -27,6 +27,9 @@ run-test: app   ## Run a second copy with its own state, leaving yours alone
 
 register-workstream: ## Show (then, with YES=1, apply) the workstream MCP server and hooks for Claude Code and Codex
 	scripts/register-workstream.sh $(if $(YES),--yes,)
+
+register-agent-status: ## Show (then, with YES=1, apply) Codex hooks that give Codex tabs a status dot
+	scripts/register-agent-status.sh $(if $(YES),--yes,)
 
 signing:        ## One-time: create a local signing identity so macOS keeps permissions across rebuilds
 	scripts/setup-signing.sh

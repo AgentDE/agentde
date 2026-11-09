@@ -62,6 +62,8 @@ public protocol AgentDEExtension: AnyObject {
     var palettes: [PaletteDefinition] { get }
     /// Trackers whose tickets this extension can look up.
     var ticketProviders: [TicketProvider] { get }
+    /// Terminal agents added to the New menus beside Claude and Codex.
+    var agents: [AgentDefinition] { get }
 }
 
 public extension AgentDEExtension {
@@ -85,6 +87,7 @@ public extension AgentDEExtension {
     var themes: [ThemeDefinition] { [] }
     var palettes: [PaletteDefinition] { [] }
     var ticketProviders: [TicketProvider] { [] }
+    var agents: [AgentDefinition] { [] }
 }
 
 /// What the app offers extensions. It's the app's own observable state, so a view that reads it updates when
@@ -171,7 +174,7 @@ public struct TabInfo: Identifiable, Equatable {
     }
 
     /// Agent tabs, and other tabs while an agent runs in them.
-    public var isAgent: Bool { kind == .claude || kind == .codex || agentSession != nil || agentPresent }
+    public var isAgent: Bool { kind == .claude || kind == .codex || kind == .agent || agentSession != nil || agentPresent }
 }
 
 public struct GroupInfo: Identifiable, Equatable {

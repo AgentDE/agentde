@@ -35,6 +35,9 @@ struct TabStrip: View {
                         Label(kind == .files ? "File Explorer" : kind.label, systemImage: kind.symbol)
                     }
                 }
+                ForEach(AgentCatalog.all, id: \.id) { agent in
+                    Button { store.newAgentTab(agent) } label: { Label(agent.name, systemImage: TabKind.agent.symbol) }
+                }
                 Button { store.newWorktreeTab() } label: { Label("Tab in Worktree…", systemImage: "arrow.triangle.branch") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 12, weight: .medium))
@@ -58,7 +61,6 @@ struct TabStrip: View {
             Spacer(minLength: 12)
         }
         .frame(height: store.settings.density == .compact ? 34 : 40)
-        .overlay(alignment: top ? .top : .bottom) { Rectangle().fill(color).frame(height: 2) }
         .overlay(alignment: top ? .bottom : .top) { Rectangle().fill(theme.border).frame(height: 0.5) }
     }
 }

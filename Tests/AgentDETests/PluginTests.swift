@@ -20,6 +20,27 @@ struct PluginTests {
         let theme = try #require(hello.manifest.themeDefinitions { Theme.resolve("claude", dark: $0) }.first)
         #expect(theme.id == "hello.dusk" && theme.alwaysDark)
         #expect(theme.resolve(true).terminalBackground.hexString == "1B1B2F")
+        #expect(hello.manifest.agents == [AgentDefinition(id: "hello.gemini", name: "Gemini", command: "gemini")])
+    }
+
+    /// A plugin's agent shows in the catalog, and its tabs run its command; an unknown id runs nothing.
+    @Test func addedAgentsRunTheirCommand() throws {
+        final class Agents: AgentDEExtension {
+            let id = "agents-probe", name = "Agents probe"
+            var agents: [AgentDefinition] {
+                [AgentDefinition(id: "aider", name: "Aider", command: "aider --model sonnet"),
+                 AgentDefinition(id: "aider", name: "Duplicate", command: "nope"),
+                 AgentDefinition(id: "empty", name: "Empty", command: "")]
+            }
+        }
+        AgentDEMain.extensions = [Agents()]
+        defer { AgentDEMain.extensions = [] }
+        #expect(AgentCatalog.all.map(\.name) == ["Aider"])
+        var tab = TabModel(kind: .agent, cwd: "/tmp")
+        tab.agentID = "aider"
+        #expect(TerminalSession.agentCommand(for: tab) == "aider --model sonnet")
+        tab.agentID = "gone"
+        #expect(TerminalSession.agentCommand(for: tab) == nil)
     }
 
     @Test func badFilesAndUnsafeEntriesAreSkipped() throws {

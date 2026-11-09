@@ -124,6 +124,7 @@ final class Store {
             return title
         }
         if tab.kind == .shell { return (tab.cwd as NSString).lastPathComponent }
+        if tab.kind == .agent { return (AgentCatalog.definition(tab.agentID)?.name ?? "agent").lowercased() }
         return tab.kind.label.lowercased()
     }
 

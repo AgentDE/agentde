@@ -49,7 +49,7 @@ struct CommandPalette: View {
             ("Open Agent View (claude agents)", "person.3", { store.newTab(kind: .command, command: "claude agents", transient: true) }),
             ("Rename tab", "pencil", { if let id = store.activeTab?.id { store.renamingTabID = id } }),
             ("Jump to next waiting tab", "bell", { store.jumpToAttention() }),
-        ]
+        ] + AgentCatalog.all.map { agent in ("New \(agent.name) tab", TabKind.agent.symbol, { store.newAgentTab(agent) }) }
         for (title, symbol, action) in actions {
             all.append(PaletteItem(id: "action:" + title, title: title, subtitle: "action", symbol: symbol,
                                    color: nil, state: .none, action: action))

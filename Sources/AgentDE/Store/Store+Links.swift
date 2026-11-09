@@ -32,7 +32,7 @@ extension Store {
         let clicked = Date()
         let owner = tab(id)
         let defaultApp = NSEvent.modifierFlags.contains(.option)
-        let hasViewer = owner.map { [.claude, .codex, .shell].contains($0.kind) } ?? false
+        let hasViewer = owner.map { [.claude, .codex, .agent, .shell].contains($0.kind) } ?? false
         switch LinkTarget.classify(link) {
         case .web(let url):
             DebugLog.log("click → web in 0 ms", "link")

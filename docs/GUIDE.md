@@ -124,7 +124,7 @@ An empty list builds the core alone. Order matters where extensions compete for 
 
 ## Plugins
 
-A **JSON plugin** is a folder in `~/.config/agentde/plugins/` with a `plugin.json`. It can add sidebar widgets (an HTML page, or a shell command's output), links that open in the viewer, themes and group palettes, with nothing to build. Plugins are read at launch, so restart AgentDE after changing one. Widgets need the Widgets extension. An example is in [examples/hello-plugin](https://github.com/AgentDE/agentde/tree/main/examples/hello-plugin); the format is in [docs/EXTENDING.md](EXTENDING.md#json-plugins).
+A **JSON plugin** is a folder in `~/.config/agentde/plugins/` with a `plugin.json`. It can add sidebar widgets (an HTML page, or a shell command's output), links that open in the viewer, themes, group palettes and other terminal agents (Gemini CLI, OpenCode, Aider…, each a New tab type that runs its command), with nothing to build. Plugins are read at launch, so restart AgentDE after changing one. Widgets need the Widgets extension. An example is in [examples/hello-plugin](https://github.com/AgentDE/agentde/tree/main/examples/hello-plugin); the format is in [docs/EXTENDING.md](EXTENDING.md#json-plugins).
 
 ## File Explorer
 
@@ -189,6 +189,15 @@ AgentDE reads Claude Code's registry of running sessions (`~/.claude/sessions/`)
 - **Dock badge:** how many tabs are waiting on you. **⌘J** jumps to the next waiting tab, then to finished ones. **⌘K** with an empty query lists tabs by urgency.
 - **Why it's waiting:** when Claude reports it, in the tab's tooltip, the status bar and ⌘K.
 - **Notifications:** a macOS banner when an agent needs you, or finishes while you're elsewhere; a click brings AgentDE forward on that tab. Turn either, or the sound, off in Settings → Agents.
+
+**Codex and other agents.** Any agent with hooks can report its state. Each tab's environment has `AGENTDE_STATUS_FILE`, and a hook writes one line to it: `working`, `needs-you` or `idle`, then the agent's pid (`$PPID` in a hook), then optionally what it's waiting for. AgentDE trusts a line only while that pid runs inside the tab, so a dot never outlives its agent. Outside AgentDE the variable isn't set and the hook does nothing.
+
+- **Codex:** `make register-agent-status` shows the hooks it would add to `~/.codex/hooks.json` (`YES=1` adds them; `scripts/register-agent-status.sh --uninstall` removes them). Then run `/hooks` in Codex once to trust them.
+- **Others** (Gemini CLI, OpenCode, your own): call this from the hook for each state, as `working` when a turn starts or a tool finishes, `needs-you` before a permission prompt, `idle` when a turn stops:
+
+  ```sh
+  cat >/dev/null 2>&1; [ -n "${AGENTDE_STATUS_FILE-}" ] && printf '%s %s\n' working "$PPID" > "$AGENTDE_STATUS_FILE" 2>/dev/null; exit 0
+  ```
 - **Bell:** a terminal bell in a tab you're not looking at marks it amber.
 
 Codex tabs don't show status.
@@ -345,6 +354,7 @@ make run-test   # run a second copy with its own state and logs, leaving yours a
 make debug      # build a debug app
 make icons      # redraw the AgentDE icon
 make register-workstream   # show (YES=1 applies) the workstream MCP server and hooks for Claude Code and Codex
+make register-agent-status # show (YES=1 applies) Codex hooks for Codex tabs' status dot
 ```
 
 The version is in `VERSION`; the build number is the commit count.

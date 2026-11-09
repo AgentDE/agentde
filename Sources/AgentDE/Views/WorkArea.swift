@@ -4,11 +4,19 @@ import SwiftUI
 struct WorkArea: View {
     @Environment(Store.self) private var store
 
+    @Environment(\.theme) private var theme
+
     var body: some View {
-        if let group = store.selectedGroup, let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.tabs.first {
-            TabPane(tab: active).id(group.id)
-        } else {
-            WithTabStrip { EmptyGroupView() }
+        Group {
+            if let group = store.selectedGroup, let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.tabs.first {
+                TabPane(tab: active).id(group.id)
+            } else {
+                WithTabStrip { EmptyGroupView() }
+            }
+        }
+        // The group's color line, on the tab strip's side, across the whole width (over the side panel too).
+        .overlay(alignment: store.settings.tabsPosition == .top ? .top : .bottom) {
+            Rectangle().fill(store.selectedGroup.map { Color(nsColor: store.groupColor($0)) } ?? theme.border).frame(height: 2)
         }
     }
 }
