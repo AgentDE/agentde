@@ -12,7 +12,7 @@ Run a dozen Claude Code and Codex sessions side by side, see at a glance which o
 
 <p align="center"><a href="#install">Install</a> · <a href="docs/GUIDE.md">Guide</a> · <a href="docs/EXTENDING.md">Extending</a> · <a href="https://agentde.github.io/agentde">Website</a> · <a href="https://github.com/AgentDE/agentde/issues">Issues</a></p>
 
-<p align="center"><img src="docs/images/demo.gif" width="800" alt="AgentDE in use: status dots in the sidebar, an agent asking a question that's answered from the workstream panel, and a file opening in the viewer above the chat"></p>
+<p align="center"><img src="docs/images/demo.gif" width="800" alt="AgentDE in use: many agents in one window, one turns amber and is answered from the workstream panel, a file opens above the chat, and the window is extended with widgets and themes"></p>
 
 - **Native and light.** SwiftUI and AppKit, no Electron. Under 100 MB of memory (as Activity Monitor shows it) with a few groups loaded, under 1% CPU when idle.
 - **Knows what each agent is doing.** A dot per tab: working, needs you, or done, with no setup. Notifications when an agent waits on you.
