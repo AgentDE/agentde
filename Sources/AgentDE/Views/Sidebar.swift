@@ -315,7 +315,8 @@ private struct RecentSessionsList: View {
         let sessions = store.recentSessions(for: group)
         let pinned = store.pinnedSessions(for: group)
         let showOlder = store.olderShown.contains(group.id)
-        if !sessions.isEmpty || showOlder || !pinned.isEmpty {
+        let olderCount = store.olderSessions(for: group)?.count ?? 0
+        if !sessions.isEmpty || showOlder || !pinned.isEmpty || olderCount > 0 {
             let hidden = group.hideRecent ?? false
             let limit = 6
             VStack(alignment: .leading, spacing: 3) {
@@ -325,7 +326,8 @@ private struct RecentSessionsList: View {
                 }
                 .padding(.top, pinned.first.map { _ in 4 } ?? 0)
                 if !sessions.isEmpty { recent(sessions, hidden: hidden, limit: limit) }
-                if showOlder || (!sessions.isEmpty && !hidden) { older(open: showOlder, limit: limit) }
+                // Older shows when it's open, under a visible Recent list, or whenever the group has older sessions.
+                if showOlder || (!sessions.isEmpty && !hidden) || olderCount > 0 { older(open: showOlder, limit: limit) }
             }
             .padding(.leading, 30)
             .padding(.trailing, 8)
@@ -335,7 +337,7 @@ private struct RecentSessionsList: View {
 
     @ViewBuilder private func older(open: Bool, limit: Int) -> some View {
         let older = store.olderSessions(for: group)
-        fold(title: "Older", count: open ? older?.count : nil, open: open,
+        fold(title: "Older", count: older?.count, open: open,
              hint: open ? "Hide older sessions" : "Show sessions from before the last \(Int(store.settings.recentSessionDays)) days") {
             store.toggleOlderShown(group.id)
         }

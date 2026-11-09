@@ -80,7 +80,9 @@ extension Store {
         }
     }
 
-    private func loadOlderSessions() {
+    /// Scans for older sessions in the background (cached by the scanners), so each group knows whether it
+    /// has any and shows its Older fold. Runs once shortly after launch, and again whenever a fold opens.
+    func loadOlderSessions() {
         let days = settings.recentSessionDays, codex = settings.showCodexSessions
         OlderSessionScan.queue.async { [weak self] in
             let cutoff = Date().addingTimeInterval(-days * 86_400)

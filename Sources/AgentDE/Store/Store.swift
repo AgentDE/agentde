@@ -71,6 +71,12 @@ final class Store {
         }
         // Before any view exists: views call extensions' hooks from their first frame.
         startExtensions()
+        // Older sessions, so groups with only old ones still show an Older fold. Delayed past launch, when
+        // tabs reattach and replay their history.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
+            guard let self, self.settings.showRecentSessions else { return }
+            self.loadOlderSessions()
+        }
     }
 
     // MARK: Lookup
