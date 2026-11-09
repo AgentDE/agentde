@@ -1,8 +1,18 @@
-# AgentDE
+<h1 align="center">AgentDE</h1>
 
-**A small, native macOS home for your terminal agents.** Run a dozen Claude Code and Codex sessions side by side, see at a glance which one needs you, and pick up any of them after a quit, an update or a crash.
+<p align="center"><b>A small, native macOS home for your terminal agents.</b><br>
+Run a dozen Claude Code and Codex sessions side by side, see at a glance which one needs you,<br>and pick up any of them after a quit, an update or a crash.</p>
 
-<p align="center"><img src="docs/images/hero.png" width="760" alt="The AgentDE window: groups and tabs in the sidebar, a viewer above the agent's chat, and the workstream panel on the right"></p>
+<p align="center">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="macOS 14 or later" src="https://img.shields.io/badge/macOS-14%2B-black">
+  <img alt="Swift, SwiftUI and AppKit" src="https://img.shields.io/badge/Swift-SwiftUI%20%2B%20AppKit-orange">
+  <a href="https://github.com/AgentDE/agentde/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/AgentDE/agentde"></a>
+</p>
+
+<p align="center"><a href="#install">Install</a> · <a href="docs/GUIDE.md">Guide</a> · <a href="docs/EXTENDING.md">Extending</a> · <a href="https://agentde.github.io/agentde">Website</a> · <a href="https://github.com/AgentDE/agentde/issues">Issues</a></p>
+
+<p align="center"><img src="docs/images/demo.gif" width="800" alt="AgentDE in use: status dots in the sidebar, an agent asking a question that's answered from the workstream panel, and a file opening in the viewer above the chat"></p>
 
 - **Native and light.** SwiftUI and AppKit, no Electron. Under 100 MB of memory (as Activity Monitor shows it) with a few groups loaded, under 1% CPU when idle.
 - **Knows what each agent is doing.** A dot per tab: working, needs you, or done, with no setup. Notifications when an agent waits on you.
