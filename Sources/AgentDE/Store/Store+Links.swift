@@ -29,17 +29,25 @@ enum LinkTarget: Equatable {
 /// new File Explorer tab, other websites in the browser; ⌥⌘-click opens them in their default app instead.
 extension Store {
     func openLink(_ link: String, fromTab id: UUID) {
+        let clicked = Date()
         let owner = tab(id)
         let defaultApp = NSEvent.modifierFlags.contains(.option)
         let hasViewer = owner.map { [.claude, .codex, .shell].contains($0.kind) } ?? false
         switch LinkTarget.classify(link) {
         case .web(let url):
+            DebugLog.log("click → web in 0 ms", "link")
             NSWorkspace.shared.open(url)
         case .localWeb(let url), .artifact(let url):
-            if defaultApp || !hasViewer { NSWorkspace.shared.open(url) } else if let owner { openInViewer(url.absoluteString, tab: owner.id) }
+            DebugLog.log("click → web in 0 ms", "link")
+            if defaultApp || !hasViewer { NSWorkspace.shared.open(url) } else if let owner {
+                LinkTiming.start(owner.id)
+                openInViewer(url.absoluteString, tab: owner.id)
+            }
         case .file(let path):
             guard let owner, let (g, _) = locate(owner.id) else { return }
-            guard let file = Store.resolveFileLink(path, relativeTo: [owner.cwd, groups[g].dir]) else {
+            let resolved = Store.resolveFileLinkReporting(path, relativeTo: [owner.cwd, groups[g].dir])
+            DebugLog.log("click → \(resolved.how) in \(Int(Date().timeIntervalSince(clicked) * 1000)) ms", "link")
+            guard let file = resolved.url else {
                 DebugLog.log("link not found: \(link)", "link")
                 NSSound.beep()
                 return
@@ -49,6 +57,7 @@ extension Store {
             } else if Store.isFolder(file.path) {
                 _ = newTab(kind: .files, in: groups[g].id, cwd: file.path)   // a folder: a File Explorer tab there
             } else if hasViewer {
+                LinkTiming.start(owner.id)
                 openInViewer(file.path, tab: owner.id)
             } else {
                 NSWorkspace.shared.open(file)
@@ -76,10 +85,16 @@ extension Store {
     /// that isn't found is also tried inside a folder entry whose name ends in a space and its first part.
     /// A link that ends a sentence (`compare.html.`) is tried again without its trailing punctuation.
     static func resolveFileLink(_ link: String, relativeTo folders: [String]) -> URL? {
-        if let found = resolveLink(link, relativeTo: folders) { return found }
+        resolveFileLinkReporting(link, relativeTo: folders).url
+    }
+
+    /// The same, and how it was found: "exact" (a path, or near one), "spotlight" (the search fallback) or "none".
+    static func resolveFileLinkReporting(_ link: String, relativeTo folders: [String]) -> (url: URL?, how: String) {
+        if let found = resolveLink(link, relativeTo: folders) { return (found, "exact") }
         let trimmed = link.replacingOccurrences(of: #"[.,;:!?)\]}'"`]+$"#, with: "", options: .regularExpression)
-        if trimmed != link, !trimmed.isEmpty, let found = resolveLink(trimmed, relativeTo: folders) { return found }
-        return searchFileLink(trimmed.isEmpty ? link : trimmed, in: folders)
+        if trimmed != link, !trimmed.isEmpty, let found = resolveLink(trimmed, relativeTo: folders) { return (found, "exact") }
+        let found = searchFileLink(trimmed.isEmpty ? link : trimmed, in: folders)
+        return (found, found == nil ? "none" : "spotlight")
     }
 
     /// Last resort for a relative path written from some subfolder (`stomp_everything/shots/a.png` living in

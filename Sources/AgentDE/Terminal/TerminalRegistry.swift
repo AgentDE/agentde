@@ -4,6 +4,8 @@ import AppKit
 final class TerminalRegistry {
     weak var store: Store?
     private var sessions: [UUID: TerminalSession] = [:]
+    /// Closed tabs whose terminal was still starting, kept until they've ended what they started.
+    private var retiring: [UUID: TerminalSession] = [:]
     let browsers = BrowserRegistry()
     let viewers = ViewerRegistry()
     private var explorers: [UUID: FileExplorerModel] = [:]
@@ -26,6 +28,8 @@ final class TerminalRegistry {
 
     func session(_ id: UUID) -> TerminalSession? { sessions[id] }
 
+    var retiringCount: Int { retiring.count }
+
     var shellPids: [pid_t: UUID] {
         var map: [pid_t: UUID] = [:]
         for (id, session) in sessions where session.shellPid > 0 { map[session.shellPid] = id }
@@ -38,8 +42,12 @@ final class TerminalRegistry {
     }
 
     func terminate(_ id: UUID) {
-        sessions[id]?.terminate()
-        sessions[id]?.view.removeFromSuperview()
+        if let session = sessions[id] {
+            retiring[id] = session
+            session.onRetired = { [weak self] in self?.retiring[id] = nil }
+            session.terminate()
+            session.view.removeFromSuperview()
+        }
         sessions[id] = nil
         browsers.remove(id)
         viewers.remove(id)

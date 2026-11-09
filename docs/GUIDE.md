@@ -231,7 +231,7 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 | Tab | Options |
 |---|---|
 | Look | Light, dark or match system; theme (Claude warm, Graphite cool, Midnight, High contrast, plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); translucent sidebar; density; tabs on top or bottom; sidebar width |
-| Terminal | Font, size, GPU rendering (experimental, off by default), scrollback (default 10,000 lines), startup command, recent sessions (on/off, Codex too, how many days), what kind of tab new tabs start as, `open` shows files and pages in the viewer |
+| Terminal | Font, size, GPU rendering (experimental, off by default), scrollback (default 10,000 lines), startup command, recent sessions (on/off, Codex too, how many days), what kind of tab new tabs start as, `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
 | Fun | Animated status dots, the finish sparkle, and how long a turn must run to earn one |
 | Agents | Notifications (needs you, done, sound), background mode, PR status (on/off, open in GitHub or Graphite) |
 | Extensions | Each loaded extension's own settings |

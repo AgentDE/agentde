@@ -404,8 +404,19 @@ int main(int argc, char **argv) {
         sigset_t none;
         sigemptyset(&none);
         sigprocmask(SIG_SETMASK, &none, NULL);
-        if (chdir(cwd) < 0) { const char *home = getenv("HOME"); if (home) (void)!chdir(home); }
-        execve(executable, child_argv, environ);
+        if (chdir(cwd) < 0) {
+            // Never run the startup command or agent somewhere else: a plain login shell in ~, and say why.
+            int err = errno;
+            const char *home = getenv("HOME");
+            if (home) (void)!chdir(home);
+            fprintf(stderr, "\033[33magentde: can't open folder %s: %s; started a plain shell in your home folder.\033[0m\r\n",
+                    cwd, strerror(err));
+            unsetenv("AGENTDE_RUN");
+            char *plain[] = {child_argv[0], "-l", NULL};
+            execve(executable, plain, environ);
+        } else {
+            execve(executable, child_argv, environ);
+        }
         fprintf(stderr, "agentde-pty: couldn't start %s: %s\n", executable, strerror(errno));
         _exit(127);
     }

@@ -157,7 +157,18 @@ final class PtyConnection {
         thread.start()
     }
 
-    func send(input bytes: ArraySlice<UInt8>) { frame("i", Array(bytes)) }
+    /// Sends input in frames of at most `inputChunk` bytes, in order: the holder drops a frame over 1 MB, which
+    /// a big paste would otherwise be.
+    func send(input bytes: ArraySlice<UInt8>) {
+        var start = bytes.startIndex
+        repeat {
+            let end = bytes.index(start, offsetBy: Self.inputChunk, limitedBy: bytes.endIndex) ?? bytes.endIndex
+            frame("i", Array(bytes[start..<end]))
+            start = end
+        } while start < bytes.endIndex
+    }
+
+    static let inputChunk = 64 * 1024
 
     func resize(rows: Int, cols: Int, xPixels: Int, yPixels: Int) {
         var payload: [UInt8] = []

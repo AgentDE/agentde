@@ -169,7 +169,10 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             showMissing(item)
             return
         }
-        switch ViewerKind.shown(item, raw: raw) {
+        let kind = ViewerKind.shown(item, raw: raw)
+        // A ⌘-click's timing ends once the item is on screen: web content when it finishes loading, the rest here.
+        defer { if ![.markdown, .html, .web].contains(kind) { LinkTiming.shown(tabID, item: item, kind: "\(kind)") } }
+        switch kind {
         case .markdown:
             webView().loadHTMLString(MarkdownView.page(for: url, theme: theme), baseURL: url.deletingLastPathComponent())
         case .html:
@@ -185,7 +188,12 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
         case .image:
             let existing = content as? ZoomableImageView
             let view = existing ?? ZoomableImageView()
-            view.show(NSImage(contentsOf: url), keepZoom: existing != nil && keepScroll)
+            let decodeStart = Date()
+            let image = NSImage(contentsOf: url)
+            _ = image?.cgImage(forProposedRect: nil, context: nil, hints: nil)   // decode now, so the time is real
+            let decodeMs = Int(Date().timeIntervalSince(decodeStart) * 1000)
+            if decodeMs > 100 { DebugLog.log("image decode \(decodeMs) ms: \((item as NSString).lastPathComponent)", "link") }
+            view.show(image, keepZoom: existing != nil && keepScroll)
             install(view)
         case .diff, .text:
             let scroll = (content as? NSScrollView) ?? NSTextView.scrollableTextView()
@@ -349,12 +357,23 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { return decisionHandler(.allow) }
-        // mailto:, app links and the like go to their apps.
-        if let scheme = url.scheme?.lowercased(), !["http", "https", "file", "about", "data", "blob"].contains(scheme) {
-            NSWorkspace.shared.open(url)
+        // mailto:, app links and the like go to their apps, but only when you click a link: a page can't
+        // launch another app by navigating there on its own (Safari asks first; this simply declines).
+        if let scheme = url.scheme?.lowercased(), !Self.webSchemes.contains(scheme) {
+            if Self.opensExternally(linkActivated: action.navigationType == .linkActivated,
+                                    mainFrame: action.targetFrame?.isMainFrame ?? true) {
+                NSWorkspace.shared.open(url)
+            } else {
+                DebugLog.log("blocked \(scheme): navigation", "link")
+            }
             return decisionHandler(.cancel)
         }
         guard webView === web, action.navigationType == .linkActivated else { return decisionHandler(.allow) }
+        // A jump within the page (#anchor) loads nothing, so it isn't timed.
+        let withoutAnchor = { (u: URL?) in u?.absoluteString.components(separatedBy: "#").first }
+        if action.targetFrame?.isMainFrame ?? true, !(url.fragment != nil && withoutAnchor(url) == withoutAnchor(webView.url)) {
+            LinkTiming.start(tabID, from: "page-click")
+        }
         // A web page browses like a browser (sign-in flows cross sites). A local page's links open in the viewer as
         // the next item, so ‹ and ⌘[ come back: another file or a web page; a link within the page just scrolls;
         // a folder or a missing file goes to its app.
@@ -371,6 +390,43 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             NSWorkspace.shared.open(url)
         }
         decisionHandler(.cancel)
+    }
+
+    static let webSchemes: Set<String> = ["http", "https", "file", "about", "data", "blob"]
+
+    /// Whether a non-web link may go to its app: only a click on a link in the page itself, not a script's
+    /// navigation or an iframe's.
+    static func opensExternally(linkActivated: Bool, mainFrame: Bool) -> Bool { linkActivated && mainFrame }
+
+    /// When the current main-frame load started and committed, for the split in the `[link]` log.
+    private var loadStartedAt: Date?
+    private var loadCommittedAt: Date?
+
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        guard webView === web, LinkTiming.hasPending else { return }
+        loadStartedAt = Date()
+        loadCommittedAt = nil
+    }
+
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        guard webView === web, loadStartedAt != nil else { return }
+        loadCommittedAt = Date()
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard webView === web else { return }
+        if let start = loadStartedAt {
+            // Network (start → commit) vs. rendering (commit → finish).
+            let commit = loadCommittedAt ?? start
+            let name = webView.url.map { url in url.host == nil ? url.lastPathComponent : url.absoluteString } ?? "page"
+            DebugLog.log("web load \(name): start→commit \(Int(commit.timeIntervalSince(start) * 1000)) ms, commit→finish \(Int(Date().timeIntervalSince(commit) * 1000)) ms", "link")
+            loadStartedAt = nil
+            loadCommittedAt = nil
+        }
+        guard let item = shown?.item else { return }
+        // A page browsed in place (a .web item) shows its new URL; anything else, the item.
+        let name = ViewerKind.of(item) == .web ? (webView.url?.absoluteString ?? item) : item
+        LinkTiming.shown(tabID, item: name, kind: "\(ViewerKind.shown(item, raw: raw))")
     }
 
     // MARK: WKUIDelegate
@@ -392,7 +448,10 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
         window.center()
         window.makeKeyAndOrderFront(nil)
         popups.append(window)
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+        // The observer goes when the window does, so a closed pop-up (and its web view) is released.
+        var token: NSObjectProtocol?
+        token = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self, weak window] _ in
+            if let token { NotificationCenter.default.removeObserver(token) }
             self?.popups.removeAll { $0 === window }
         }
         return popup

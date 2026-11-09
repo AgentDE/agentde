@@ -29,12 +29,12 @@ struct PtyHostTests {
     /// Short enough for a socket path (104 bytes), unlike the system temporary folder.
     let dir = NSHomeDirectory() + "/.config/agentde/pty-test-" + String(UUID().uuidString.prefix(8))
 
-    func spawn(_ script: String, ring: Int = PtyHost.ringBytes) throws -> String {
+    func spawn(_ script: String, ring: Int = PtyHost.ringBytes, cwd: String = "/tmp") throws -> String {
         let holder = try #require(Self.holder)
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         let socket = dir + "/t.sock"
-        let env = ["PATH=/usr/bin:/bin", "TERM=xterm-256color", "LANG=en_US.UTF-8"]
-        #expect(PtyHost.spawn(holder: holder, socket: socket, rows: 24, cols: 80, ringBytes: ring, cwd: "/tmp",
+        let env = ["PATH=/usr/bin:/bin", "TERM=xterm-256color", "LANG=en_US.UTF-8", "HOME=" + NSHomeDirectory(), "AGENTDE_RUN=echo should-not-run"]
+        #expect(PtyHost.spawn(holder: holder, socket: socket, rows: 24, cols: 80, ringBytes: ring, cwd: cwd,
                               executable: "/bin/sh", argv0: "sh", args: ["-c", script], environment: env))
         return socket
     }
@@ -138,6 +138,39 @@ struct PtyHostTests {
         #expect(!second.replay.contains("line-0-"))
         kill(second.shell, SIGKILL)
         await second.wait { second.exitStatus != nil }
+    }
+
+    /// A 2 MB paste, more than the holder's 1 MB frame limit, arrives whole and the connection survives.
+    @MainActor @Test func aPasteBiggerThanOneFrameArrivesWhole() async throws {
+        defer { cleanUp() }
+        // Counts 2.5 MB of input; stty raw so the line discipline doesn't cap a line.
+        let socket = try spawn("stty raw -echo; echo ready; n=$(head -c 2621440 | wc -c); echo \"got $n\"; sleep 30")
+        let tab = Recorder(fd: try #require(PtyHost.connect(path: socket)))
+        await tab.wait { (tab.replay + tab.output).contains("ready") && tab.replayEnded }
+        let size = 40 * 65536   // 2.5 MB
+        tab.connection.send(input: [UInt8](repeating: UInt8(ascii: "x"), count: size)[...])
+        await tab.wait(20) { tab.output.contains("got ") }
+        #expect(tab.output.contains("\(size)"))
+        #expect(!tab.closed)
+        kill(tab.shell, SIGKILL)
+        await tab.wait { tab.exitStatus != nil }
+    }
+
+    /// A folder the shell can't enter: no command, no startup run; a plain shell in ~ that says why.
+    @MainActor @Test func aFolderThatCantBeEnteredRunsOnlyAPlainShell() async throws {
+        defer { cleanUp() }
+        let locked = dir + "-locked"
+        try FileManager.default.createDirectory(atPath: locked, withIntermediateDirectories: true)
+        chmod(locked, 0o600)
+        defer { chmod(locked, 0o755); try? FileManager.default.removeItem(atPath: locked) }
+        let socket = try spawn("echo the-command-ran; sleep 30", cwd: locked)
+        let tab = Recorder(fd: try #require(PtyHost.connect(path: socket)))
+        await tab.wait { (tab.replay + tab.output).contains("can't open folder") }
+        let text = tab.replay + tab.output
+        #expect(text.contains("can't open folder \(locked)"))
+        #expect(!text.contains("the-command-ran"))
+        kill(tab.shell, SIGKILL)
+        await tab.wait { tab.exitStatus != nil }
     }
 
     @Test func socketFoldersDependOnlyOnTheStatePath() {

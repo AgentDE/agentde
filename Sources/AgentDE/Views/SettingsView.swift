@@ -51,6 +51,8 @@ struct SettingsView: View {
                     .help("History each terminal keeps. Applies to tabs opened after the change. More lines use more memory.")
                 TextField("Startup command", text: $store.settings.startupCommand, prompt: Text("conda activate myenv"))
                     .help("Runs in every new tab before Claude or Codex starts. Groups can override it from their right-click menu.")
+                Toggle("Let terminal programs read the clipboard (OSC 52)", isOn: $store.settings.allowClipboardRead)
+                    .help("Off by default: when on, any program in a tab, including one on another machine over SSH, can read what you last copied.")
                 Toggle("`open` shows files and pages in the tab's viewer", isOn: $store.settings.openInViewer)
                     .help("In tabs opened after the change, `open report.html` (also from Claude's ! and Bash commands) shows it in the viewer. /usr/bin/open always reaches the real one.")
                 Toggle("Show recent sessions under each group", isOn: $store.settings.showRecentSessions)

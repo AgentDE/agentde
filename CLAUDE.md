@@ -23,7 +23,7 @@ Native macOS app (SwiftUI + AppKit) that hosts terminal agents in groups and tab
 
 ## Testing changes
 
-- After building, check that the app launches: `open build/AgentDE.app`, then `pgrep -lf AgentDE.app`. Check memory and idle CPU with `ps -o rss=` and `top -l 2 -pid <pid> -stats cpu`.
+- After building, check that the app launches with `make run-test` (its own state and holders). Never `open build/AgentDE.app` while the installed app runs: it shares the user's state, and the instance lock makes it quit. Check memory with `footprint <pid>` (what Activity Monitor shows) and idle CPU with `top -l 2 -pid <pid> -stats cpu`.
 - Don't quit or kill a running AgentDE without asking the user. Their tabs keep running in `agentde-pty` holders when the app quits. Never kill the user's holders (sockets in `~/.config/<data folder>/pty/`): that ends a tab's shell and agent. A test instance's holders live in their own folder, named by the hash of its state path; clean up only those.
 - `scripts/register-workstream.sh` edits the user's global Claude Code and Codex config. Its dry run (no `--yes`) is fine; apply it only when the user asks.
 - Saved state is in `~/.config/<data folder>/state.json`. Inspect it read-only. To try something in a real window, `make run-test` runs a second copy with its own state and log folder; quit it when you're done.

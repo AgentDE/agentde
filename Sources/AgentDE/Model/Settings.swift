@@ -29,6 +29,9 @@ struct AgentDESettings: Codable, Equatable {
     var showCodexSessions: Bool = true
     /// `open <file or web page>` in a tab (also from Claude's `!` and Bash commands) shows it in the tab's viewer.
     var openInViewer: Bool = true
+    /// Whether programs in a tab may read the clipboard (OSC 52). Off: any program, even over SSH, could
+    /// otherwise read what you last copied.
+    var allowClipboardRead: Bool = false
     /// Shell commands run in every new tab before its agent starts, e.g. `conda activate myenv`.
     var startupCommand: String = ""
     /// Seconds an agent must have been working for its finish to earn a sparkle.

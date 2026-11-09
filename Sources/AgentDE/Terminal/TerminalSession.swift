@@ -154,7 +154,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         case .hello(let version, _, let shell):
             if version != 1 { DebugLog.log("tab \(tabID.uuidString.prefix(8)) holder speaks protocol \(version)", "tab") }
             shellPid = shell
-            if terminating { endProcesses() }
+            if terminating { endProcesses(); retire() }
         case .output(let bytes, let replay):
             bytesSinceHeartbeat += bytes.count
             replaying = replay
@@ -176,7 +176,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             let code: Int32? = (status & 0x7f) == 0 ? (status >> 8) & 0xff : nil
             processTerminated(exitCode: code)
         case .closed:
-            guard !exited, !terminating else { return }
+            if terminating { retire(); return }
+            guard !exited else { return }
             reconnect()
         }
     }
@@ -220,17 +221,16 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         DebugLog.log("start tab \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue) cwd=\(tab.cwd.abbreviatingHome)"
                      + (tab.claudeSessionId.map { " resume=\($0.prefix(8))" } ?? "") + (tab.attachJobId.map { " attach=\($0)" } ?? ""), "tab")
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
-        var isDirectory: ObjCBool = false
-        let folderExists = FileManager.default.fileExists(atPath: tab.cwd, isDirectory: &isDirectory) && isDirectory.boolValue
+        let folderExists = Self.canEnter(folder: tab.cwd)
         let cwd = folderExists ? tab.cwd : NSHomeDirectory()
         var env = environment(for: tab)
         var args: [String]
 
         if !folderExists {
             // Never run the startup command or an agent somewhere else: open a plain shell and say why.
-            DebugLog.log("tab \(tab.id.uuidString.prefix(8)) folder missing: \(tab.cwd)", "tab")
+            DebugLog.log("tab \(tab.id.uuidString.prefix(8)) folder missing or not accessible: \(tab.cwd)", "tab")
             env["AGENTDE_MISSING_DIR"] = tab.cwd
-            let note = "printf '\\033[33m\(AppBrand.name): %s no longer exists, so this shell opened in ~ without the startup command or agent.\\033[0m\\n' \"$AGENTDE_MISSING_DIR\"; unset AGENTDE_MISSING_DIR"
+            let note = "printf '\\033[33m\(AppBrand.name): %s is missing or not accessible, so this shell opened in ~ without the startup command or agent.\\033[0m\\n' \"$AGENTDE_MISSING_DIR\"; unset AGENTDE_MISSING_DIR"
             if ShellIntegration.supports(shell: shell) {
                 args = ["-l"]
                 if let userZdotdir = env["ZDOTDIR"] { env["AGENTDE_USER_ZDOTDIR"] = userZdotdir }
@@ -281,12 +281,21 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
                 guard let self else { if let fd { close(fd) }; return }
                 if let fd {
                     self.attach(fd)
+                } else if self.terminating {
+                    self.retire()
                 } else {
                     DebugLog.log("tab \(id.uuidString.prefix(8)) couldn't start: \(problem ?? "unknown")", "tab")
                     self.view.feed(text: "\u{1b}[31m\(AppBrand.name) couldn't start this tab's terminal: \(problem ?? "unknown error").\u{1b}[0m\r\n")
                 }
             }
         }
+    }
+
+    /// Whether a shell can start in `folder`: it exists, is a folder, and can be entered (search permission).
+    static func canEnter(folder: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: folder, isDirectory: &isDirectory) && isDirectory.boolValue
+            && access(folder, X_OK) == 0
     }
 
     /// The agent a tab runs after its startup command, or nil for a plain shell.
@@ -355,9 +364,29 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     /// keep running.
     func terminate() {
         terminating = true
-        if shellPid > 0 { endProcesses() }
-        // Without a shell pid yet, the holder is still starting; `.hello` ends it on arrival.
-        if shellPid > 0 || connection == nil { connection?.close() }
+        if shellPid > 0 || !started {
+            if shellPid > 0 { endProcesses() }
+            connection?.close()
+            retire()
+            return
+        }
+        // The holder is still starting: `.hello` ends its processes on arrival (or a failed start retires the
+        // session). The registry keeps the session alive until then; give up after 15 s.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+            guard let self, self.onRetired != nil else { return }
+            DebugLog.log("tab \(self.tabID.uuidString.prefix(8)) closed while starting; no shell reported in 15 s", "tab")
+            self.connection?.close()
+            self.retire()
+        }
+    }
+
+    /// Called once a closed tab has ended (or given up on) its processes; the registry lets the session go.
+    var onRetired: (() -> Void)?
+
+    private func retire() {
+        let done = onRetired
+        onRetired = nil
+        done?()
     }
 
     private func endProcesses() {
@@ -392,14 +421,22 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     }
 
     func clipboardCopy(source: TerminalView, content: Data) {
-        guard let text = String(data: content, encoding: .utf8) else { return }
+        // A replay re-feeds old output; a copy it contains already happened once.
+        guard !replaying, let text = String(data: content, encoding: .utf8) else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.writeObjects([text as NSString])
     }
 
+    /// OSC 52 clipboard reads: answered only when allowed in Settings, and never during a replay.
     func clipboardRead(source: TerminalView) -> Data? {
-        NSPasteboard.general.string(forType: .string)?.data(using: .utf8)
+        guard Self.answersClipboardRead(allowed: store?.settings.allowClipboardRead ?? false, replaying: replaying) else {
+            DebugLog.log("tab \(tabID.uuidString.prefix(8)) denied a clipboard read (OSC 52)", "tab")
+            return nil
+        }
+        return NSPasteboard.general.string(forType: .string)?.data(using: .utf8)
     }
+
+    static func answersClipboardRead(allowed: Bool, replaying: Bool) -> Bool { allowed && !replaying }
 
     /// Programs like Claude Code animate a spinner in the title many times a second. Only shell tabs use
     /// the title (as their name), so other tabs ignore it, and shell tabs publish at most once a second,

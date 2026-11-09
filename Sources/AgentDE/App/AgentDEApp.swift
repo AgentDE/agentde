@@ -42,7 +42,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 public enum AgentDEMain {
     static var extensions: [AgentDEExtension] = []
 
+    /// Held for the life of the process (see `InstanceLock`).
+    private static var lockFD: Int32 = -1
+
     public static func run(extensions: [AgentDEExtension]) -> Never {
+        switch InstanceLock.acquire(statePath: PtyHost.stateFilePath) {
+        case .acquired(let fd):
+            lockFD = fd
+        case .held:
+            _ = NSApplication.shared
+            let alert = NSAlert()
+            alert.messageText = "\(AppBrand.name) is already running with this state"
+            alert.informativeText = "Quit the other copy first. Both would fight over the same tabs. (\(PtyHost.stateFilePath.abbreviatingHome))"
+            alert.runModal()
+            exit(1)
+        case .unavailable:
+            DebugLog.log("couldn't open the instance lock beside \(PtyHost.stateFilePath); continuing without it")
+        }
         self.extensions = extensions
         AgentDEApp.main()
         exit(0)
