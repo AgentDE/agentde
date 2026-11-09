@@ -7,6 +7,7 @@ Native macOS app (SwiftUI + AppKit) that hosts terminal agents in groups and tab
 - `make` builds `build/AgentDE.app` with the extensions in `extensions.json` (side by side; missing ones are cloned from their `repo`), `make test` runs the core's Swift Testing suites, and `make install` tests, builds and installs. Plain `swift build` / `swift test` fail on SDKs whose SwiftUI needs Xcode's macro plugins; the scripts set `SDKROOT` from `scripts/env.sh`.
 - Add tests in `Tests/AgentDETests/` for new logic that doesn't need a window. Keep such logic in plain functions, and inject folders or paths (see `TranscriptIndex(projectsDir:)`) rather than reaching into `~`.
 - Bump `VERSION` for user-visible releases; the build number is the commit count.
+- Planned work is tracked as GitHub issues in AgentDE/agentde: label `planned` (plus `enhancement` or `bug`) and the next release's milestone; larger features get one issue with a checklist. Extension work goes in that extension's repo.
 - There's no Xcode. Don't add anything that needs it: `.metal` files to process, asset catalogs, SwiftUI macros like `#Preview` or `@Entry`, or Xcode project files.
 - Use `AppBrand.name` for the app's name in anything users see, and `AppBrand.configDirectory` for its folder: a brand file can rename the build (`scripts/brand.sh`).
 

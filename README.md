@@ -48,6 +48,7 @@ The first build clones the extensions next to this folder. Run `make install` ag
 - **[Guide](docs/GUIDE.md):** everything AgentDE does, every key and setting, troubleshooting.
 - **[Extending](docs/EXTENDING.md):** write a native extension or a JSON plugin.
 - **[Architecture](docs/ARCHITECTURE.md):** how it works inside.
+- **[Roadmap](https://github.com/AgentDE/agentde/issues?q=is%3Aopen+label%3Aplanned):** what's planned, as issues labeled `planned`.
 - **[CLAUDE.md](CLAUDE.md):** notes for agents working on this repo.
 
 ## License
