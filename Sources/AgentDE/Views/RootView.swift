@@ -61,9 +61,7 @@ private struct MainColumn: View {
     var body: some View {
         VStack(spacing: 0) {
             HeaderBar()
-            if store.settings.tabsPosition == .top { TabStrip() }
-            WorkArea()
-            if store.settings.tabsPosition == .bottom { TabStrip() }
+            WorkArea()   // the tab strip is in its left column, so the side panel runs from the header down
             StatusBar()
         }
         .overlay(alignment: .top) {

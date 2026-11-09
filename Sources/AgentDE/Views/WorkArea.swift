@@ -8,7 +8,21 @@ struct WorkArea: View {
         if let group = store.selectedGroup, let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.tabs.first {
             TabPane(tab: active).id(group.id)
         } else {
-            EmptyGroupView()
+            WithTabStrip { EmptyGroupView() }
+        }
+    }
+}
+
+/// A column with the tab strip above (or below, per Settings) its content.
+struct WithTabStrip<Content: View>: View {
+    @ViewBuilder let content: Content
+    @Environment(Store.self) private var store
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if store.settings.tabsPosition == .top { TabStrip() }
+            content
+            if store.settings.tabsPosition == .bottom { TabStrip() }
         }
     }
 }
@@ -26,13 +40,13 @@ private struct TabPane: View {
 
     var body: some View {
         if tab.kind == .files || tab.kind == .command {
-            terminalStack
+            WithTabStrip { terminalStack }
         } else {
             GeometryReader { geo in
                 let showPanel = store.panelVisible(tab)
                 let narrow = geo.size.width < 760
                 HStack(spacing: 0) {
-                    mainColumn(height: geo.size.height)
+                    WithTabStrip { mainColumn(height: geo.size.height) }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     if showPanel {
                         if narrow {

@@ -18,13 +18,17 @@ enum AppRestart {
     }
 
     /// Once a minute, compares the bundle on disk with the running build, and offers a restart when
-    /// `make install` (or anything else) has put a different one there.
+    /// `make install` (or anything else) has put a different one there: another build number, or the same
+    /// number rebuilt (an install of uncommitted changes), which only the executable's date tells apart.
     static func watchForUpdates(store: Store) {
         let running = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
         let plist = Bundle.main.bundleURL.appendingPathComponent("Contents/Info.plist")
+        let executable = Bundle.main.executableURL
+        let modified = { executable.flatMap { try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate } }
+        let launchedFrom = modified()
         Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             guard let info = NSDictionary(contentsOf: plist), let build = info["CFBundleVersion"] as? String,
-                  build != running else { return }
+                  build != running || modified() != launchedFrom else { return }
             let version = "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(build))"
             if store.updateInstalled != version {
                 DebugLog.log("update installed: \(version)", "app")

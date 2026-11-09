@@ -124,9 +124,10 @@ private struct GroupRow: View {
         }
         .padding(.leading, 2).padding(.trailing, 8)
         .frame(height: 30)
-        .background(RoundedRectangle(cornerRadius: 7).fill(selected ? theme.selected : hovering ? theme.hover : .clear))
+        // Open, its selected tab's row carries the highlight, so the two don't stack.
+        .background(RoundedRectangle(cornerRadius: 7).fill(selected && (collapsed || group.tabs.isEmpty) ? theme.selected : hovering ? theme.hover : .clear))
         .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color(nsColor: store.groupColor(group)), lineWidth: dropTarget ? 1.5 : 0))
-        .activeOutline(selected && !dropTarget, radius: 7, dashed: true)
+        .activeOutline(selected && (collapsed || group.tabs.isEmpty) && !dropTarget, radius: 7, dashed: true)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture(count: 2) { store.renamingGroupID = group.id }
@@ -360,7 +361,7 @@ private struct RecentSessionsList: View {
                 if older.count > limit { moreButton(showAll: $showAllOlder, extra: older.count - limit) }
             } else {
                 Text(older == nil ? "Looking…" : "None").font(.system(size: 10.5))
-                    .foregroundStyle(theme.muted.opacity(0.8)).padding(.leading, 4)
+                    .foregroundStyle(theme.muted.opacity(0.8)).padding(.leading, 11)
             }
         }
     }
@@ -391,7 +392,7 @@ private struct RecentSessionsList: View {
         .buttonStyle(.plain)
         .font(.system(size: 10.5))
         .foregroundStyle(theme.muted.opacity(0.8))
-        .padding(.leading, 4)
+        .padding(.leading, 11)
     }
 
     @ViewBuilder private func recent(_ sessions: [RecentSession], hidden: Bool, limit: Int) -> some View {
