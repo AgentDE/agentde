@@ -225,7 +225,7 @@ Quitting saves groups, tabs, colors, names, browser URLs and settings. Closing a
 
 ### Background mode
 
-Turn on **Settings → Agents → Run Claude as background sessions**. New Claude tabs then start as Claude background sessions (`claude --bg`) and attach with `claude attach <id>`. Closing a tab stops its agent (`claude stop`); the conversation is kept, so you can resume it from Recent. To close the tab and leave the agent working, right-click it → **Close, Keep Agent Running**; reattach from Claude's Agent View (⌘K → **Open Agent View**).
+Turn on **Settings → Agents → Run Claude as background sessions**. New Claude tabs then start as Claude background sessions (`claude --bg`) and attach with `claude attach <id>`. Closing a tab stops its agent (`claude stop`); the conversation is kept, so you can resume it from Recent. To close the tab and leave the agent working, right-click it → **Close, Keep Agent Running** (**Close & Stop Agent** stops it); reattach from Claude's Agent View (⌘K → **Open Agent View**).
 
 Background sessions inherit your startup command's environment, but Claude's background service reorders `PATH`, so a conda env's `python` may not come first.
 
@@ -235,7 +235,7 @@ Background sessions inherit your startup command's environment, but Claude's bac
 |---|---|
 | ⌘T, ⌘⇧T, ⌘⌥T | New Claude, shell or Codex tab |
 | ⌘⇧E | New File Explorer tab |
-| ⌘W | Close tab (asks if its agent is working) |
+| ⌘W | Close the tab; for an agent tab that stops the agent (asks if it's working; the conversation is kept) |
 | ⌘R, or double-click | Rename tab |
 | ⌘⇧F | Search all sessions |
 | ⌘F, ⌘G, ⌘⇧G | Find in this tab (or its viewer, when focused), next, previous |

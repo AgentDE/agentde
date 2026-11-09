@@ -19,6 +19,12 @@ struct TerminalPane: NSViewRepresentable {
     }
 
     private func attach(to container: NSView) {
+        // SwiftUI can update a pane once more after its tab is closed. Starting it then would bring the
+        // closed tab's holder back (and re-attach its background agent), so a tab no longer in the store gets nothing.
+        guard store.tab(tab.id) != nil else {
+            for other in container.subviews { other.removeFromSuperview() }
+            return
+        }
         let session = store.terminals.session(for: tab)
         let view = session.view
         // A reused container may still hold another tab's terminal, which would cover this one.

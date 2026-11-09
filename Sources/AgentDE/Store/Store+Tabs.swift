@@ -23,8 +23,8 @@ extension Store {
     func closeTab(_ id: UUID, confirmIfBusy: Bool = true, keepAgent: Bool = false) {
         guard let tab = tab(id) else { return }
         if confirmIfBusy, state(id) == .working, !keepAgent,
-           !confirm("Close a working agent?", detail: "\(title(for: tab)) is still running a turn"
-                    + (tab.attachJobId != nil ? ", and closing stops it." : ".")) {
+           !confirm("Stop a working agent?", detail: "\(title(for: tab)) is still running a turn, and closing stops it. "
+                    + "The conversation is kept, so you can resume it from Recent.", button: "Close & Stop Agent") {
             return
         }
         // The alert ran the event loop, so the tab may have moved or gone: look it up again.

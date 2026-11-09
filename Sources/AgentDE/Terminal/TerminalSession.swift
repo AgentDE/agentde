@@ -94,7 +94,11 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     /// Connects the tab the first time it is shown: to its running holder if there is one (after a relaunch,
     /// the shell and agent are still going), else to a new holder running a fresh shell.
     func startIfNeeded(_ tab: TabModel) {
-        guard !started, !held, store != nil else { return }
+        guard !started, !held, let store else { return }
+        guard store.tab(tabID) != nil else {
+            DebugLog.log("not starting closed tab \(tabID.uuidString.prefix(8))", "tab")
+            return
+        }
         started = true
         markStarted()
         let id = tabID

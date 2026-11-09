@@ -84,6 +84,15 @@ struct SavedStateTests {
         let files = try FileManager.default.contentsOfDirectory(atPath: dir.path)
         #expect(!files.contains { $0.hasPrefix("state.json.unreadable-") })
     }
+
+    /// SwiftUI can update a closed tab's pane once more; starting it then would bring the tab's holder back.
+    @Test func aClosedTabIsNeverStarted() throws {
+        let store = try load(#"{"groups": []}"#)
+        let tab = TabModel(id: UUID(), kind: .shell, cwd: "/tmp")
+        let session = TerminalSession(tabID: tab.id, store: store)
+        session.startIfNeeded(tab)
+        #expect(!session.started)
+    }
 }
 
 @Suite("Shell drawers from earlier versions")
