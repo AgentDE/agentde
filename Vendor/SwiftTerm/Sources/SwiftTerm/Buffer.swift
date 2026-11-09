@@ -899,6 +899,11 @@ public final class Buffer {
         }
         rows = newRows
         cols = newCols
+        // AgentDE patch: resizing and reflow expand every line to the new width; compact the scrollback
+        // again so history doesn't stay full-width after the first window or pane resize.
+        for i in 0..<min(yBase, lines.count) {
+            lines [i].compact ()
+        }
     }
     
     /// Removes the scrollback history (the lines above the visible screen)

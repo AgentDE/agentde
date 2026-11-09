@@ -129,5 +129,12 @@ struct ScrollbackCompactionTests {
         for line in expected.suffix(200) {
             #expect(after.contains(line), "\(line) after resize")
         }
+        // ...and stays compact: a resize re-expands every line, so history is compacted again afterwards.
+        let resized = (0..<terminal.buffer.yBase).map { terminal.buffer.lines[$0] }
+        #expect(resized.filter(\.isCompacted).count > resized.count * 9 / 10)
+        terminal.resize(cols: 140, rows: 14)   // rows only
+        terminal.resize(cols: 160, rows: 14)   // wider, no reflow of shorter lines
+        let again = (0..<terminal.buffer.yBase).map { terminal.buffer.lines[$0] }
+        #expect(again.filter(\.isCompacted).count > again.count * 9 / 10)
     }
 }
