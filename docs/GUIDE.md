@@ -151,7 +151,7 @@ Every word must appear, in any order, ignoring case. Results stream in per sessi
 
 ## Recent sessions
 
-Under each group's tabs, a faded **Recent** list shows the named sessions you started in exactly that group's folder in the last 2 weeks. Click one to resume it in a new tab: Claude with `claude --resume`, Codex with `codex resume`.
+Under each group's tabs, a faded **Recent** list shows the named sessions you started in exactly that group's folder in the last 2 weeks. Click one to resume it in a new tab: Claude with `claude --resume`, Codex with `codex resume`. When two groups share a folder, its sessions show only under the first one (the higher in the sidebar).
 
 - **Only yours, only named.** Claude sessions count if you started them from the CLI or the desktop app and gave them a title (`/rename`, or the desktop app's), or Claude Code named a background session. Codex threads count if you started and named them in the Codex CLI or desktop app. SDK runs, forks, `codex exec` runs, sub-agent threads and sessions already open in a tab are left out.
 - **Telling them apart.** Codex sessions show the Codex icon. A Claude session live in another terminal shows a radio-waves icon, and AgentDE asks before opening a second copy. Right-click one of those running sessions → **Stop Agent** to stop it without opening it (it asks first; the conversation is kept).

@@ -77,9 +77,18 @@ extension Store {
     }
 
     private func sessions(_ all: [RecentSession], for group: GroupModel) -> [RecentSession] {
-        let hidden = openSessionIds.union((group.pinnedSessions ?? []).map(\.sessionId))
-        let dir = Self.normalized(group.dir)
-        return all.filter { !hidden.contains($0.sessionId) && Self.normalized($0.cwd) == dir }
+        Self.sessions(all, for: group, in: groups, open: openSessionIds)
+    }
+
+    /// A folder's sessions belong to the first group (from the top of the sidebar) with that folder, so a second
+    /// group started in the same folder doesn't list them again. Pinned or open sessions aren't listed.
+    static func sessions(_ all: [RecentSession], for group: GroupModel, in groups: [GroupModel], open: Set<String>) -> [RecentSession] {
+        let dir = normalized(group.dir)
+        let sameFolder = groups.filter { normalized($0.dir) == dir }
+        guard sameFolder.first?.id ?? group.id == group.id else { return [] }
+        let pinned = sameFolder.flatMap { ($0.pinnedSessions ?? []).map(\.sessionId) }
+        let hidden = open.union(pinned)
+        return all.filter { !hidden.contains($0.sessionId) && normalized($0.cwd) == dir }
     }
 
     /// Opens or closes a group's Older list; opening it rescans (the scanners cache what hasn't changed).
