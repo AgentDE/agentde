@@ -93,17 +93,6 @@ struct SavedStateTests {
         #expect(store.groups[0].tabs.first?.attachJobId == "kept1234")
     }
 
-    /// A running tab left behind by Change Folder starts in the new folder when it's closed and reopened.
-    @Test func aMovedTabReopensInItsNewFolder() throws {
-        _ = NSApplication.shared
-        let a = UUID()
-        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(a.uuidString)", "kind": "shell", "cwd": "/old/repo/src", "movedTo": "/tmp/src"}]}]}"#)
-        store.closeTab(a, confirmIfBusy: false)
-        store.reopenClosedTab()
-        #expect(store.groups[0].tabs.first?.cwd == "/tmp/src")
-        #expect(store.groups[0].tabs.first?.movedTo == nil)
-    }
-
     /// Text typed into a tab whose terminal never started counts as not delivered.
     @Test func typingIntoATerminalThatIsntRunningFails() throws {
         let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(UUID().uuidString)", "kind": "shell", "cwd": "/tmp"}]}]}"#)

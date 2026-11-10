@@ -89,9 +89,6 @@ extension Store {
                     tab.attachJobId = tab.claudeSessionId.flatMap { liveBackgroundJobs[$0] }.flatMap { stoppingJobs.contains($0) ? nil : $0 }
                 }
             }
-            // A pending folder move applies when the agent starts fresh here, not when it reattaches to one
-            // still running in the old folder.
-            if tab.attachJobId == nil, let moved = tab.movedTo { tab.cwd = moved; tab.movedTo = nil }
             if tab.kind == .shell, tab.claudeSessionId == nil { tab.lastAgentName = nil }
             groups[g].tabs.insert(tab, at: min(closed.index, groups[g].tabs.count))
             DebugLog.log("reopened closed tab as \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)", "tab")

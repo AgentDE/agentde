@@ -162,7 +162,7 @@ Under each group's tabs, a faded **Recent** list shows the named sessions you st
 The list refreshes every 30 seconds.
 
 
-**Moved a repository?** Right-click its group → **Change Folder…** (**Locate Folder…** when the folder is gone): tabs inside the old folder that aren't running move along to the same place in the new one. Running tabs stay where their agent works until you close and reopen them (⌥⇧⌘T), so their Files, Changes and paths never point at a different repository. Tabs elsewhere stay.
+**A group's folder** is where its new tabs start, and what its Recent list and worktrees use. Right-click the group → **Default Folder…** to change it (say, the repository moved). Open tabs keep their own folders; a tab can be anywhere, and **Move to Group** puts it in another group.
 
 **Only active tabs.** The filter button beside **Groups** hides every tab without a status dot, Recent and Older, and groups with nothing left, leaving the agents that are working, waiting on you or done (and the tab on screen). Click it again for everything.
 

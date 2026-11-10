@@ -23,14 +23,6 @@ struct AuditFixTests {
         #expect(Store.trimmedLink("compare.html).") == "compare.html")
     }
 
-    /// Change Folder moves tabs inside the old folder along, and leaves others where they are.
-    @Test func groupFoldersMoveTheirTabsAlong() {
-        #expect(Store.moved("/old/repo", from: "/old/repo", to: "/new/repo") == "/new/repo")
-        #expect(Store.moved("/old/repo/src", from: "/old/repo", to: "/new/repo") == "/new/repo/src")
-        #expect(Store.moved("/old/repo-worktrees/fix", from: "/old/repo", to: "/new/repo") == nil)
-        #expect(Store.moved("/elsewhere", from: "/old/repo/", to: "/new/repo") == nil)
-    }
-
     /// Search reads Codex threads: your prompts and the agent's replies, not its instructions or tool calls.
     @Test func codexLogsAreSearchable() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-codex-\(UUID().uuidString)")

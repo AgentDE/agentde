@@ -180,7 +180,7 @@ private struct GroupRow: View {
             }
             Divider()
             Button("Rename") { store.renamingGroupID = group.id }
-            Button(TerminalSession.canEnter(folder: group.dir) ? "Change Folder…" : "Locate Folder…") { store.changeGroupFolder(group.id) }
+            Button("Default Folder…") { store.setGroupFolder(group.id) }
             Menu("Color") {
                 ForEach(0..<8, id: \.self) { i in
                     Button { store.setGroupColor(group.id, i) } label: {
