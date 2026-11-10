@@ -40,6 +40,7 @@ extension Store: AgentDEHost {
         guard let id = newTab(kind: kind, in: group, cwd: folder) else { return nil }
         if let title, let (g, t) = locate(id) {
             groups[g].tabs[t].customTitle = title
+            if kind == .claude { groups[g].tabs[t].sessionName = title }
             scheduleSave()
         }
         return id

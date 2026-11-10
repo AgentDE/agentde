@@ -89,9 +89,9 @@ struct AgentDECommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("New Claude Tab") { store.newTab(kind: .claude) }.keyboardShortcut("t")
+            Button("New Claude Tab") { store.startTab(kind: .claude) }.keyboardShortcut("t")
             Button("New Shell Tab") { store.newTab(kind: .shell) }.keyboardShortcut("t", modifiers: [.command, .shift])
-            Button("New Codex Tab") { store.newTab(kind: .codex) }.keyboardShortcut("t", modifiers: [.command, .option])
+            Button("New Codex Tab") { store.startTab(kind: .codex) }.keyboardShortcut("t", modifiers: [.command, .option])
             Button("New File Explorer Tab") { store.newTab(kind: .files) }.keyboardShortcut("e", modifiers: [.command, .shift])
             Button("New Group…") { store.newGroup() }.keyboardShortcut("n", modifiers: [.command, .shift])
             Divider()

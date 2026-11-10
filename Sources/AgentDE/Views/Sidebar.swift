@@ -164,7 +164,7 @@ private struct GroupRow: View {
             // The same choices as the tab strip's +.
             Menu("New") {
                 ForEach([TabKind.claude, .codex, .shell, .files], id: \.self) { kind in
-                    Button { store.newTab(kind: kind, in: group.id) } label: {
+                    Button { store.startTab(kind: kind, in: group.id) } label: {
                         Label(kind == .files ? "File Explorer" : kind.label, systemImage: kind.symbol)
                     }
                 }

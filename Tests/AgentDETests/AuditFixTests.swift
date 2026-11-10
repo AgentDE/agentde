@@ -43,4 +43,13 @@ struct AuditFixTests {
         #expect(entries.map(\.text) == ["rename the flaky test", "Renamed it to testRetriesOnce."])
         #expect(entries.map(\.role) == [.you, .codex])
     }
+
+    /// A new Claude tab with a name starts `claude --name '<name>'`, safely quoted; a resume ignores it.
+    @Test func namedSessionsStartWithTheirName() {
+        var tab = TabModel(kind: .claude, cwd: "/tmp")
+        tab.sessionName = "fix Andy's login; rm -rf /"
+        #expect(TerminalSession.agentCommand(for: tab) == #"claude --name 'fix Andy'\''s login; rm -rf /'"#)
+        tab.claudeSessionId = "3d4e5f6a-7b8c-4d9e-8f0a-1b2c3d4e5f6a"
+        #expect(TerminalSession.agentCommand(for: tab) == "claude --resume 3d4e5f6a-7b8c-4d9e-8f0a-1b2c3d4e5f6a")
+    }
 }

@@ -38,7 +38,7 @@ struct TabStrip: View {
             // A click opens the choice of tab type; the keyboard shortcuts open each kind directly.
             Menu {
                 ForEach([TabKind.claude, .codex, .shell, .files], id: \.self) { kind in
-                    Button { store.newTab(kind: kind) } label: {
+                    Button { store.startTab(kind: kind) } label: {
                         Label(kind == .files ? "File Explorer" : kind.label, systemImage: kind.symbol)
                     }
                 }

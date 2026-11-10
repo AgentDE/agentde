@@ -37,9 +37,9 @@ struct CommandPalette: View {
             })
         }
         let actions: [(String, String, () -> Void)] = [
-            ("New Claude tab", "sparkle", { store.newTab(kind: .claude) }),
+            ("New Claude tab", "sparkle", { store.startTab(kind: .claude) }),
             ("New shell tab", "terminal", { store.newTab(kind: .shell) }),
-            ("New Codex tab", "chevron.left.forwardslash.chevron.right", { store.newTab(kind: .codex) }),
+            ("New Codex tab", "chevron.left.forwardslash.chevron.right", { store.startTab(kind: .codex) }),
             ("New File Explorer tab", "folder", { store.newTab(kind: .files) }),
             ("New tab in worktree…", "arrow.triangle.branch", { store.newWorktreeTab() }),
             ("New group…", "folder.badge.plus", { store.newGroup() }),

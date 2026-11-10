@@ -18,6 +18,35 @@ extension Store {
         return tab.id
     }
 
+    /// A new tab from a menu, key or button: Claude and Codex tabs ask for a name first when Settings → Terminal
+    /// says so (Return starts it; an empty name starts it unnamed; Cancel opens nothing).
+    @discardableResult
+    func startTab(kind: TabKind, in groupID: UUID? = nil) -> UUID? {
+        var name: String?
+        if settings.askSessionName, kind == .claude || kind == .codex {
+            let alert = NSAlert()
+            alert.messageText = "Name this \(kind.label) session"
+            alert.informativeText = kind == .claude
+                ? "It shows on the tab, in Recent and in Claude's resume list. Leave it empty to skip."
+                : "It shows on the tab. Leave it empty to skip."
+            let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+            field.placeholderString = "fix login"
+            alert.accessoryView = field
+            alert.addButton(withTitle: "Start")
+            alert.addButton(withTitle: "Cancel")
+            alert.window.initialFirstResponder = field
+            guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+            name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " ")
+        }
+        guard let id = newTab(kind: kind, in: groupID) else { return nil }
+        if let name, !name.isEmpty, let (g, t) = locate(id) {
+            groups[g].tabs[t].customTitle = name
+            if kind == .claude { groups[g].tabs[t].sessionName = name }
+            scheduleSave()
+        }
+        return id
+    }
+
     /// A new tab running an added agent (`AgentDefinition`).
     @discardableResult
     func newAgentTab(_ agent: AgentDefinition, in groupID: UUID? = nil) -> UUID? {

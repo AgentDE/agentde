@@ -16,7 +16,7 @@ extension Store {
         let group = GroupModel(name: url.lastPathComponent, colorIndex: color, dir: url.path)
         groups.append(group)
         selectedGroupID = group.id
-        newTab(kind: settings.defaultTabKind, in: group.id)
+        startTab(kind: settings.defaultTabKind, in: group.id)
     }
 
     func renameGroup(_ id: UUID, to name: String) {

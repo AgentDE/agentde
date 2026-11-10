@@ -313,6 +313,11 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             && access(folder, X_OK) == 0
     }
 
+    /// Text as one shell word, whatever it contains.
+    static func shellQuoted(_ text: String) -> String {
+        "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
     /// The agent a tab runs after its startup command, or nil for a plain shell.
     static func agentCommand(for tab: TabModel, background: Bool = false) -> String? {
         // Ids are validated before they reach the shell; an invalid one is treated as absent.
@@ -320,7 +325,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         let session = SafeID.session(tab.claudeSessionId)
         switch tab.kind {
         case .claude:
-            let flags = session.map { " --resume \($0)" + (tab.forkOnStart == true ? " --fork-session" : "") } ?? ""
+            let flags = session.map { " --resume \($0)" + (tab.forkOnStart == true ? " --fork-session" : "") }
+                ?? tab.sessionName.flatMap { $0.isEmpty ? nil : " --name " + shellQuoted($0) } ?? ""
             return background ? backgroundLaunch(flags: flags) : "claude" + flags
         case .codex:
             return "codex" + (SafeID.session(tab.codexSessionId).map { " resume \($0)" } ?? "")

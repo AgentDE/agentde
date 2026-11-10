@@ -9,6 +9,8 @@ struct TabModel: Identifiable, Codable, Equatable {
     /// Codex tabs: the Codex thread to resume (`codex resume <id>`).
     var codexSessionId: String?
     var command: String?
+    /// A name for the agent session this tab starts (Claude's `--name`), used only when it starts a new one.
+    var sessionName: String?
     /// Agent tabs: which `AgentDefinition` they run.
     var agentID: String?
     var browserURL: String?

@@ -218,9 +218,9 @@ private struct EmptyGroupView: View {
             } else {
                 Text("Start a tab in this group").font(.system(size: 15, weight: .medium)).foregroundStyle(theme.text)
                 HStack(spacing: 10) {
-                    Button("Claude  ⌘T") { store.newTab(kind: .claude) }
+                    Button("Claude  ⌘T") { store.startTab(kind: .claude) }
                     Button("Shell  ⌘⇧T") { store.newTab(kind: .shell) }
-                    Button("Codex") { store.newTab(kind: .codex) }
+                    Button("Codex") { store.startTab(kind: .codex) }
                     Button("Files  ⌘⇧E") { store.newTab(kind: .files) }
                 }
                 .controlSize(.large)
