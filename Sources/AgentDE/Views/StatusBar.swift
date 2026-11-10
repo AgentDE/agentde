@@ -26,7 +26,17 @@ struct StatusBar: View {
                 }
             }
             Spacer()
+            if let error = store.saveError {
+                Button { store.save() } label: {
+                    Label("Not saved · Retry", systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color(hex: 0xE24B4A))
+                }
+                .buttonStyle(.plain)
+                .hint("\(AppBrand.name) couldn't save its tabs: \(error). Click to try again.")
+            }
             let outdated = store.outdatedClaudeTabs.count
+            if let note = store.activityNote {
+                Text(note).foregroundStyle(theme.muted)
+            }
             if let note = store.claudeRestartNote {
                 Text(note).foregroundStyle(Theme.doneUnseen)
             } else if outdated > 0 {

@@ -40,12 +40,12 @@ struct HookStatusTests {
         let input = Pipe()
         task.standardInput = input
         try task.run()
-        input.fileHandleForWriting.write(Data(#"{"hook_event_name":"PermissionRequest"}"#.utf8))
+        input.fileHandleForWriting.write(Data(#"{"session_id": "019a5c3e-7b2d-7c41-9e1a-3f5d2b8c4e6a", "hook_event_name":"PermissionRequest"}"#.utf8))
         try input.fileHandleForWriting.close()
         task.waitUntilExit()
         #expect(task.terminationStatus == 0)
         let report = HookStatus.parse(try String(contentsOf: file, encoding: .utf8))
-        #expect(report == .init(state: "needs-you", pid: getpid(), detail: nil))
+        #expect(report == .init(state: "needs-you", pid: getpid(), detail: nil, session: "019a5c3e-7b2d-7c41-9e1a-3f5d2b8c4e6a"))
 
         // Outside AgentDE (no variable) it does nothing and still succeeds.
         let outside = Process()

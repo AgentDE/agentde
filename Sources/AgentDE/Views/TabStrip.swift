@@ -12,17 +12,24 @@ struct TabStrip: View {
         let color = group.map { Color(nsColor: store.groupColor($0)) } ?? theme.border
         let top = store.settings.tabsPosition == .top
         HStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 3) {
-                    if let group {
-                        ForEach(Array(group.tabs.enumerated()), id: \.element.id) { index, tab in
-                            TabChip(group: group, tab: tab, index: index, color: color)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 3) {
+                        if let group {
+                            ForEach(Array(group.tabs.enumerated()), id: \.element.id) { index, tab in
+                                TabChip(group: group, tab: tab, index: index, color: color).id(tab.id)
+                            }
                         }
                     }
+                    .padding(.leading, 8)
+                    .padding(.trailing, 2)
+                    .background(GeometryReader { Color.clear.preference(key: TabsWidthKey.self, value: $0.size.width) })
                 }
-                .padding(.leading, 8)
-                .padding(.trailing, 2)
-                .background(GeometryReader { Color.clear.preference(key: TabsWidthKey.self, value: $0.size.width) })
+                // With more tabs than fit, the one you switch to (⌘1–9, ⌘J, the sidebar) scrolls into view.
+                .onChange(of: group?.selectedTabID) { _, id in
+                    guard let id else { return }
+                    withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(id) }
+                }
             }
             .frame(maxWidth: tabsWidth)
             .layoutPriority(1)   // the tabs get the room they need before the trailing spacer
@@ -58,7 +65,12 @@ struct TabStrip: View {
                 }
                 .hint("Reopen in the viewer (⌘[)")
             }
-            Spacer(minLength: 12)
+            if store.settings.termi {
+                TermiStrip(mood: TermiMood.of(store.runtime.values.map(\.state), quietFor: 0), animated: store.animations)
+                    .frame(minWidth: 12, maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Spacer(minLength: 12)
+            }
         }
         .frame(height: store.settings.density == .compact ? 34 : 40)
         .overlay(alignment: top ? .bottom : .top) { Rectangle().fill(theme.border).frame(height: 0.5) }
@@ -91,7 +103,7 @@ private struct TabChip: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(active ? color : theme.muted)
                 } else {
-                    StatusDot(state: state, animated: store.settings.animations)
+                    StatusDot(state: state, animated: store.animations)
                 }
                 if state != .needsYou, store.wantsAttention(tab) { AskRing(size: 14) }
                 SparkleBurst(token: store.runtime[tab.id]?.sparkleToken ?? 0, firedAt: store.runtime[tab.id]?.sparkleAt, color: color)
@@ -118,8 +130,8 @@ private struct TabChip: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(theme.secondary)
                     .hint("Close tab (⌘W)")
-                } else if index < 9, !compact {
-                    Text("⌘\(index + 1)").font(.system(size: 10)).foregroundStyle(theme.muted.opacity(active ? 1 : 0))
+                } else if let key = index < 8 ? index + 1 : (index == group.tabs.count - 1 ? 9 : nil), !compact {
+                    Text("⌘\(key)").font(.system(size: 10)).foregroundStyle(theme.muted.opacity(active ? 1 : 0))
                 }
             }
             .frame(width: 22)

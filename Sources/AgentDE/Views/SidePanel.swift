@@ -26,6 +26,10 @@ struct SidePanel: View {
                         }
                         .contentShape(Rectangle())
                         .onTapGesture { store.setPanelTab(tab.id, item.id) }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(item.title)
+                        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+                        .accessibilityAction { store.setPanelTab(tab.id, item.id) }
                 }
                 Spacer(minLength: 0)
             }
@@ -33,7 +37,10 @@ struct SidePanel: View {
             .frame(height: store.settings.density == .compact ? 34 : 40)
             // A visible rule the underline sits on, so it doesn't just end in black.
             .overlay(alignment: .bottom) { Rectangle().fill(theme.muted.opacity(0.35)).frame(height: 0.5) }
-            if let current { current.view.id(current.id).frame(maxWidth: .infinity, maxHeight: .infinity) }
+            if let current {
+                // Per tab and folder: one tab's Files or Changes state never carries over to another's.
+                current.view.id("\(tab.id.uuidString)|\(tab.cwd)|\(current.id)").frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
         // No edge of its own: the resize handle beside it draws the divider.
         .background(theme.sidebar.opacity(0.55))

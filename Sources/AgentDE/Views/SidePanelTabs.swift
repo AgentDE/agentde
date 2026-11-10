@@ -68,6 +68,8 @@ struct ChangesPanel: View {
     @State private var log: [GitCommit] = []
     @State private var loaded = false
     @State private var shown: String?
+    /// The newest load; an older one finishing late is dropped.
+    @State private var generation = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -124,9 +126,12 @@ struct ChangesPanel: View {
 
     private func reload() {
         let dir = tab.cwd
+        generation += 1
+        let mine = generation
         DispatchQueue.global(qos: .userInitiated).async {
             let result = GitChanges.load(in: dir)
             DispatchQueue.main.async {
+                guard mine == generation, dir == tab.cwd else { return }
                 root = result?.root
                 changes = result?.changes ?? []
                 log = result?.log ?? []
@@ -191,6 +196,23 @@ private struct ChangeRow: View {
         .onHover { hovering = $0 }
         .onTapGesture(perform: action)
         .help(change.path)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
+    }
+
+    /// What VoiceOver reads: the path, what happened to it, and the line counts.
+    private var spoken: String {
+        let what: String = switch change.status {
+        case "??": "new"
+        case "D": "deleted"
+        case "A": "added"
+        default: "modified"
+        }
+        let added = change.added.map { ", \($0) added" } ?? ""
+        let removed = change.removed.map { ", \($0) removed" } ?? ""
+        return change.path + ", " + what + added + removed
     }
 
     private var color: Color {
@@ -229,5 +251,8 @@ private struct CommitRow: View {
         .onHover { hovering = $0 }
         .onTapGesture(perform: action)
         .help(commit.subject)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
     }
 }

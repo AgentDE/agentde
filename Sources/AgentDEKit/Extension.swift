@@ -111,8 +111,10 @@ public protocol AgentDEHost: AnyObject {
     var extensions: [AgentDEExtension] { get }
 
     func selectTab(_ id: UUID, focus: Bool)
-    /// Types text into a tab's terminal, as if pasted ("\r" presses Return).
-    func type(_ text: String, into tab: UUID)
+    /// Types text into a tab's terminal, as if pasted ("\r" presses Return). False when the tab has no running
+    /// terminal to type into (closed, or not started yet).
+    @discardableResult
+    func type(_ text: String, into tab: UUID) -> Bool
     /// Shows a file path or link in a tab's viewer.
     func openInViewer(_ item: String, tab: UUID, select: Bool)
     /// Opens a new tab and returns its id.

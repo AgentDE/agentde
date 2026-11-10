@@ -38,6 +38,7 @@ extension Store {
         }
         // The alert ran the event loop, so the tab may have moved or gone: look it up again.
         guard let (g, t) = locate(id) else { return }
+        rememberClosed(groups[g].tabs[t], group: groups[g].id, at: t, keptAgent: keepAgent && groups[g].tabs[t].attachJobId != nil)
         dispose(groups[g].tabs[t], keepAgent: keepAgent)
         let wasSelected = groups[g].selectedTabID == id
         groups[g].tabs.remove(at: t)
@@ -50,6 +51,55 @@ extension Store {
         }
         scheduleSave()
         focusActiveTerminal()
+    }
+
+    /// The last few closed tabs, newest last, for Reopen Closed Tab (this run only).
+    struct ClosedTab { var tab: TabModel; var group: UUID; var index: Int; var keptAgent = false }
+
+    private func rememberClosed(_ tab: TabModel, group: UUID, at index: Int, keptAgent: Bool) {
+        guard tab.transient != true, tab.kind != .command else { return }
+        closedTabs.append(ClosedTab(tab: tab, group: group, index: index, keptAgent: keptAgent))
+        if closedTabs.count > 20 { closedTabs.removeFirst(closedTabs.count - 20) }
+    }
+
+    /// Brings back the last closed tab where it was: its folder (a worktree too), its session (resumed, since
+    /// closing stopped the agent), title, viewer and panel. Its terminal starts fresh.
+    func reopenClosedTab(waited: Int = 0) {
+        // Its background job is still being stopped, or still listed as running: wait (up to 10 s), so the
+        // session isn't attached to a job that's exiting, nor resumed beside one that's still alive.
+        if let last = closedTabs.last, !last.keptAgent, let job = last.tab.attachJobId, waited < 50,
+           stoppingJobs.contains(job) || (liveBackgroundJobs.values.contains(job) && !failedStops.contains(job)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.reopenClosedTab(waited: waited + 1) }
+            return
+        }
+        while let closed = closedTabs.popLast() {
+            guard let g = groups.firstIndex(where: { $0.id == closed.group }) ?? groups.indices.first else { continue }
+            var tab = closed.tab
+            tab.id = UUID()
+            tab.forkOnStart = nil
+            // A job kept running (Close, Keep Agent Running) is attached again. A stopped one resumes its session,
+            // unless that session is live in the background anyway (stopping can lag), then it's attached.
+            if !closed.keptAgent {
+                let original = closed.tab.attachJobId
+                if let original, liveBackgroundJobs.values.contains(original) {
+                    // Its stop failed or is still going: attach to it rather than start a second copy.
+                    tab.attachJobId = original
+                    DebugLog.log("reopen: background job \(original) is still running; attaching to it", "tab")
+                } else {
+                    tab.attachJobId = tab.claudeSessionId.flatMap { liveBackgroundJobs[$0] }.flatMap { stoppingJobs.contains($0) ? nil : $0 }
+                }
+            }
+            // A pending folder move applies when the agent starts fresh here, not when it reattaches to one
+            // still running in the old folder.
+            if tab.attachJobId == nil, let moved = tab.movedTo { tab.cwd = moved; tab.movedTo = nil }
+            if tab.kind == .shell, tab.claudeSessionId == nil { tab.lastAgentName = nil }
+            groups[g].tabs.insert(tab, at: min(closed.index, groups[g].tabs.count))
+            DebugLog.log("reopened closed tab as \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)", "tab")
+            selectTab(tab.id)
+            scheduleSave()
+            return
+        }
+        NSSound.beep()
     }
 
     /// Everything a tab owns goes with it: its terminal, its browser and its runtime state, and its background
@@ -168,22 +218,30 @@ extension Store {
         scheduleSave()
     }
 
-    /// Types a path into the group's Claude tab (the one used most recently), without pressing Enter,
-    /// and switches to it, so you can finish the sentence.
-    func sendPathToClaude(_ path: String, from id: UUID) {
+    /// `path` relative to `folder` when it's inside it, else unchanged.
+    static func path(_ path: String, relativeTo folder: String) -> String {
+        let base = folder.hasSuffix("/") ? folder : folder + "/"
+        return path.hasPrefix(base) ? String(path.dropFirst(base.count)) : path
+    }
+
+    /// Types a file's path into the group's agent tab used most recently (Claude, Codex or another), without
+    /// pressing Enter, and switches to it, so you can finish the sentence. The path is relative to that agent's
+    /// folder when the file is inside it, else absolute, so a worktree tab never gets a path meaning another file.
+    func sendPathToAgent(_ path: String, from id: UUID) {
         guard let (g, _) = locate(id) else { return }
-        let claudeTabs = groups[g].tabs.filter { runtime[$0.id]?.agentPresent == true }
-        guard let target = claudeTabs.max(by: { (lastFocusedAt[$0.id] ?? .distantPast) < (lastFocusedAt[$1.id] ?? .distantPast) }) else {
+        let agentTabs = groups[g].tabs.filter { runtime[$0.id]?.agentPresent == true }
+        guard let target = agentTabs.max(by: { (lastFocusedAt[$0.id] ?? .distantPast) < (lastFocusedAt[$1.id] ?? .distantPast) }) else {
             let alert = NSAlert()
-            alert.messageText = "No Claude tab in this group"
-            alert.informativeText = "Start Claude in a tab of \(groups[g].name), then send the path again."
+            alert.messageText = "No agent running in this group"
+            alert.informativeText = "Start Claude or Codex in a tab of \(groups[g].name), then send the path again."
             alert.runModal()
             return
         }
         selectTab(target.id)
-        let quoted = path.contains(" ") ? "\"\(path)\"" : path
+        let shown = Self.path(path, relativeTo: target.cwd)
+        let quoted = shown.contains(" ") ? "\"\(shown)\"" : shown
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            // Still a Claude tab? Never type a path into whatever replaced it.
+            // Still an agent tab? Never type a path into whatever replaced it.
             guard let self, self.runtime[target.id]?.agentPresent == true else { return }
             self.terminals.typeIntoTerminal(target.id, quoted + " ")
         }

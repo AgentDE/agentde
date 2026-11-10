@@ -96,6 +96,8 @@ struct AgentDECommands: Commands {
             Button("New Group…") { store.newGroup() }.keyboardShortcut("n", modifiers: [.command, .shift])
             Divider()
             Button("Close Tab") { store.closeActiveTab() }.keyboardShortcut("w")
+            Button("Reopen Closed Tab") { store.reopenClosedTab() }.keyboardShortcut("t", modifiers: [.command, .option, .shift])
+                .disabled(store.closedTabs.isEmpty)
             Button("Rename Tab") { if let id = store.activeTab?.id { store.renamingTabID = id } }.keyboardShortcut("r")
             Button("Fork Claude Session into New Tab") { store.forkTab() }.keyboardShortcut("f", modifiers: [.command, .option])
         }
@@ -139,6 +141,9 @@ struct AgentDECommands: Commands {
             Button("Viewer Back") { store.stepViewer(1) }.keyboardShortcut("[")
             Button("Viewer Forward") { store.stepViewer(-1) }.keyboardShortcut("]")
             Button("Side Panel") { store.togglePanel() }.keyboardShortcut("i", modifiers: [.command, .option])
+            ForEach(1...3, id: \.self) { n in
+                Button("Side Panel Tab \(n)") { store.showPanelTab(n - 1) }.keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: [.command, .control])
+            }
             Button("Browser Above Tab") { store.toggleBrowser() }.keyboardShortcut("b", modifiers: [.command, .shift])
             Button("Show Diff") { store.showDiff() }.keyboardShortcut("d", modifiers: [.command, .shift])
             Button("Open Folder in Cursor") { store.openInEditor() }.keyboardShortcut("o", modifiers: [.command, .shift])

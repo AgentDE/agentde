@@ -58,7 +58,7 @@ extension Store {
                     if rt.state == .working {
                         let worked = rt.busySince.map { Date().timeIntervalSince($0) } ?? 0
                         rt.state = (NSApp.isActive && isVisible(tabID)) ? .none : .doneUnseen
-                        if settings.sparkles, settings.animations, worked >= settings.sparkleAfterSeconds {
+                        if settings.sparkles, animations, worked >= settings.sparkleAfterSeconds {
                             rt.sparkleToken += 1
                             rt.sparkleAt = Date()
                         }
@@ -67,7 +67,13 @@ extension Store {
                     }
                     rt.busySince = nil
                 }
-                if let sessionId = entry.sessionId, let (g, t) = locate(tabID) {
+                if entry.fromHook == true, let sessionId = entry.sessionId, let (g, t) = locate(tabID) {
+                    // Another agent's own report: a Codex tab keeps its thread to resume; nothing else changes.
+                    if groups[g].tabs[t].kind == .codex, groups[g].tabs[t].codexSessionId != sessionId {
+                        groups[g].tabs[t].codexSessionId = sessionId
+                        dirty = true
+                    }
+                } else if let sessionId = entry.sessionId, let (g, t) = locate(tabID) {
                     var tab = groups[g].tabs[t]
                     if let name = entry.name, !name.isEmpty, tab.lastAgentName != name { tab.lastAgentName = name; dirty = true }
                     if tab.claudeSessionId != sessionId {

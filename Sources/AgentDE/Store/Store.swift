@@ -7,6 +7,13 @@ import Observation
 final class Store {
     var groups: [GroupModel] = []
     var selectedGroupID: UUID?
+    /// Background jobs a `claude stop` is ending right now, and ones whose stop failed.
+    var stoppingJobs = Set<String>()
+    var failedStops = Set<String>()
+    /// Recently closed tabs, for Reopen Closed Tab.
+    var closedTabs: [ClosedTab] = []
+    /// Why the last save failed, while it's failing (the status bar shows it with a Retry).
+    var saveError: String?
     var settings = AgentDESettings() { didSet { if settings != oldValue { settingsChanged(from: oldValue) } } }
     var runtime: [UUID: TabRuntime] = [:]
     var rateLimits = RateLimits()
@@ -31,6 +38,8 @@ final class Store {
     var installedClaudeVersion: String?
     /// Progress, then the summary, of Restart Idle Claude Tabs, shown in the status bar for a while.
     var claudeRestartNote: String?
+    /// A short note in the status bar about something in progress or just finished ("Making worktree fix-login…").
+    var activityNote: String?
     /// Tabs whose Claude is restarting now.
     var restartingClaude: Set<UUID> = []
     var sidebarVisible = true
@@ -149,7 +158,10 @@ final class Store {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
     }
 
-    func save() {
+    /// Writes the state file. On failure (a full disk, lost permissions) it says so in the status bar with
+    /// a Retry, rather than looking saved; returns whether it worked.
+    @discardableResult
+    func save() -> Bool {
         var snapshot = groups
         for g in snapshot.indices {
             snapshot[g].tabs.removeAll { $0.transient == true }
@@ -158,9 +170,17 @@ final class Store {
         let state = SavedState(groups: snapshot, selectedGroupID: selectedGroupID, settings: settings)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(state) else { return }
-        try? FileManager.default.createDirectory(at: stateURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? data.write(to: stateURL, options: .atomic)
+        do {
+            let data = try encoder.encode(state)
+            try FileManager.default.createDirectory(at: stateURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: stateURL, options: .atomic)
+            if saveError != nil { saveError = nil; DebugLog.log("state saved again", "app") }
+            return true
+        } catch {
+            if saveError == nil { DebugLog.log("couldn't save state: \(error.localizedDescription)", "app") }
+            saveError = error.localizedDescription
+            return false
+        }
     }
 
     /// Loads saved state group by group and tab by tab, so one unreadable entry (say, from a newer version)

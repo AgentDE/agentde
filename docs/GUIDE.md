@@ -133,17 +133,17 @@ A **JSON plugin** is a folder in `~/.config/agentde/plugins/` with a `plugin.jso
 - **Tree:** folders load as you open them. Dotfiles show. Generated folders like `.git`, `node_modules`, `__pycache__` and `.venv` are hidden; the eye button shows them. ↑↓ move, → and ← open and close folders, Return opens a file in its default app.
 - **Find a file:** type in the box at the top to search the whole folder by path. In a git repo it uses `git ls-files`, so it respects `.gitignore`. Every word must appear; matches in the file name rank first.
 - **Preview:** the right side shows the selected file with Quick Look. Buttons open it in the default app or Cursor, or reveal it in Finder.
-- **Right-click a file:** open it, open it in Cursor, reveal it in Finder, show an HTML file in the tab's browser pane, copy its full or relative path, or **Send path to Claude**, which types the relative path into the group's most recently used Claude tab, without pressing Return, and switches to it.
+- **Right-click a file:** open it, open it in Cursor, reveal it in Finder, show an HTML file in the tab's browser pane, copy its full or relative path, or **Send Path to Agent**, which types the path into the group's most recently used agent tab (Claude, Codex or another), relative to that agent's folder when the file is inside it, without pressing Return, and switches to it.
 
 The selected file is remembered across relaunches.
 
 ## Search
 
 **⌘⇧F searches across your sessions.** It covers every open tab:
-- **Claude tabs:** the session's whole conversation (your prompts and Claude's replies), including history that scrolled out of the terminal or was compacted away. Tool output isn't searched.
+- **Claude and Codex tabs:** the session's whole conversation (your prompts and the agent's replies), including history that scrolled out of the terminal or was compacted away. Tool output isn't searched. A Codex tab needs its thread id, which a resumed tab has and a new one gets from the status hook (`make register-agent-status`).
 - **Shell tabs:** the terminal's scrollback.
 
-Tick **Include recent sessions** to also search each group's Recent list.
+Tick **Include recent sessions** to also search each group's Recent list, Claude and Codex.
 
 Every word must appear, in any order, ignoring case. Results stream in per session, newest first, with matches highlighted. ↑↓ and Return, or a click, jumps there: a tab is selected and scrolls to the latest occurrence; a recent session is resumed in a new tab. The first search reads each transcript once, which can take several seconds; later searches read only what's new.
 
@@ -161,6 +161,8 @@ Under each group's tabs, a faded **Recent** list shows the named sessions you st
 
 The list refreshes every 30 seconds.
 
+
+**Moved a repository?** Right-click its group → **Change Folder…** (**Locate Folder…** when the folder is gone): tabs inside the old folder that aren't running move along to the same place in the new one. Running tabs stay where their agent works until you close and reopen them (⌥⇧⌘T), so their Files, Changes and paths never point at a different repository. Tabs elsewhere stay.
 
 **Only active tabs.** The filter button beside **Groups** hides every tab without a status dot, Recent and Older, and groups with nothing left, leaving the agents that are working, waiting on you or done (and the tab on screen). Click it again for everything.
 
@@ -189,11 +191,12 @@ AgentDE reads Claude Code's registry of running sessions (`~/.claude/sessions/`)
 | Icon only | Idle, or no agent running |
 
 - **Sparkle:** a turn of 45 seconds or more ends with a small sparkle (adjustable in Settings → Fun).
+- **Termi** (Settings → Fun, off by default): the mascot hangs out in the free end of the tab strip. Amber and hopping while an agent waits on you, green and typing while agents work, blue and wandering otherwise, and asleep after two quiet minutes. Clicks pass through him.
 - **Dock badge:** how many tabs are waiting on you. **⌘J** jumps to the next waiting tab, then to finished ones. **⌘K** with an empty query lists tabs by urgency.
 - **Why it's waiting:** when Claude reports it, in the tab's tooltip, the status bar and ⌘K.
 - **Notifications:** a macOS banner when an agent needs you, or finishes while you're elsewhere; a click brings AgentDE forward on that tab. Turn either, or the sound, off in Settings → Agents.
 
-**Codex and other agents.** Any agent with hooks can report its state. Each tab's environment has `AGENTDE_STATUS_FILE`, and a hook writes one line to it: `working`, `needs-you` or `idle`, then the agent's pid (`$PPID` in a hook), then optionally what it's waiting for. AgentDE trusts a line only while that pid runs inside the tab, so a dot never outlives its agent. Outside AgentDE the variable isn't set and the hook does nothing.
+**Codex and other agents.** Any agent with hooks can report its state. Each tab's environment has `AGENTDE_STATUS_FILE`, and a hook writes one line to it: `working`, `needs-you` or `idle`, then the agent's pid (`$PPID` in a hook), then optionally what it's waiting for. A second line, `session <id>`, names the agent's session: that's how a new Codex tab learns which thread to resume after a reboot (the registered hooks read it from the hook's input). AgentDE trusts a line only while that pid runs inside the tab, so a dot never outlives its agent. Outside AgentDE the variable isn't set and the hook does nothing.
 
 - **Codex:** `make register-agent-status` shows the hooks it would add to `~/.codex/hooks.json` (`YES=1` adds them; `scripts/register-agent-status.sh --uninstall` removes them). Then run `/hooks` in Codex once to trust them.
 - **Others** (Gemini CLI, OpenCode, your own): call this from the hook for each state, as `working` when a turn starts or a tool finishes, `needs-you` before a permission prompt, `idle` when a turn stops:
@@ -250,6 +253,7 @@ Background sessions inherit your startup command's environment, but Claude's bac
 | ⌘T, ⌘⇧T, ⌘⌥T | New Claude, shell or Codex tab |
 | ⌘⇧E | New File Explorer tab |
 | ⌘W | Close the tab; for an agent tab that stops the agent (asks if it's working; the conversation is kept) |
+| ⌥⇧⌘T | Reopen the last closed tab where it was, resuming its session (the last 20, this run) |
 | ⌘R, or double-click | Rename tab |
 | ⌘⇧F | Search all sessions |
 | ⌘F, ⌘G, ⌘⇧G | Find in this tab (or its viewer, when focused), next, previous |
@@ -261,6 +265,7 @@ Background sessions inherit your startup command's environment, but Claude's bac
 | ⌘J | Next tab that needs you, then finished ones |
 | ⌘-click, ⌥⌘-click | Open a path or link from the terminal (in the viewer / in its default app) |
 | ⌥⌘I | Show or hide the side panel |
+| ⌃⌘1–3 | Show the side panel on its first, second or third tab (Workstream, Files, Changes) |
 | ⌘⇧B | Browser above the tab |
 | ⌘[, ⌘] | Viewer: back and forward through what it showed (⌘[ reopens a closed viewer) |
 | ⌘⇧D | Diff of the tab's folder |

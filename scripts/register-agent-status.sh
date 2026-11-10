@@ -31,8 +31,10 @@ path, apply, uninstall = sys.argv[1], sys.argv[2] == "1", sys.argv[3] == "1"
 
 # The same command as HookStatus.hookCommand in the app (a test keeps them equal).
 def command(state):
-    return ('cat >/dev/null 2>&1; [ -n "${AGENTDE_STATUS_FILE-}" ] && printf \'%s %s\\n\' ' + state
-            + ' "$PPID" > "$AGENTDE_STATUS_FILE" 2>/dev/null; exit 0')
+    return ('in=$(cat 2>/dev/null); [ -n "${AGENTDE_STATUS_FILE-}" ] && { s=$(printf \'%s\' "$in" | sed -n '
+            + '\'s/.*"session_id"[[:space:]]*:[[:space:]]*"\\([A-Za-z0-9_-]*\\)".*/\\1/p\' | head -n 1); '
+            + 'printf \'%s %s\\n\' ' + state + ' "$PPID" > "$AGENTDE_STATUS_FILE"; '
+            + '[ -n "$s" ] && printf \'session %s\\n\' "$s" >> "$AGENTDE_STATUS_FILE"; } 2>/dev/null; exit 0')
 
 WANTED = {"SessionStart": "idle", "UserPromptSubmit": "working", "PostToolUse": "working",
           "PermissionRequest": "needs-you", "Stop": "idle"}

@@ -12,6 +12,8 @@ final class SessionSearch {
         let role: SearchEntry.Role
         let snippet: String
         let timestamp: Date?
+        /// The whole message, for when the terminal no longer shows it.
+        var text = ""
     }
 
     struct Section: Identifiable {
@@ -46,6 +48,8 @@ final class SessionSearch {
         let sessionId: String?
         let cwd: String
         let scrollback: [String]?
+        /// The session is a Codex thread (its log, not a Claude transcript).
+        var codex = false
     }
 
     func schedule() {
@@ -70,19 +74,20 @@ final class SessionSearch {
         for group in store.groups {
             let color = SwiftUI.Color(nsColor: store.groupColor(group))
             for tab in group.tabs where tab.kind != .command {
-                let session = tab.claudeSessionId
+                let codex = tab.kind == .codex
+                let session = codex ? tab.codexSessionId : tab.claudeSessionId
                 sources.append(Source(id: tab.id.uuidString, source: .tab(tab.id), title: store.title(for: tab),
                                       subtitle: group.name, color: color, sessionId: session, cwd: tab.cwd,
-                                      scrollback: session == nil ? store.terminals.scrollback(tab.id) : nil))
+                                      scrollback: session == nil ? store.terminals.scrollback(tab.id) : nil, codex: codex))
             }
         }
         if includeRecent {
             let open = Set(sources.compactMap(\.sessionId))
-            // Search reads Claude transcripts; Codex threads aren't indexed.
-            for recent in store.recentSessions where recent.agent == .claude && !open.contains(recent.sessionId) {
+            // Claude transcripts and Codex session logs alike.
+            for recent in store.recentSessions where !open.contains(recent.sessionId) {
                 sources.append(Source(id: recent.sessionId, source: .recent(recent), title: recent.name,
                                       subtitle: "recent · " + (recent.cwd as NSString).lastPathComponent, color: nil,
-                                      sessionId: recent.sessionId, cwd: recent.cwd, scrollback: nil))
+                                      sessionId: recent.sessionId, cwd: recent.cwd, scrollback: nil, codex: recent.agent == .codex))
             }
         }
         progress = (0, sources.count)
@@ -114,7 +119,7 @@ final class SessionSearch {
     private func search(_ source: Source, _ terms: [String]) -> Section? {
         var matches: [SearchEntry] = []
         if let sessionId = source.sessionId {
-            matches = index.entries(sessionId: sessionId, cwd: source.cwd).filter { SearchMatch.matches($0, terms) }
+            matches = index.entries(sessionId: sessionId, cwd: source.cwd, codex: source.codex).filter { SearchMatch.matches($0, terms) }
         } else if let lines = source.scrollback {
             for (i, line) in lines.enumerated() where !line.isEmpty {
                 let lower = line.lowercased()
@@ -127,7 +132,7 @@ final class SessionSearch {
         let newestFirst = matches.sorted { $0.order > $1.order }
         let hits = newestFirst.prefix(6).map { entry in
             Hit(id: "\(source.id)#\(entry.order)", role: entry.role, snippet: SearchMatch.snippet(entry.text, terms),
-                timestamp: entry.timestamp)
+                timestamp: entry.timestamp, text: entry.text)
         }
         return Section(id: source.id, source: source.source, title: source.title, subtitle: source.subtitle,
                        color: source.color, hits: Array(hits), total: matches.count)
@@ -141,7 +146,11 @@ final class SessionSearch {
         switch section.source {
         case .tab(let id):
             store.selectTab(id)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { store.terminals.reveal(id, term: term) }
+            let query = self.query
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // Compacted away or scrolled past the terminal's history: show the matching messages instead.
+                if !store.terminals.reveal(id, term: term) { Self.showMatches(section, query: query, in: id, store: store) }
+            }
         case .recent(let recent):
             let group = store.groups.first { $0.dir == recent.cwd }?.id ?? store.selectedGroupID
             if let group { store.resumeRecentSession(recent, in: group) }
@@ -149,18 +158,41 @@ final class SessionSearch {
     }
 }
 
+extension SessionSearch {
+    /// The matching messages as a small Markdown page in the tab's viewer: what a search result jumps to when the
+    /// terminal no longer has the text.
+    static func showMatches(_ section: Section, query: String, in tab: UUID, store: Store) {
+        let stamp = DateFormatter()
+        stamp.dateFormat = "MMM d, HH:mm"
+        var page = "# “\(query)” in \(section.title)\n\n"
+        for hit in section.hits {
+            let who = hit.role == .you ? "You" : hit.role == .codex ? "Codex" : hit.role == .claude ? "Claude" : "Terminal"
+            page += "**\(who)**" + (hit.timestamp.map { " · " + stamp.string(from: $0) } ?? "") + "\n\n" + hit.text + "\n\n---\n\n"
+        }
+        if section.total > section.hits.count { page += "_\(section.total - section.hits.count) more matches, older._\n" }
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-search", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let file = dir.appendingPathComponent("\(tab.uuidString.prefix(8))-matches.md")
+        guard (try? page.write(to: file, atomically: true, encoding: .utf8)) != nil else { return }
+        store.openInViewer(file.path, tab: tab)
+    }
+}
+
 extension TerminalRegistry {
     /// A tab's scrollback as text, for searching. Nil if the tab's terminal hasn't started.
     func scrollback(_ id: UUID) -> [String]? {
         guard let session = session(id), session.started else { return nil }
-        return session.view.getTerminal().scrollbackLines(last: 5_000)
+        // All the history the terminal keeps (Settings → Terminal), not a fixed slice.
+        return session.view.getTerminal().scrollbackLines(last: max(5_000, store?.settings.scrollbackLines ?? 10_000))
     }
 
     /// Scrolls a tab's terminal to the most recent occurrence of `term` and selects it.
-    func reveal(_ id: UUID, term: String) {
-        guard let view = session(id)?.view, !term.isEmpty else { return }
+    /// Highlights the latest occurrence of `term` in the tab's terminal; false when the terminal doesn't have it.
+    @discardableResult
+    func reveal(_ id: UUID, term: String) -> Bool {
+        guard let view = session(id)?.view, !term.isEmpty else { return false }
         view.clearSearch()
-        _ = view.findPrevious(term)
+        return view.findPrevious(term)
     }
 
     /// Drives the terminal's built-in find bar (⌘F, ⌘G, ⌘⇧G).

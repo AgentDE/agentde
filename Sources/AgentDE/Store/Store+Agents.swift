@@ -162,14 +162,15 @@ extension Store {
             DebugLog.log("tab \(id.uuidString.prefix(8)) attached to background job \(jobId)", "agent")
         }
         pendingBackgroundLaunches[id] = nil
-        save()
-        return true
+        // The receipt is deleted only once the job id is on disk; a failed save keeps it for the next poll.
+        return save()
     }
 
     /// Stops a background session (`claude stop`): its tab closed, so the agent ends too. The conversation is
     /// kept, so it can be resumed from the group's recent sessions. A failure only goes to the log.
     func stopBackgroundJob(_ job: String) {
         guard let job = SafeID.job(job) else { return }
+        stoppingJobs.insert(job)
         // Interactive login shell, like the tabs, so `claude` is on PATH even when .zshrc puts it there.
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/zsh")
@@ -181,8 +182,17 @@ extension Store {
             let text = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
             let last = text.split(separator: "\n").last.map(String.init) ?? ""
             DebugLog.log("claude stop \(job) exit \(finished.terminationStatus): \(last.prefix(200))", "agent")
+            let failed = finished.terminationStatus != 0
+            DispatchQueue.main.async { [weak self] in
+                self?.stoppingJobs.remove(job)
+                if failed { self?.failedStops.insert(job) } else { self?.failedStops.remove(job) }
+            }
         }
-        do { try task.run() } catch { DebugLog.log("couldn't run claude stop: \(error)", "agent") }
+        do { try task.run() } catch {
+            DebugLog.log("couldn't run claude stop: \(error)", "agent")
+            stoppingJobs.remove(job)
+            failedStops.insert(job)
+        }
     }
 
 

@@ -189,7 +189,7 @@ private struct PanelStrip: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                StatusDot(state: store.state(tab.id), animated: store.settings.animations, size: 6)
+                StatusDot(state: store.state(tab.id), animated: store.animations, size: 6)
                 if store.wantsAttention(tab) { AskRing(size: 10) }
                 Spacer()
             }
@@ -212,14 +212,19 @@ private struct EmptyGroupView: View {
     var body: some View {
         VStack(spacing: 14) {
             AppLogo(size: 96, wiggleOnHover: true)
-            Text("Start a tab in this group").font(.system(size: 15, weight: .medium)).foregroundStyle(theme.text)
-            HStack(spacing: 10) {
-                Button("Claude  ⌘T") { store.newTab(kind: .claude) }
-                Button("Shell  ⌘⇧T") { store.newTab(kind: .shell) }
-                Button("Codex") { store.newTab(kind: .codex) }
-                Button("Files  ⌘⇧E") { store.newTab(kind: .files) }
+            if store.selectedGroup == nil {
+                Text("Make a group for a folder you work in").font(.system(size: 15, weight: .medium)).foregroundStyle(theme.text)
+                Button("New Group…  ⌘⇧N") { store.newGroup() }.controlSize(.large)
+            } else {
+                Text("Start a tab in this group").font(.system(size: 15, weight: .medium)).foregroundStyle(theme.text)
+                HStack(spacing: 10) {
+                    Button("Claude  ⌘T") { store.newTab(kind: .claude) }
+                    Button("Shell  ⌘⇧T") { store.newTab(kind: .shell) }
+                    Button("Codex") { store.newTab(kind: .codex) }
+                    Button("Files  ⌘⇧E") { store.newTab(kind: .files) }
+                }
+                .controlSize(.large)
             }
-            .controlSize(.large)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

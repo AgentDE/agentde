@@ -39,7 +39,7 @@ struct BrowserPane: View {
                 Button { model.webView?.goForward() } label: { Image(systemName: "chevron.right") }
                     .disabled(!model.canGoForward)
                     .hint("Forward")
-                Button { model.webView?.reload() } label: {
+                Button { if model.loading { model.webView?.stopLoading() } else { model.webView?.reload() } } label: {
                     Image(systemName: model.loading ? "xmark" : "arrow.clockwise")
                 }
                 .hint(model.loading ? "Stop loading" : "Reload")

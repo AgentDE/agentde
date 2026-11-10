@@ -34,14 +34,16 @@ public enum Worktrees {
     /// Makes the worktree on a new branch `name`: from the remote's default branch after fetching it, or from
     /// what the repo has checked out when there's none (a fetch that fails, say offline, falls back to the
     /// last one fetched). The branch doesn't track it, so a plain `git push` can't go there. Returns the start
-    /// point used, or git's message on failure. Takes a moment in a big repo, so call it off the main thread.
+    /// point used ("origin/main", with " (last fetched)" when the fetch failed), or git's message on failure.
+    /// Takes a moment in a big repo, so call it off the main thread.
     public static func add(repoRoot: String, name: String) -> Result<String, WorktreeError> {
         let remote = baseBranch(repoRoot: repoRoot)
-        if let remote { _ = git(["-C", repoRoot, "fetch", "--quiet", "origin", String(remote.dropFirst("origin/".count))]) }
+        var fetched = true
+        if let remote { fetched = git(["-C", repoRoot, "fetch", "--quiet", "origin", String(remote.dropFirst("origin/".count))]).status == 0 }
         let base = remote.flatMap { git(["-C", repoRoot, "rev-parse", "--verify", "--quiet", $0 + "^{commit}"]).status == 0 ? $0 : nil } ?? "HEAD"
         let result = git(["-C", repoRoot, "worktree", "add", "--no-track", "-b", name, path(repoRoot: repoRoot, name: name), base])
         guard result.status == 0 else { return .failure(WorktreeError(message: result.output.isEmpty ? "git worktree add failed" : result.output)) }
-        return .success(base)
+        return .success(base != "HEAD" && !fetched ? base + " (last fetched)" : base)
     }
 
     public struct WorktreeError: Error { public let message: String }

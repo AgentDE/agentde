@@ -107,8 +107,26 @@ extension Store {
         path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
     }
 
+    /// The folder a session resumes in: its own, or, when that's gone (a removed worktree, say), one you
+    /// pick: never a silent substitute, since the agent would run in another repository.
+    private func folderToResume(_ session: RecentSession) -> String? {
+        if TerminalSession.canEnter(folder: session.cwd) { return session.cwd }
+        let alert = NSAlert()
+        alert.messageText = "\(session.name)'s folder is gone"
+        alert.informativeText = "\(session.cwd.abbreviatingHome) no longer exists. Choose where to resume it."
+        alert.addButton(withTitle: "Choose Folder…")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.directoryURL = URL(fileURLWithPath: session.cwd).deletingLastPathComponent()
+        guard panel.runModal() == .OK, let url = panel.url else { return nil }
+        return url.path
+    }
+
     func resumeRecentSession(_ session: RecentSession, in groupID: UUID) {
-        let cwd = FileManager.default.fileExists(atPath: session.cwd) ? session.cwd : nil
+        guard let cwd = folderToResume(session) else { return }
         if session.agent == .codex {
             if let id = newTab(kind: .codex, in: groupID, cwd: cwd), let (g, t) = locate(id) {
                 groups[g].tabs[t].codexSessionId = session.sessionId

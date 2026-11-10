@@ -7,6 +7,8 @@ private struct PaletteItem: Identifiable {
     let symbol: String
     let color: Color?
     let state: AgentState
+    /// An open question in the tab's workstream: sorted right after needs-you tabs.
+    var asking = false
     let action: () -> Void
 }
 
@@ -22,9 +24,10 @@ struct CommandPalette: View {
         for group in store.groups {
             let color = Color(nsColor: store.groupColor(group))
             for tab in group.tabs {
-                let waiting = store.runtime[tab.id]?.waitingFor.map { " · " + Notifier.describeWaiting($0) } ?? ""
+                let asking = store.wantsAttention(tab)
+                let waiting = store.runtime[tab.id]?.waitingFor.map { " · " + Notifier.describeWaiting($0) } ?? (asking ? " · a question for you" : "")
                 all.append(PaletteItem(id: tab.id.uuidString, title: store.title(for: tab), subtitle: group.name + waiting,
-                                       symbol: tab.kind.symbol, color: color, state: store.state(tab.id)) {
+                                       symbol: tab.kind.symbol, color: color, state: store.state(tab.id), asking: asking) {
                     store.selectTab(tab.id)
                 })
             }
@@ -49,6 +52,7 @@ struct CommandPalette: View {
             ("Open Agent View (claude agents)", "person.3", { store.newTab(kind: .command, command: "claude agents", transient: true) }),
             ("Rename tab", "pencil", { if let id = store.activeTab?.id { store.renamingTabID = id } }),
             ("Jump to next waiting tab", "bell", { store.jumpToAttention() }),
+            ("Reopen closed tab", "arrow.uturn.backward", { store.reopenClosedTab() }),
         ] + AgentCatalog.all.map { agent in ("New \(agent.name) tab", TabKind.agent.symbol, { store.newAgentTab(agent) }) }
         for (title, symbol, action) in actions {
             all.append(PaletteItem(id: "action:" + title, title: title, subtitle: "action", symbol: symbol,
@@ -57,11 +61,13 @@ struct CommandPalette: View {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         // With no query, tabs that want attention come first: needs you → working → done → the rest.
         func urgency(_ item: PaletteItem) -> Int {
+            if item.state == .needsYou { return 0 }
+            if item.asking { return 1 }
             switch item.state {
-            case .needsYou: 0
-            case .working: 1
-            case .doneUnseen: 2
-            case .none: 3
+            case .needsYou: return 0
+            case .working: return 2
+            case .doneUnseen: return 3
+            case .none: return 4
             }
         }
         guard !q.isEmpty else {
@@ -126,7 +132,7 @@ struct CommandPalette: View {
         HStack(spacing: 10) {
             ZStack {
                 if item.state != .none {
-                    StatusDot(state: item.state, animated: store.settings.animations)
+                    StatusDot(state: item.state, animated: store.animations)
                 } else {
                     Image(systemName: item.symbol).font(.system(size: 12)).foregroundStyle(item.color ?? theme.secondary)
                 }

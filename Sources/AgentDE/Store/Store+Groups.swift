@@ -28,6 +28,52 @@ extension Store {
         focusActiveTerminal()
     }
 
+    /// Points a group at another folder (the repository moved or was renamed): its tabs inside the old folder
+    /// move along, to the same place inside the new one. Tabs elsewhere (another repository's worktrees, say)
+    /// stay, and the confirmation says how many move. Tabs restart in the new place next time they start.
+    func changeGroupFolder(_ id: UUID) {
+        guard let g = groups.firstIndex(where: { $0.id == id }) else { return }
+        let old = groups[g].dir
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.message = "Choose the folder for \(groups[g].name) (it was \(old.abbreviatingHome))"
+        panel.directoryURL = URL(fileURLWithPath: old).deletingLastPathComponent()
+        guard panel.runModal() == .OK, let new = panel.url?.path, new != old,
+              let g = groups.firstIndex(where: { $0.id == id }) else { return }
+        // A running terminal stays where its process is: moving only its folder in AgentDE would point Files,
+        // Changes and Send Path at a different repository than the agent works in. Those tabs keep their
+        // folder; close and reopen them (⌥⇧⌘T) to start them in the new place.
+        // A tab already waiting to move (an earlier Change Folder) is rebased from where it's going.
+        let inside = groups[g].tabs.filter { Self.moved($0.movedTo ?? $0.cwd, from: old, to: new) != nil }
+        let running = inside.filter { runtime[$0.id]?.started == true }
+        let detail = "\(inside.count - running.count) of its \(groups[g].tabs.count) tabs move with it."
+            + (running.isEmpty ? "" : " \(running.count) running \(running.count == 1 ? "tab stays" : "tabs stay") in the old folder until closed and reopened.")
+        guard confirm("Move \(groups[g].name) to \(new.abbreviatingHome)?", detail: detail, button: "Move"),
+              let g = groups.firstIndex(where: { $0.id == id }) else { return }
+        groups[g].dir = new
+        for t in groups[g].tabs.indices {
+            guard let moved = Self.moved(groups[g].tabs[t].movedTo ?? groups[g].tabs[t].cwd, from: old, to: new) else { continue }
+            if runtime[groups[g].tabs[t].id]?.started == true {
+                groups[g].tabs[t].movedTo = moved   // applied when it's reopened
+            } else {
+                groups[g].tabs[t].cwd = moved
+                groups[g].tabs[t].movedTo = nil
+            }
+        }
+        let moving = inside.count - running.count
+        DebugLog.log("group \(groups[g].name) moved from \(old.abbreviatingHome) to \(new.abbreviatingHome), \(moving) tabs along", "tab")
+        scheduleSave()
+    }
+
+    /// `path` inside `old`, rebased onto `new`; nil when it isn't inside `old`.
+    static func moved(_ path: String, from old: String, to new: String) -> String? {
+        if path == old { return new }
+        let base = old.hasSuffix("/") ? old : old + "/"
+        guard path.hasPrefix(base) else { return nil }
+        return (new.hasSuffix("/") ? new : new + "/") + path.dropFirst(base.count)
+    }
+
     func setGroupColor(_ id: UUID, _ index: Int) {
         guard let g = groups.firstIndex(where: { $0.id == id }) else { return }
         groups[g].colorIndex = index

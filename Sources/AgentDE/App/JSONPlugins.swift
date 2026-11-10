@@ -6,11 +6,14 @@ final class JSONPlugins: AgentDEExtension {
     let id = "plugins"
     let name = "Plugins"
     let loaded: [PluginManifest.Loaded]
+    /// Plugins that didn't load, and why (Settings → Extensions lists them).
+    let problems: [(name: String, reason: String)]
 
     static var directory: URL { URL(fileURLWithPath: AppBrand.configDirectory).appendingPathComponent("plugins") }
 
     init(directory: URL = JSONPlugins.directory) {
         loaded = PluginManifest.loadAll(in: directory)
+        problems = PluginManifest.problems(in: directory)
         if !loaded.isEmpty { DebugLog.log("plugins: \(loaded.map(\.manifest.name).joined(separator: ", "))", "plugins") }
     }
 

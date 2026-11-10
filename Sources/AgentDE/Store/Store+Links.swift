@@ -45,23 +45,41 @@ extension Store {
             }
         case .file(let path):
             guard let owner, let (g, _) = locate(owner.id) else { return }
-            let resolved = Store.resolveFileLinkReporting(path, relativeTo: [owner.cwd, groups[g].dir])
-            DebugLog.log("click → \(resolved.how) in \(Int(Date().timeIntervalSince(clicked) * 1000)) ms", "link")
-            guard let file = resolved.url else {
-                DebugLog.log("link not found: \(link)", "link")
-                NSSound.beep()
-                return
+            let folders = [owner.cwd, groups[g].dir]
+            let open: (URL?, String) -> Void = { [weak self] file, how in
+                DebugLog.log("click → \(how) in \(Int(Date().timeIntervalSince(clicked) * 1000)) ms", "link")
+                guard let file else {
+                    DebugLog.log("link not found: \(link)", "link")
+                    NSSound.beep()
+                    return
+                }
+                self?.openFileLink(file, from: owner.id, defaultApp: defaultApp, hasViewer: hasViewer)
             }
-            if defaultApp {
-                NSWorkspace.shared.open(file)
-            } else if Store.isFolder(file.path) {
-                _ = newTab(kind: .files, in: groups[g].id, cwd: file.path)   // a folder: a File Explorer tab there
-            } else if hasViewer {
-                LinkTiming.start(owner.id)
-                openInViewer(file.path, tab: owner.id)
+            // Exact paths are a few stat calls; the Spotlight search behind them can take seconds, so it runs
+            // in the background and finishes the click when it's done.
+            if let exact = Store.resolveFileLinkExact(path, relativeTo: folders) {
+                open(exact, "exact")
             } else {
-                NSWorkspace.shared.open(file)
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let found = Store.searchFileLink(Store.trimmedLink(path), in: folders)
+                    DispatchQueue.main.async { open(found, found == nil ? "none" : "spotlight") }
+                }
             }
+        }
+    }
+
+    /// Opens a resolved file link: its default app (⌥), a File Explorer tab for a folder, else the tab's viewer.
+    private func openFileLink(_ file: URL, from tabID: UUID, defaultApp: Bool, hasViewer: Bool) {
+        guard let owner = tab(tabID), let (g, _) = locate(tabID) else { return }
+        if defaultApp {
+            NSWorkspace.shared.open(file)
+        } else if Store.isFolder(file.path) {
+            _ = newTab(kind: .files, in: groups[g].id, cwd: file.path)   // a folder: a File Explorer tab there
+        } else if hasViewer {
+            LinkTiming.start(owner.id)
+            openInViewer(file.path, tab: owner.id)
+        } else {
+            NSWorkspace.shared.open(file)
         }
     }
 
@@ -90,11 +108,22 @@ extension Store {
 
     /// The same, and how it was found: "exact" (a path, or near one), "spotlight" (the search fallback) or "none".
     static func resolveFileLinkReporting(_ link: String, relativeTo folders: [String]) -> (url: URL?, how: String) {
-        if let found = resolveLink(link, relativeTo: folders) { return (found, "exact") }
-        let trimmed = link.replacingOccurrences(of: #"[.,;:!?)\]}'"`]+$"#, with: "", options: .regularExpression)
-        if trimmed != link, !trimmed.isEmpty, let found = resolveLink(trimmed, relativeTo: folders) { return (found, "exact") }
-        let found = searchFileLink(trimmed.isEmpty ? link : trimmed, in: folders)
+        if let found = resolveFileLinkExact(link, relativeTo: folders) { return (found, "exact") }
+        let found = searchFileLink(trimmedLink(link), in: folders)
         return (found, found == nil ? "none" : "spotlight")
+    }
+
+    /// The fast part: a path, near one, or the same without sentence punctuation. No Spotlight.
+    static func resolveFileLinkExact(_ link: String, relativeTo folders: [String]) -> URL? {
+        if let found = resolveLink(link, relativeTo: folders) { return found }
+        let trimmed = trimmedLink(link)
+        return trimmed != link ? resolveLink(trimmed, relativeTo: folders) : nil
+    }
+
+    /// A link without the punctuation that ends a sentence (`compare.html.`).
+    static func trimmedLink(_ link: String) -> String {
+        let trimmed = link.replacingOccurrences(of: #"[.,;:!?)\]}'"`]+$"#, with: "", options: .regularExpression)
+        return trimmed.isEmpty ? link : trimmed
     }
 
     /// Last resort for a relative path written from some subfolder (`stomp_everything/shots/a.png` living in
@@ -265,6 +294,16 @@ extension Store {
     func togglePanel(_ id: UUID? = nil) {
         guard let id = id ?? activeTab?.id, let (g, t) = locate(id) else { return }
         groups[g].tabs[t].panelHidden = panelVisible(groups[g].tabs[t])
+        scheduleSave()
+    }
+
+    /// Shows the side panel on its `index`th tab (⌃⌘1–3: Workstream, Files, Changes when Workstreams is there).
+    func showPanelTab(_ index: Int) {
+        guard let tab = activeTab, let (g, t) = locate(tab.id) else { return }
+        let tabs = sidePanelTabs(for: tab)
+        guard tabs.indices.contains(index) else { NSSound.beep(); return }
+        groups[g].tabs[t].panelHidden = false
+        groups[g].tabs[t].panelTab = tabs[index].id
         scheduleSave()
     }
 

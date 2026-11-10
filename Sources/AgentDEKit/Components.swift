@@ -69,6 +69,15 @@ public struct StatusDot: NSViewRepresentable {
         public func configure(state: AgentState, animated: Bool, size: CGFloat) {
             if let current, current.0 == state, current.1 == animated, current.2 == size { return }
             current = (state, animated, size)
+            setAccessibilityElement(state != .none)
+            setAccessibilityRole(.image)
+            let label: String = switch state {
+            case .working: "Working"
+            case .needsYou: "Needs you"
+            case .doneUnseen: "Done"
+            case .none: ""
+            }
+            setAccessibilityLabel(label)
             dot.removeAllAnimations()
             ring.removeAllAnimations()
             ring.opacity = 0

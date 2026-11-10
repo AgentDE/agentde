@@ -112,9 +112,9 @@ private struct SearchSectionView: View {
             }
             ForEach(section.hits) { hit in
                 HStack(alignment: .firstTextBaseline, spacing: 7) {
-                    Image(systemName: hit.role == .you ? "person.fill" : hit.role == .claude ? "sparkle" : "terminal")
+                    Image(systemName: hit.role == .you ? "person.fill" : hit.role == .claude ? "sparkle" : hit.role == .codex ? TabKind.codex.symbol : "terminal")
                         .font(.system(size: 9.5))
-                        .foregroundStyle(hit.role == .claude ? Theme.needsYou : theme.muted)
+                        .foregroundStyle(hit.role == .claude || hit.role == .codex ? Theme.needsYou : theme.muted)
                         .frame(width: 12)
                     Text(highlighted(hit.snippet))
                         .font(.system(size: 12, design: hit.role == .terminal ? .monospaced : .default))

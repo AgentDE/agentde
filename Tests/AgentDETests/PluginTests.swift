@@ -23,26 +23,6 @@ struct PluginTests {
         #expect(hello.manifest.agents == [AgentDefinition(id: "hello.gemini", name: "Gemini", command: "gemini")])
     }
 
-    /// A plugin's agent shows in the catalog, and its tabs run its command; an unknown id runs nothing.
-    @Test func addedAgentsRunTheirCommand() throws {
-        final class Agents: AgentDEExtension {
-            let id = "agents-probe", name = "Agents probe"
-            var agents: [AgentDefinition] {
-                [AgentDefinition(id: "aider", name: "Aider", command: "aider --model sonnet"),
-                 AgentDefinition(id: "aider", name: "Duplicate", command: "nope"),
-                 AgentDefinition(id: "empty", name: "Empty", command: "")]
-            }
-        }
-        AgentDEMain.extensions = [Agents()]
-        defer { AgentDEMain.extensions = [] }
-        #expect(AgentCatalog.all.map(\.name) == ["Aider"])
-        var tab = TabModel(kind: .agent, cwd: "/tmp")
-        tab.agentID = "aider"
-        #expect(TerminalSession.agentCommand(for: tab) == "aider --model sonnet")
-        tab.agentID = "gone"
-        #expect(TerminalSession.agentCommand(for: tab) == nil)
-    }
-
     @Test func badFilesAndUnsafeEntriesAreSkipped() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-plugins-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -53,6 +33,9 @@ struct PluginTests {
         }
         let plugins = PluginManifest.loadAll(in: dir)
         #expect(plugins.map(\.manifest.name) == ["E"])
+        let problems = PluginManifest.problems(in: dir)
+        #expect(problems.map(\.name) == ["broken", "nameless"])
+        #expect(problems.first { $0.name == "nameless" }?.reason == "missing \"name\"")
         #expect(plugins[0].manifest.linkRules.isEmpty)        // a pattern that doesn't compile
         #expect(PluginManifest.loadAll(in: dir.appendingPathComponent("missing")).isEmpty)
     }

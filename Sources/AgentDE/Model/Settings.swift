@@ -16,6 +16,8 @@ struct AgentDESettings: Codable, Equatable {
     var tabsPosition: TabsPosition = .top
     var animations: Bool = true
     var sparkles: Bool = true
+    /// Termi, the mascot, hangs out in the tab strip's free space (`TermiStrip`).
+    var termi: Bool = false
     var translucentSidebar: Bool = true
     /// SwiftTerm's Metal renderer. Off by default: it rebuilds the whole screen on every change, so a busy
     /// Claude spinner keeps the main thread busy. The CoreGraphics renderer redraws only changed rows.

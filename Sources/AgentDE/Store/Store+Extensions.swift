@@ -32,7 +32,8 @@ extension Store: AgentDEHost {
     var animations: Bool { settings.animations && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
 
-    func type(_ text: String, into tab: UUID) { terminals.typeIntoTerminal(tab, text) }
+    @discardableResult
+    func type(_ text: String, into tab: UUID) -> Bool { terminals.typeIntoTerminal(tab, text) }
 
     @discardableResult
     func openTab(kind: TabKind, in group: UUID, folder: String?, title: String?) -> UUID? {

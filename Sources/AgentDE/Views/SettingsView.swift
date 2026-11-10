@@ -71,6 +71,7 @@ struct SettingsView: View {
 
             Form {
                 Toggle("Animate status dots", isOn: $store.settings.animations)
+                Toggle("Termi hangs out in the tab strip", isOn: $store.settings.termi)
                 Toggle("Sparkle when a long turn finishes", isOn: $store.settings.sparkles)
                 Stepper("Long turn means \(Int(store.settings.sparkleAfterSeconds))s or more",
                         value: $store.settings.sparkleAfterSeconds, in: 5...600, step: 15)
@@ -86,7 +87,7 @@ struct SettingsView: View {
                 }
                 Section("Background agents") {
                     Toggle("Run Claude as background sessions", isOn: $store.settings.backgroundAgents)
-                    Text("Every tab already keeps running when \(AppBrand.name) quits or updates. With this on, new Claude tabs also start as Claude background sessions (`claude --bg`) and attach, so closing a tab leaves the agent running too. Background sessions keep your conda env, but Claude's background service reorders PATH, so check `which python` if that matters.")
+                    Text("Every tab already keeps running when \(AppBrand.name) quits or updates. With this on, new Claude tabs also start as Claude background sessions (`claude --bg`) and attach. Closing a tab still stops its agent (the conversation is kept); right-click → Close, Keep Agent Running leaves it running. Background sessions keep your conda env, but Claude's background service reorders PATH, so check `which python` if that matters.")
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Section("Pull requests") {
@@ -151,6 +152,25 @@ private struct ExtensionsSettings: View {
     @State private var selected: String?
 
     var body: some View {
+        VStack(spacing: 0) {
+            // Plugins that were found but didn't load: named here, not just in the log.
+            let problems = store.extensions.compactMap { $0 as? JSONPlugins }.flatMap(\.problems)
+            if !problems.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(problems, id: \.name) { problem in
+                        Label("Plugin \(problem.name) didn't load: \(problem.reason)", systemImage: "exclamationmark.triangle.fill")
+                            .font(.system(size: 11.5)).foregroundStyle(Color(hex: 0xE24B4A))
+                    }
+                    Text("Fix its plugin.json, then restart \(AppBrand.name).").font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+            }
+            extensionSettings
+        }
+    }
+
+    @ViewBuilder private var extensionSettings: some View {
         let withSettings = store.extensions.filter { $0.settingsView() != nil }
         if withSettings.isEmpty {
             Text("No extensions with settings are loaded.").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)

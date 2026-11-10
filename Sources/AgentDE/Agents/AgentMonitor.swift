@@ -20,6 +20,8 @@ struct ClaudeSessionEntry: Decodable {
     /// The Claude Code version this session runs ("2.1.318"). Filled from the process's executable when the
     /// registry leaves it out (`ClaudeVersion.running(pid:)`).
     var version: String?
+    /// Made from an agent's own hook report (`HookStatus`), not Claude's registry: not necessarily Claude.
+    var fromHook: Bool?
 }
 
 /// Reads Claude's session registry, decoding only the files that changed since the last read.
@@ -147,8 +149,9 @@ final class AgentMonitor {
             owners.updateValue(owner, forKey: report.pid)
             livePids.insert(report.pid)
             guard owner == tab else { continue }
-            matches[tab] = ClaudeSessionEntry(pid: report.pid, sessionId: nil, name: nil, status: report.registryStatus,
-                                              cwd: nil, kind: nil, jobId: nil, waitingFor: report.detail, spare: nil, version: nil)
+            matches[tab] = ClaudeSessionEntry(pid: report.pid, sessionId: report.session, name: nil, status: report.registryStatus,
+                                              cwd: nil, kind: nil, jobId: nil, waitingFor: report.detail, spare: nil, version: nil,
+                                              fromHook: true)
         }
         owners = owners.filter { livePids.contains($0.key) }
         versionsByPid = versionsByPid.filter { livePids.contains($0.key) }

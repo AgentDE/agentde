@@ -49,15 +49,18 @@ extension Store {
         selectGroup(groups[(index + delta + groups.count) % groups.count].id)
     }
 
-    /// Jumps to the next tab that wants attention: needs-you tabs first, then finished-but-unseen ones.
+    /// Jumps to the next tab that wants attention: needs-you tabs first, then ones with an open question in
+    /// their workstream (an extension's attention ring), then finished-but-unseen ones.
     func jumpToAttention() {
         let ordered = groups.flatMap { $0.tabs }
         guard !ordered.isEmpty else { NSSound.beep(); return }
         let start = ordered.firstIndex { $0.id == activeTab?.id } ?? -1
-        for wanted in [AgentState.needsYou, .doneUnseen] {
+        let wants: [(TabModel) -> Bool] = [{ self.state($0.id) == .needsYou }, { self.wantsAttention($0) },
+                                           { self.state($0.id) == .doneUnseen }]
+        for wanted in wants {
             for offset in 1...max(ordered.count, 1) {
                 let tab = ordered[(start + offset + ordered.count) % ordered.count]
-                if state(tab.id) == wanted {
+                if wanted(tab) {
                     selectTab(tab.id)
                     NSSound(named: "Pop")?.play()
                     return

@@ -47,6 +47,69 @@ struct SavedStateTests {
         #expect(store.wantsAttention(store.groups[0].tabs[0]) == false)
     }
 
+    /// (Here, in the serialized suite: it sets the global extension list.) A plugin's agent shows in the catalog, and its tabs run its command; an unknown id runs nothing.
+    @Test func addedAgentsRunTheirCommand() throws {
+        final class Agents: AgentDEExtension {
+            let id = "agents-probe", name = "Agents probe"
+            var agents: [AgentDefinition] {
+                [AgentDefinition(id: "aider", name: "Aider", command: "aider --model sonnet"),
+                 AgentDefinition(id: "aider", name: "Duplicate", command: "nope"),
+                 AgentDefinition(id: "empty", name: "Empty", command: "")]
+            }
+        }
+        AgentDEMain.extensions = [Agents()]
+        defer { AgentDEMain.extensions = [] }
+        #expect(AgentCatalog.all.map(\.name) == ["Aider"])
+        var tab = TabModel(kind: .agent, cwd: "/tmp")
+        tab.agentID = "aider"
+        #expect(TerminalSession.agentCommand(for: tab) == "aider --model sonnet")
+        tab.agentID = "gone"
+        #expect(TerminalSession.agentCommand(for: tab) == nil)
+    }
+
+    /// Reopen Closed Tab brings back the closed tab's folder, session and title at its old place, as a new tab.
+    @Test func aClosedTabReopensWhereItWas() throws {
+        _ = NSApplication.shared
+        let session = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f"
+        let a = UUID(), b = UUID()
+        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(a.uuidString)", "kind": "claude", "cwd": "/tmp", "claudeSessionId": "\#(session)", "customTitle": "fix login"}, {"id": "\#(b.uuidString)", "kind": "shell", "cwd": "/tmp"}]}]}"#)
+        store.closeTab(a, confirmIfBusy: false)
+        #expect(store.groups[0].tabs.map(\.id) == [b])
+        store.reopenClosedTab()
+        let back = store.groups[0].tabs[0]
+        #expect(store.groups[0].tabs.count == 2 && back.id != a)
+        #expect(back.claudeSessionId == session && back.customTitle == "fix login")
+        #expect(store.closedTabs.isEmpty)
+    }
+
+    /// A tab closed with Close, Keep Agent Running reopens attached to that same background job, never a
+    /// second copy of the session. (Keeping the agent means nothing is stopped, so no `claude` runs here.)
+    @Test func aKeptAgentReopensAttached() throws {
+        _ = NSApplication.shared
+        let a = UUID()
+        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(a.uuidString)", "kind": "claude", "cwd": "/tmp", "claudeSessionId": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f", "attachJobId": "kept1234"}]}]}"#)
+        store.closeTab(a, confirmIfBusy: false, keepAgent: true)
+        store.reopenClosedTab()
+        #expect(store.groups[0].tabs.first?.attachJobId == "kept1234")
+    }
+
+    /// A running tab left behind by Change Folder starts in the new folder when it's closed and reopened.
+    @Test func aMovedTabReopensInItsNewFolder() throws {
+        _ = NSApplication.shared
+        let a = UUID()
+        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(a.uuidString)", "kind": "shell", "cwd": "/old/repo/src", "movedTo": "/tmp/src"}]}]}"#)
+        store.closeTab(a, confirmIfBusy: false)
+        store.reopenClosedTab()
+        #expect(store.groups[0].tabs.first?.cwd == "/tmp/src")
+        #expect(store.groups[0].tabs.first?.movedTo == nil)
+    }
+
+    /// Text typed into a tab whose terminal never started counts as not delivered.
+    @Test func typingIntoATerminalThatIsntRunningFails() throws {
+        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(UUID().uuidString)", "kind": "shell", "cwd": "/tmp"}]}]}"#)
+        #expect(store.type("hello\r", into: store.groups[0].tabs[0].id) == false)
+    }
+
     /// Right-click → Fork Session tells extensions which tab it came from, and the fork claims no session (not
     /// its parent's) until Claude gives it its own.
     @Test func forksAreAnnouncedWithoutTheirParentsSession() throws {

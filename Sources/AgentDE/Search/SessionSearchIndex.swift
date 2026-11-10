@@ -2,7 +2,7 @@ import Foundation
 
 /// One searchable message from a Claude transcript, or one line of terminal scrollback.
 struct SearchEntry {
-    enum Role { case you, claude, terminal }
+    enum Role { case you, claude, codex, terminal }
     let role: Role
     let text: String
     /// `text` lowercased once at index time, so each search is a plain substring scan.
@@ -12,8 +12,8 @@ struct SearchEntry {
     let order: Int
 }
 
-/// Indexes the conversational text of Claude transcripts (your prompts and Claude's replies; not tool
-/// output) so searches across many sessions stay fast. Each file is read once, then only the bytes appended
+/// Indexes the conversational text of Claude transcripts and Codex session logs (your prompts and the agent's
+/// replies; not tool output) so searches across many sessions stay fast. Each file is read once, then only the bytes appended
 /// since, so re-searching a live session costs a few milliseconds.
 final class TranscriptIndex {
     private struct FileState {
@@ -25,9 +25,24 @@ final class TranscriptIndex {
     private var files: [String: FileState] = [:]
     private var located: [String: URL] = [:]
     private let projectsDir: URL
+    private let codexDir: URL
 
-    init(projectsDir: URL = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".claude/projects")) {
+    init(projectsDir: URL = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".claude/projects"),
+         codexDir: URL = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".codex/sessions")) {
         self.projectsDir = projectsDir
+        self.codexDir = codexDir
+    }
+
+    /// Codex keeps each thread as `sessions/<year>/<month>/<day>/rollout-<time>-<thread id>.jsonl`.
+    func codexLogURL(sessionId: String) -> URL? {
+        if let known = located[sessionId], FileManager.default.fileExists(atPath: known.path) { return known }
+        let suffix = "-\(sessionId).jsonl"
+        var found: URL?
+        if let walker = FileManager.default.enumerator(at: codexDir, includingPropertiesForKeys: nil) {
+            for case let url as URL in walker where url.lastPathComponent.hasSuffix(suffix) { found = url; break }
+        }
+        located[sessionId] = found
+        return found
     }
     private static let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -58,8 +73,8 @@ final class TranscriptIndex {
     }
 
     /// The session's entries, brought up to date with anything appended since the last call.
-    func entries(sessionId: String, cwd: String) -> [SearchEntry] {
-        guard let url = transcriptURL(sessionId: sessionId, cwd: cwd) else { return [] }
+    func entries(sessionId: String, cwd: String, codex: Bool = false) -> [SearchEntry] {
+        guard let url = codex ? codexLogURL(sessionId: sessionId) : transcriptURL(sessionId: sessionId, cwd: cwd) else { return [] }
         var state = files[url.path] ?? FileState()
         guard let handle = try? FileHandle(forReadingFrom: url) else { return state.entries }
         defer { try? handle.close() }
@@ -82,7 +97,9 @@ final class TranscriptIndex {
                 chunk = Data()
             }
             for line in chunk.split(separator: UInt8(ascii: "\n")) {
-                if let entry = Self.parse(line, order: state.entries.count) { state.entries.append(entry) }
+                if let entry = codex ? Self.parseCodex(line, order: state.entries.count) : Self.parse(line, order: state.entries.count) {
+                    state.entries.append(entry)
+                }
             }
         }
         files[url.path] = state
@@ -110,6 +127,31 @@ final class TranscriptIndex {
         let date = (object["timestamp"] as? String).flatMap { iso.date(from: $0) }
         return SearchEntry(role: isUser ? .you : .claude, text: text, lower: text.lowercased(), timestamp: date, order: order)
     }
+}
+
+extension TranscriptIndex {
+    private static let codexMessageMarker = Data("\"type\":\"message\"".utf8)
+
+    /// A Codex `response_item` message from you or the agent (not its instructions or tool calls).
+    static func parseCodex(_ line: Data, order: Int) -> SearchEntry? {
+        guard line.range(of: codexMessageMarker) != nil,
+              let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+              object["type"] as? String == "response_item",
+              let payload = object["payload"] as? [String: Any], payload["type"] as? String == "message",
+              let role = payload["role"] as? String, role == "user" || role == "assistant",
+              let parts = payload["content"] as? [[String: Any]] else { return nil }
+        let text = parts.compactMap { $0["text"] as? String }.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        // Skip empty turns and harness text (environment context, instructions), which start with a tag.
+        guard !text.isEmpty, !text.hasPrefix("<") else { return nil }
+        let date = (object["timestamp"] as? String).flatMap { codexDate.date(from: $0) }
+        return SearchEntry(role: role == "user" ? .you : .codex, text: text, lower: text.lowercased(), timestamp: date, order: order)
+    }
+
+    private static let codexDate: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
 }
 
 /// Matching shared by every source: all words must appear (case-insensitive); the snippet centers on the first.

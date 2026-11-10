@@ -35,14 +35,24 @@ extension Store {
         }
         let kind: TabKind = agent.indexOfSelectedItem == 1 ? .codex : .claude
         let groupID = group.id
+        // Fetching and checking out can take a while: say so, so the click doesn't look ignored.
+        activityNote = "Making worktree \(name)…"
         DispatchQueue.global(qos: .userInitiated).async {
             let result = Worktrees.add(repoRoot: root, name: name)
             DispatchQueue.main.async { [self] in
+                activityNote = nil
                 switch result {
                 case .failure(let error): showProblem("Couldn't make the worktree for \(name)", error.message)
                 case .success(let base):
                     DebugLog.log("new worktree \(name) from \(base) for group \(group.name)", "tab")
                     _ = openTab(kind: kind, in: groupID, folder: Worktrees.path(repoRoot: root, name: name), title: name)
+                    if base.hasSuffix("(last fetched)") {
+                        // Offline, say: the branch starts from what was fetched before, which may be behind.
+                        activityNote = "\(name) started from \(base): the fetch failed"
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+                            if self?.activityNote?.hasPrefix(name + " started") == true { self?.activityNote = nil }
+                        }
+                    }
                 }
             }
         }

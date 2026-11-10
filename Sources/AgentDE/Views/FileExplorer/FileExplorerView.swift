@@ -2,6 +2,16 @@ import AppKit
 import Quartz
 import SwiftUI
 
+/// The explorer's two panes, side by side or stacked.
+private struct ExplorerSplit<Content: View>: View {
+    let vertical: Bool
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        if vertical { VSplitView { content } } else { HSplitView { content } }
+    }
+}
+
 struct FileExplorerView: View {
     let tab: TabModel
     @Environment(Store.self) private var store
@@ -10,9 +20,14 @@ struct FileExplorerView: View {
     @FocusState private var treeFocused: Bool
 
     var body: some View {
+        // Narrow (a small window, a wide sidebar): the tree above the preview instead of beside it.
+        GeometryReader { geo in explorer(narrow: geo.size.width < 560) }
+    }
+
+    @ViewBuilder private func explorer(narrow: Bool) -> some View {
         let model = store.terminals.explorer(for: tab)
         @Bindable var bindable = model
-        HSplitView {
+        ExplorerSplit(vertical: narrow) {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(theme.muted)
@@ -85,11 +100,12 @@ struct FileExplorerView: View {
                 .onKeyPress(.leftArrow) { expandSelection(model, false); return .handled }
                 .onKeyPress(.return) { if let url = model.selection { open(url) }; return .handled }
             }
-            .frame(minWidth: 220, idealWidth: 300, maxWidth: 520)
+            .frame(minWidth: narrow ? nil : 220, idealWidth: narrow ? nil : 300, maxWidth: narrow ? .infinity : 520,
+                   minHeight: narrow ? 140 : nil)
             .background(theme.sidebar.opacity(0.5))
 
             FilePreview(url: model.selection, root: model.root, tab: tab)
-                .frame(minWidth: 280, maxWidth: .infinity)
+                .frame(minWidth: narrow ? nil : 280, maxWidth: .infinity, minHeight: narrow ? 160 : nil)
         }
         .onAppear { if model.selection == nil { filterFocused = true } }
     }
@@ -163,6 +179,9 @@ struct FileRow: View {
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .help(url.path.abbreviatingHome)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel((isDirectory ? "Folder " : "") + name)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -183,7 +202,7 @@ struct FileMenu: View {
         Divider()
         Button("Copy path") { copy(url.path) }
         Button("Copy relative path") { copy(relative) }
-        Button("Send path to Claude") { store.sendPathToClaude(relative, from: tab.id) }
+        Button("Send Path to Agent") { store.sendPathToAgent(url.path, from: tab.id) }
     }
 
     private var relative: String {

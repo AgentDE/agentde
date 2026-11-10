@@ -61,7 +61,7 @@ struct Sidebar: View {
                     let activeOnly = store.settings.sidebarActiveOnly
                     ForEach(store.groups) { group in
                         // Active only: tabs with a dot, plus the one on screen so you can see where you are.
-                        let tabs = activeOnly ? group.tabs.filter { store.state($0.id) != .none || $0.id == store.activeTab?.id } : group.tabs
+                        let tabs = activeOnly ? group.tabs.filter { store.state($0.id) != .none || store.wantsAttention($0) || $0.id == store.activeTab?.id } : group.tabs
                         if !activeOnly || !tabs.isEmpty {
                             GroupRow(group: group)
                             if !(group.collapsed ?? false) {
@@ -74,7 +74,7 @@ struct Sidebar: View {
                             }
                         }
                     }
-                    if activeOnly, !store.groups.contains(where: { g in g.tabs.contains { store.state($0.id) != .none } }) {
+                    if activeOnly, !store.groups.contains(where: { g in g.tabs.contains { store.state($0.id) != .none || store.wantsAttention($0) } }) {
                         Text("No agent is working, waiting or done")
                             .font(.system(size: 11.5)).foregroundStyle(theme.muted)
                             .padding(.horizontal, 8).padding(.top, 6)
@@ -136,7 +136,7 @@ private struct GroupRow: View {
             }
             Spacer(minLength: 4)
             if collapsed {
-                GroupSummary(states: states, count: group.tabs.count)
+                GroupSummary(states: states, count: group.tabs.count, asking: group.tabs.contains { store.wantsAttention($0) })
             }
         }
         .padding(.leading, 2).padding(.trailing, 8)
@@ -180,6 +180,7 @@ private struct GroupRow: View {
             }
             Divider()
             Button("Rename") { store.renamingGroupID = group.id }
+            Button(TerminalSession.canEnter(folder: group.dir) ? "Change Folder…" : "Locate Folder…") { store.changeGroupFolder(group.id) }
             Menu("Color") {
                 ForEach(0..<8, id: \.self) { i in
                     Button { store.setGroupColor(group.id, i) } label: {
@@ -208,6 +209,8 @@ private struct GroupRow: View {
 private struct GroupSummary: View {
     let states: [AgentState]
     let count: Int
+    /// A tab in the group has an open question in its workstream.
+    var asking = false
     @Environment(Store.self) private var store
     @Environment(\.theme) private var theme
 
@@ -216,10 +219,11 @@ private struct GroupSummary: View {
         let waiting = states.filter { $0 == .needsYou }.count
         let done = states.filter { $0 == .doneUnseen }.count
         HStack(spacing: 2) {
-            if waiting > 0 { StatusDot(state: .needsYou, animated: store.settings.animations, size: 6) }
-            if working > 0 { StatusDot(state: .working, animated: store.settings.animations, size: 6) }
+            if asking, waiting == 0 { AskRing(size: 10) }
+            if waiting > 0 { StatusDot(state: .needsYou, animated: store.animations, size: 6) }
+            if working > 0 { StatusDot(state: .working, animated: store.animations, size: 6) }
             if done > 0 { StatusDot(state: .doneUnseen, size: 6) }
-            if working + waiting + done == 0 {
+            if working + waiting + done == 0, !asking {
                 Text("\(count)").font(.system(size: 11)).foregroundStyle(theme.muted)
             }
         }
@@ -244,7 +248,7 @@ private struct SidebarTabRow: View {
                         .font(.system(size: 10))
                         .foregroundStyle(theme.muted)
                 } else {
-                    StatusDot(state: state, animated: store.settings.animations, size: 6)
+                    StatusDot(state: state, animated: store.animations, size: 6)
                 }
                 if state != .needsYou, store.wantsAttention(tab) { AskRing(size: 13) }
             }
@@ -460,7 +464,7 @@ private struct RecentSessionPill: View {
             .frame(height: 21)
             .background(Capsule().fill(theme.hover))
             .overlay(Capsule().stroke(theme.border, lineWidth: 0.5))
-            .opacity(hovering ? 0.95 : 0.5)
+            .opacity(hovering ? 0.95 : theme.outline != nil ? 1 : 0.5)   // never faded in High contrast
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)

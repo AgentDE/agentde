@@ -12,8 +12,10 @@ final class TerminalRegistry {
 
     func existingExplorer(_ id: UUID) -> FileExplorerModel? { explorers[id] }
 
+    /// The tab's explorer, rooted at its folder; a tab whose folder changed (Claude moved into a worktree,
+    /// say) gets a new one there rather than the old folder's tree.
     func explorer(for tab: TabModel) -> FileExplorerModel {
-        if let existing = explorers[tab.id] { return existing }
+        if let existing = explorers[tab.id], existing.root.path == URL(fileURLWithPath: tab.cwd).path { return existing }
         let model = FileExplorerModel(root: tab.cwd, selection: tab.explorerSelection)
         explorers[tab.id] = model
         return model
@@ -88,8 +90,10 @@ final class TerminalRegistry {
 
     /// Types text into a tab as if from the keyboard. A trailing "\r" is sent separately after a pause,
     /// so TUIs like Claude Code treat it as Enter rather than part of a paste.
-    func typeIntoTerminal(_ id: UUID, _ text: String) {
-        guard let view = sessions[id]?.view else { return }
+    @discardableResult
+    func typeIntoTerminal(_ id: UUID, _ text: String) -> Bool {
+        guard let session = sessions[id], session.started, session.acceptsInput else { return false }
+        let view = session.view
         let submit = text.hasSuffix("\r")
         // Control characters (newlines, escapes) in file names or check names must never act as keys.
         let body = (submit ? String(text.dropLast()) : text).unicodeScalars
@@ -98,6 +102,7 @@ final class TerminalRegistry {
         if submit {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { view.send(txt: "\r") }
         }
+        return true
     }
 }
 

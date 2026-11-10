@@ -32,6 +32,10 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     var launchInBackground = false
 
     private var connection: PtyConnection?
+    /// Input typed now reaches the shell: the current connection has said hello and hasn't closed, the shell
+    /// hasn't exited, and the tab isn't closing.
+    var acceptsInput: Bool { connection != nil && helloed && !exited && !terminating }
+    private var helloed = false
     /// The tab's shell, as its holder reports it; 0 until connected.
     private(set) var shellPid: pid_t = 0
     /// While replaying output from before a reconnect, replies the terminal generates to old queries (cursor
@@ -148,6 +152,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
 
     private func attach(_ fd: Int32) {
         connection?.close()
+        helloed = false
         let connection = PtyConnection(fd: fd)
         connection.onEvent = { [weak self, weak connection] event in
             guard let self, let connection, connection === self.connection else { return }
@@ -162,6 +167,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         case .hello(let version, _, let shell):
             if version != 1 { DebugLog.log("tab \(tabID.uuidString.prefix(8)) holder speaks protocol \(version)", "tab") }
             shellPid = shell
+            helloed = true
             if terminating { endProcesses(); retire() }
         case .output(let bytes, let replay):
             bytesSinceHeartbeat += bytes.count
@@ -184,6 +190,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             let code: Int32? = (status & 0x7f) == 0 ? (status >> 8) & 0xff : nil
             processTerminated(exitCode: code)
         case .closed:
+            helloed = false
             if terminating { retire(); return }
             guard !exited else { return }
             reconnect()

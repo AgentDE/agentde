@@ -60,6 +60,25 @@ public struct PluginManifest: Decodable, Equatable {
         public var manifest: PluginManifest
     }
 
+    /// Plugins in `directory` whose `plugin.json` doesn't read, with why, for Settings to show.
+    public static func problems(in directory: URL) -> [(name: String, reason: String)] {
+        let folders = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
+        return folders.sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { folder in
+            let file = folder.appendingPathComponent("plugin.json")
+            guard FileManager.default.fileExists(atPath: file.path) else { return nil }
+            do {
+                _ = try JSONDecoder().decode(PluginManifest.self, from: Data(contentsOf: file))
+                return nil
+            } catch let DecodingError.keyNotFound(key, _) {
+                return (folder.lastPathComponent, "missing \"\(key.stringValue)\"")
+            } catch let DecodingError.typeMismatch(_, context), let DecodingError.valueNotFound(_, context) {
+                return (folder.lastPathComponent, "\(context.codingPath.map(\.stringValue).joined(separator: ".")): \(context.debugDescription)")
+            } catch {
+                return (folder.lastPathComponent, "not valid JSON")
+            }
+        }
+    }
+
     /// Every plugin in `directory` whose `plugin.json` reads, by folder name; the others are logged and skipped.
     public static func loadAll(in directory: URL) -> [Loaded] {
         let folders = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
