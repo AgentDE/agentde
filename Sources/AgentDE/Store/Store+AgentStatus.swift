@@ -5,6 +5,7 @@ extension Store {
     /// Banners for state changes you can't see: needs-you while the tab is hidden, or a finish you missed.
     func notifyTransition(_ tabID: UUID, from old: AgentState, to rt: TabRuntime) {
         if old != rt.state {
+            if rt.state == .working || rt.state == .needsYou { noteActivity(tabID) }
             DebugLog.log("tab \(tabID.uuidString.prefix(8)) \(old) -> \(rt.state)" + (rt.waitingFor.map { " (\($0))" } ?? ""), "agent")
             // An agent that just went idle can take an ask's overdue default.
             if rt.state == .none || rt.state == .doneUnseen {

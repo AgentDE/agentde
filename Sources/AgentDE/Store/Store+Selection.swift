@@ -18,6 +18,7 @@ extension Store {
         selectedGroupID = groups[g].id
         groups[g].selectedTabID = id
         lastFocusedAt[id] = Date()
+        noteActivity(id)
         refreshActivePullRequest()
         markSeenVisibleTabs()
         scheduleSave()
@@ -68,5 +69,33 @@ extension Store {
             }
         }
         NSSound.beep()
+    }
+}
+
+extension Store {
+    func noteActivity(_ id: UUID) {
+        guard let (g, t) = locate(id) else { return }
+        groups[g].tabs[t].lastActiveAt = Date()
+        scheduleSave()
+    }
+
+    /// Whether `date` is today. A day starts at 4 AM, so late-night work still counts as the same day.
+    static func isToday(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> Bool {
+        let shift: TimeInterval = -4 * 3600
+        return calendar.isDate(date.addingTimeInterval(shift), inSameDayAs: now.addingTimeInterval(shift))
+    }
+
+    /// Tabs the sidebar's filter keeps: anything with a status or an open question, the tab on screen, and any
+    /// tab active today (from its own record, or its session's transcript for tabs from before there was one).
+    func tabsActiveToday() -> Set<UUID> {
+        let sessions = Dictionary((recentSessions + (olderSessions ?? [])).map { ($0.sessionId, $0.lastActive) }) { a, b in max(a, b) }
+        var ids = Set<UUID>()
+        for tab in groups.flatMap(\.tabs) {
+            let dates = [tab.lastActiveAt, agentSession(of: tab).flatMap { sessions[$0] }].compactMap { $0 }
+            if state(tab.id) != .none || wantsAttention(tab) || tab.id == activeTab?.id || dates.contains(where: { Self.isToday($0) }) {
+                ids.insert(tab.id)
+            }
+        }
+        return ids
     }
 }

@@ -164,7 +164,7 @@ The list refreshes every 30 seconds.
 
 **A group's folder** is where its new tabs start, and what its Recent list and worktrees use. Right-click the group → **Default Folder…** to change it (say, the repository moved). Open tabs keep their own folders; a tab can be anywhere, and **Move to Group** puts it in another group.
 
-**Only active tabs.** The filter button beside **Groups** hides every tab without a status dot, Recent and Older, and groups with nothing left, leaving the agents that are working, waiting on you or done (and the tab on screen). Click it again for everything.
+**Only today's tabs.** The filter button beside **Groups** hides tabs that haven't been active today, Recent and Older, and groups with nothing left. A tab counts if its agent worked or waited on you today, you switched to it today, it has a status dot or an open question, or it's on screen. A day starts at 4 AM. Click the button again for everything.
 
 ## Startup command (conda and friends)
 

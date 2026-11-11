@@ -28,7 +28,7 @@ struct AgentDESettings: Codable, Equatable {
     var showRecentSessions: Bool = true
     /// New Claude and Codex tabs ask for a name first (Claude's session gets it with `--name`).
     var askSessionName: Bool = true
-    /// The sidebar shows only tabs with a status (working, waiting on you, done) and hides Recent.
+    /// The sidebar shows only tabs active today (`Store.isActiveToday`) and hides Recent.
     var sidebarActiveOnly: Bool = false
     var recentSessionDays: Double = 14
     /// Include named Codex threads in the Recent lists.

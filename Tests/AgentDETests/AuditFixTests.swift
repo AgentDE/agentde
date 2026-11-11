@@ -52,4 +52,15 @@ struct AuditFixTests {
         tab.claudeSessionId = "3d4e5f6a-7b8c-4d9e-8f0a-1b2c3d4e5f6a"
         #expect(TerminalSession.agentCommand(for: tab) == "claude --resume 3d4e5f6a-7b8c-4d9e-8f0a-1b2c3d4e5f6a")
     }
+
+    /// The filter's day runs from 4 AM to 4 AM, so a late night counts as the same day.
+    @Test func aDayStartsAtFourInTheMorning() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        func at(_ day: Int, _ hour: Int) throws -> Date { try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour))) }
+        #expect(Store.isToday(try at(9, 23), now: try at(10, 2), calendar: calendar))
+        #expect(Store.isToday(try at(10, 5), now: try at(10, 20), calendar: calendar))
+        #expect(!Store.isToday(try at(10, 3), now: try at(10, 5), calendar: calendar))
+        #expect(!Store.isToday(try at(8, 20), now: try at(10, 12), calendar: calendar))
+    }
 }

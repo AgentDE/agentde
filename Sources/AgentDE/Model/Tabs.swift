@@ -11,6 +11,8 @@ struct TabModel: Identifiable, Codable, Equatable {
     var command: String?
     /// A name for the agent session this tab starts (Claude's `--name`), used only when it starts a new one.
     var sessionName: String?
+    /// When its agent last worked or waited on you, or you last switched to it (the sidebar's active-today filter).
+    var lastActiveAt: Date?
     /// Agent tabs: which `AgentDefinition` they run.
     var agentID: String?
     var browserURL: String?

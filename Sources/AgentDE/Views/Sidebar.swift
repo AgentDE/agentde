@@ -46,7 +46,7 @@ struct Sidebar: View {
                         .font(.system(size: 12)).foregroundStyle(activeOnly ? theme.text : theme.muted)
                 }
                 .buttonStyle(.plain)
-                .hint(activeOnly ? "Show every tab and Recent" : "Show only tabs that are working, waiting on you or done")
+                .hint(activeOnly ? "Show every tab and Recent" : "Show only tabs active today")
                 Button { store.newGroup() } label: {
                     Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).foregroundStyle(theme.muted)
                 }
@@ -59,9 +59,9 @@ struct Sidebar: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
                     let activeOnly = store.settings.sidebarActiveOnly
+                    let activeToday = activeOnly ? store.tabsActiveToday() : []
                     ForEach(store.groups) { group in
-                        // Active only: tabs with a dot, plus the one on screen so you can see where you are.
-                        let tabs = activeOnly ? group.tabs.filter { store.state($0.id) != .none || store.wantsAttention($0) || $0.id == store.activeTab?.id } : group.tabs
+                        let tabs = activeOnly ? group.tabs.filter { activeToday.contains($0.id) } : group.tabs
                         if !activeOnly || !tabs.isEmpty {
                             GroupRow(group: group)
                             if !(group.collapsed ?? false) {
@@ -74,8 +74,8 @@ struct Sidebar: View {
                             }
                         }
                     }
-                    if activeOnly, !store.groups.contains(where: { g in g.tabs.contains { store.state($0.id) != .none || store.wantsAttention($0) } }) {
-                        Text("No agent is working, waiting or done")
+                    if activeOnly, activeToday.isEmpty {
+                        Text("No tabs active today")
                             .font(.system(size: 11.5)).foregroundStyle(theme.muted)
                             .padding(.horizontal, 8).padding(.top, 6)
                     }
