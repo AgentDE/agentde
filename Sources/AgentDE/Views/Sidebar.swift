@@ -19,23 +19,9 @@ struct Sidebar: View {
             .frame(height: 46)
             .padding(.horizontal, 10)
 
-            Button { store.paletteOpen = true } label: {
-                HStack(spacing: 7) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 12))
-                    Text("Jump to…").font(.system(size: 12.5))
-                    Spacer()
-                    Text("⌘K").font(.system(size: 11, design: .monospaced))
-                }
-                .foregroundStyle(theme.muted)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(theme.hover))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(theme.border, lineWidth: 0.5))
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 10)
-            .padding(.bottom, 14)
+            SidebarSearchField()
+                .padding(.horizontal, 10)
+                .padding(.bottom, 14)
 
             HStack {
                 Text("Groups").font(.system(size: 11.5, weight: .medium)).foregroundStyle(theme.muted)
@@ -56,6 +42,9 @@ struct Sidebar: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 4)
 
+            if !store.sidebarQuery.isEmpty {
+                ScrollView { SidebarSearchResults().padding(.horizontal, 8) }
+            } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
                     let activeOnly = store.settings.sidebarActiveOnly
@@ -81,6 +70,7 @@ struct Sidebar: View {
                     }
                 }
                 .padding(.horizontal, 8)
+            }
             }
 
             Spacer(minLength: 0)
@@ -481,5 +471,160 @@ private struct RecentSessionPill: View {
         }
         .help("Resume \(session.agent == .codex ? "Codex" : "Claude") session \(session.name) in a new tab"
               + (live ? " (it's running somewhere else right now)" : ""))
+    }
+}
+
+
+/// The sidebar's search box (⌘K): as you type, the list below shows only matching groups, tabs and sessions, then
+/// conversations that mention it. Return opens the first match; Esc clears it.
+private struct SidebarSearchField: View {
+    @Environment(Store.self) private var store
+    @Environment(\.theme) private var theme
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        @Bindable var bindable = store
+        HStack(spacing: 7) {
+            Image(systemName: "magnifyingglass").font(.system(size: 12))
+            TextField("Jump to…", text: $bindable.sidebarQuery)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12.5))
+                .foregroundStyle(theme.text)
+                .focused($focused)
+                .onSubmit { SidebarSearchResults.openFirst(store) }
+                .onKeyPress(.escape) {
+                    store.sidebarQuery = ""
+                    focused = false
+                    store.focusActiveTerminal()
+                    return .handled
+                }
+            if store.sidebarQuery.isEmpty {
+                Text("⌘K").font(.system(size: 11, design: .monospaced))
+            } else {
+                Button { store.sidebarQuery = "" } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 11)) }
+                    .buttonStyle(.plain)
+                    .hint("Clear")
+            }
+        }
+        .foregroundStyle(theme.muted)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
+        .background(RoundedRectangle(cornerRadius: 8).fill(theme.hover))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(focused ? theme.secondary.opacity(0.6) : theme.border, lineWidth: focused ? 1 : 0.5))
+        .onChange(of: store.sidebarSearchFocus) { _, _ in focused = true }
+    }
+}
+
+/// What the sidebar shows while searching: groups whose name, tabs or sessions match by name, then the
+/// conversations (open tabs and Recent) that mention the words.
+private struct SidebarSearchResults: View {
+    @Environment(Store.self) private var store
+    @Environment(\.theme) private var theme
+
+    struct Match {
+        let group: GroupModel
+        let tabs: [TabModel]
+        let sessions: [RecentSession]
+    }
+
+    static func matches(_ store: Store) -> [Match] {
+        let q = store.sidebarQuery
+        return store.groups.compactMap { group in
+            let groupHit = Store.matches(q, [group.name])
+            let tabs = group.tabs.filter { groupHit || Store.matches(q, [store.title(for: $0), ($0.cwd as NSString).lastPathComponent]) }
+            let pool = store.pinnedSessions(for: group) + store.recentSessions(for: group) + (store.olderSessions(for: group) ?? [])
+            let sessions = pool.filter { Store.matches(q, [$0.name]) }
+            return tabs.isEmpty && sessions.isEmpty ? nil : Match(group: group, tabs: tabs, sessions: Array(sessions.prefix(8)))
+        }
+    }
+
+    /// Return in the box: the first tab, else the first session, else the first conversation that mentions it.
+    static func openFirst(_ store: Store) {
+        let found = matches(store)
+        if let tab = found.lazy.flatMap(\.tabs).first {
+            store.selectTab(tab.id)
+        } else if let match = found.first(where: { !$0.sessions.isEmpty }), let session = match.sessions.first {
+            store.resumeRecentSession(session, in: match.group.id)
+        } else if let section = store.sidebarSearch.sections.first {
+            store.sidebarSearch.open(section)
+        } else {
+            NSSound.beep()
+            return
+        }
+        store.sidebarQuery = ""
+    }
+
+    var body: some View {
+        let found = Self.matches(store)
+        let named = Set(found.flatMap { $0.tabs.map(\.id.uuidString) + $0.sessions.map(\.sessionId) })
+        let mentions = store.sidebarSearch.sections.filter { section in
+            switch section.source {
+            case .tab(let id): !named.contains(id.uuidString)
+            case .recent(let recent): !named.contains(recent.sessionId)
+            }
+        }
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(found, id: \.group.id) { match in
+                GroupRow(group: match.group)
+                ForEach(match.tabs) { tab in SidebarTabRow(group: match.group, tab: tab) }
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(match.sessions) { session in RecentSessionPill(session: session, groupID: match.group.id) }
+                }
+                .padding(.leading, 30).padding(.trailing, 8)
+                Spacer().frame(height: 4)
+            }
+            if store.sidebarQuery.count >= 3 {
+                HStack(spacing: 6) {
+                    Text("In conversations").font(.system(size: 11.5, weight: .medium))
+                    if let progress = store.sidebarSearch.progress {
+                        Text("\(progress.done)/\(progress.total)").font(.system(size: 10.5)).monospacedDigit()
+                    }
+                }
+                .foregroundStyle(theme.muted)
+                .padding(.horizontal, 8).padding(.top, 8).padding(.bottom, 2)
+                ForEach(mentions) { section in MentionRow(section: section) }
+                if mentions.isEmpty, store.sidebarSearch.progress == nil {
+                    Text(found.isEmpty ? "Nothing matches" : "No other conversations mention it")
+                        .font(.system(size: 11.5)).foregroundStyle(theme.muted).padding(.horizontal, 8)
+                }
+            } else if found.isEmpty {
+                Text("Nothing matches by name. Type 3 letters to search conversations too.")
+                    .font(.system(size: 11.5)).foregroundStyle(theme.muted).padding(.horizontal, 8)
+            }
+        }
+    }
+}
+
+/// A conversation that mentions the search: its tab or session, and the newest matching line.
+private struct MentionRow: View {
+    let section: SessionSearch.Section
+    @Environment(Store.self) private var store
+    @Environment(\.theme) private var theme
+    @State private var hovering = false
+
+    var body: some View {
+        Button {
+            store.sidebarSearch.open(section)
+            store.sidebarQuery = ""
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Circle().fill(section.color ?? theme.muted).frame(width: 6, height: 6)
+                    Text(section.title).font(.system(size: 12.5)).foregroundStyle(theme.text).lineLimit(1)
+                    Spacer(minLength: 4)
+                    if section.total > 1 { Text("\(section.total)").font(.system(size: 10.5)).foregroundStyle(theme.muted) }
+                }
+                if let hit = section.hits.first {
+                    Text(hit.snippet).font(.system(size: 11)).foregroundStyle(theme.secondary).lineLimit(2)
+                }
+            }
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 6).fill(hovering ? theme.hover : .clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(section.subtitle)
     }
 }

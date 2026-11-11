@@ -139,6 +139,8 @@ The selected file is remembered across relaunches.
 
 ## Search
 
+**The sidebar's box (⌘K) is the quick way:** type and the sidebar narrows to the groups, tabs and Recent or Older sessions whose names match, then lists the conversations (open tabs and Recent) that mention every word, with the line. Return opens the first match; Esc clears the box. It reads the same index as ⌘⇧F below.
+
 **⌘⇧F searches across your sessions.** It covers every open tab:
 - **Claude and Codex tabs:** the session's whole conversation (your prompts and the agent's replies), including history that scrolled out of the terminal or was compacted away. Tool output isn't searched. A Codex tab needs its thread id, which a resumed tab has and a new one gets from the status hook (`make register-agent-status`).
 - **Shell tabs:** the terminal's scrollback.
@@ -175,7 +177,7 @@ Tabs run a normal interactive login zsh with your dotfiles. The startup command 
 ## Forking a Claude session
 
 - **Type `/fork` in Claude.** Claude copies the conversation into a new background session and keeps working in the current tab. AgentDE opens the new session as a tab after the last tab you used in that folder, running `claude attach <id>`. The fork keeps running whether or not its tab is open. Any other named background session in a group's folder (say, from `claude --bg`) opens the same way.
-- **Or press ⌘⌥F** (also **Fork Session** in the tab's right-click menu, and ⌘K): forks the active tab's conversation into a new interactive tab with `claude --resume <id> --fork-session`.
+- **Or press ⌘⌥F** (also **Fork Session** in the tab's right-click menu, and ⇧⌘P): forks the active tab's conversation into a new interactive tab with `claude --resume <id> --fork-session`.
 
 A fork is an independent tab: renaming or closing either one doesn't affect the other. With the Workstreams extension, either way gives the fork a workstream of its own, starting with a copy of its parent's overview, rules and memory.
 
@@ -192,8 +194,8 @@ AgentDE reads Claude Code's registry of running sessions (`~/.claude/sessions/`)
 
 - **Sparkle:** a turn of 45 seconds or more ends with a small sparkle (adjustable in Settings → Fun).
 - **Termi** (Settings → Fun, off by default): the mascot hangs out in the free end of the tab strip. Amber and hopping while an agent waits on you, green and typing while agents work, blue and wandering otherwise, and asleep after two quiet minutes. Clicks pass through him.
-- **Dock badge:** how many tabs are waiting on you. **⌘J** jumps to the next waiting tab, then to finished ones. **⌘K** with an empty query lists tabs by urgency.
-- **Why it's waiting:** when Claude reports it, in the tab's tooltip, the status bar and ⌘K.
+- **Dock badge:** how many tabs are waiting on you. **⌘J** jumps to the next waiting tab, then to finished ones. **⇧⌘P** (the command palette) with an empty query lists tabs by urgency.
+- **Why it's waiting:** when Claude reports it, in the tab's tooltip, the status bar and the command palette (⇧⌘P).
 - **Notifications:** a macOS banner when an agent needs you, or finishes while you're elsewhere; a click brings AgentDE forward on that tab. Turn either, or the sound, off in Settings → Agents.
 
 **Codex and other agents.** Any agent with hooks can report its state. Each tab's environment has `AGENTDE_STATUS_FILE`, and a hook writes one line to it: `working`, `needs-you` or `idle`, then the agent's pid (`$PPID` in a hook), then optionally what it's waiting for. A second line, `session <id>`, names the agent's session: that's how a new Codex tab learns which thread to resume after a reboot (the registered hooks read it from the hook's input). AgentDE trusts a line only while that pid runs inside the tab, so a dot never outlives its agent. Outside AgentDE the variable isn't set and the hook does nothing.
@@ -242,7 +244,7 @@ Quitting saves groups, tabs, colors, names, browser URLs and settings. Closing a
 
 ### Background mode
 
-Turn on **Settings → Agents → Run Claude as background sessions**. New Claude tabs then start as Claude background sessions (`claude --bg`) and attach with `claude attach <id>`. Closing a tab stops its agent (`claude stop`); the conversation is kept, so you can resume it from Recent. To close the tab and leave the agent working, right-click it → **Close, Keep Agent Running** (**Close & Stop Agent** stops it); reattach from Claude's Agent View (⌘K → **Open Agent View**).
+Turn on **Settings → Agents → Run Claude as background sessions**. New Claude tabs then start as Claude background sessions (`claude --bg`) and attach with `claude attach <id>`. Closing a tab stops its agent (`claude stop`); the conversation is kept, so you can resume it from Recent. To close the tab and leave the agent working, right-click it → **Close, Keep Agent Running** (**Close & Stop Agent** stops it); reattach from Claude's Agent View (⇧⌘P → **Open Agent View**).
 
 Background sessions inherit your startup command's environment, but Claude's background service reorders `PATH`, so a conda env's `python` may not come first.
 
@@ -261,7 +263,8 @@ Background sessions inherit your startup command's environment, but Claude's bac
 | ⌘1 … ⌘9 | Go to tab 1–8, or the last tab |
 | ⌘⇧[, ⌘⇧] | Previous or next tab |
 | ⌘⌥↑, ⌘⌥↓ | Previous or next group |
-| ⌘K | Jump to any tab or group, or run an action |
+| ⌘K | Search the sidebar: as you type it shows only matching groups, tabs and sessions, then (from 3 letters) conversations that mention the words. Return opens the first; Esc clears |
+| ⇧⌘P | Command palette: jump to any tab or group, or run an action |
 | ⌘J | Next tab that needs you, then finished ones |
 | ⌘-click, ⌥⌘-click | Open a path or link from the terminal (in the viewer / in its default app) |
 | ⌥⌘I | Show or hide the side panel |

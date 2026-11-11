@@ -34,8 +34,11 @@ final class SessionSearch {
     var progress: (done: Int, total: Int)?
 
     @ObservationIgnored weak var store: Store?
-    @ObservationIgnored private let index = TranscriptIndex()
-    @ObservationIgnored private let queue = DispatchQueue(label: "agentde.search", qos: .userInitiated)
+    /// One index and one queue for every search (⌘⇧F and the sidebar box), so transcripts are read and held once.
+    private static let sharedIndex = TranscriptIndex()
+    private static let sharedQueue = DispatchQueue(label: "agentde.search", qos: .userInitiated)
+    @ObservationIgnored private var index: TranscriptIndex { Self.sharedIndex }
+    @ObservationIgnored private var queue: DispatchQueue { Self.sharedQueue }
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var pending: DispatchWorkItem?
 

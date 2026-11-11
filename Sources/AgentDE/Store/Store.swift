@@ -57,6 +57,12 @@ final class Store {
     @ObservationIgnored let terminals = TerminalRegistry()
     @ObservationIgnored var notifier: Notifier?
     @ObservationIgnored let search = SessionSearch()
+    /// The sidebar's search box: filters groups, tabs and sessions by name as you type, and finds the query in
+    /// conversations (`sidebarSearch`, which includes Recent).
+    var sidebarQuery = "" { didSet { if sidebarQuery != oldValue { sidebarSearch.query = sidebarQuery.count >= 3 ? sidebarQuery : "" } } }
+    @ObservationIgnored let sidebarSearch = SessionSearch()
+    /// Bumped by ⌘K to put the cursor in the sidebar's search box.
+    var sidebarSearchFocus = 0
     @ObservationIgnored lazy var pullRequestMonitor = PullRequestMonitor(store: self)
     /// Tabs that just ran `claude --bg` and haven't reported their job id yet, so `/fork` detection ignores their session.
     @ObservationIgnored var pendingBackgroundLaunches: [UUID: Date] = [:]
@@ -73,6 +79,8 @@ final class Store {
         terminals.viewers.onEscape = { [weak self] id in self?.closeViewer(id) }
         terminals.viewers.onOpen = { [weak self] id, item in self?.followViewerLink(item, tab: id) }
         search.store = self
+        sidebarSearch.store = self
+        sidebarSearch.includeRecent = true
         load()
         attachToLiveBackgroundJobs(Store.liveBackgroundJobs(
             in: URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".claude/sessions")))

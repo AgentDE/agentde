@@ -113,7 +113,8 @@ struct AgentDECommands: Commands {
                 .keyboardShortcut("f", modifiers: [.command, .shift])
         }
         CommandMenu("Go") {
-            Button("Jump To…") { store.searchOpen = false; store.paletteOpen.toggle() }.keyboardShortcut("k")
+            Button("Jump To…") { store.searchOpen = false; store.paletteOpen = false; store.focusSidebarSearch() }.keyboardShortcut("k")
+            Button("Command Palette…") { store.searchOpen = false; store.paletteOpen.toggle() }.keyboardShortcut("p", modifiers: [.command, .shift])
             Button("Next Waiting Tab") { store.jumpToAttention() }.keyboardShortcut("j")
             Divider()
             Button("Next Tab") { store.cycleTab(1) }.keyboardShortcut("]", modifiers: [.command, .shift])

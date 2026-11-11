@@ -63,4 +63,12 @@ struct AuditFixTests {
         #expect(!Store.isToday(try at(10, 3), now: try at(10, 5), calendar: calendar))
         #expect(!Store.isToday(try at(8, 20), now: try at(10, 12), calendar: calendar))
     }
+
+    /// The sidebar search matches every word, in any field, ignoring case.
+    @Test func sidebarSearchMatchesEveryWord() {
+        #expect(Store.matches("login fix", ["Fix the login bug", "app"]))
+        #expect(Store.matches("APP login", ["fix login", "app"]))
+        #expect(!Store.matches("login deploy", ["fix login", "app"]))
+        #expect(Store.matches("  ", ["anything"]))
+    }
 }

@@ -99,3 +99,19 @@ extension Store {
         return ids
     }
 }
+
+extension Store {
+    /// Whether every word of `query` appears in any of `fields`, ignoring case (the sidebar search's name match).
+    static func matches(_ query: String, _ fields: [String]) -> Bool {
+        let words = query.lowercased().split(whereSeparator: \.isWhitespace)
+        guard !words.isEmpty else { return true }
+        let text = fields.joined(separator: " ").lowercased()
+        return words.allSatisfy { text.contains($0) }
+    }
+
+    /// ⌘K: shows the sidebar and puts the cursor in its search box.
+    func focusSidebarSearch() {
+        sidebarVisible = true
+        sidebarSearchFocus += 1
+    }
+}
