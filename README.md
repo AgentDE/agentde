@@ -66,6 +66,10 @@ The full steps, what each one changes, and uninstalling: [Guide → Install](doc
 - **[Roadmap](https://github.com/AgentDE/agentde/issues?q=is%3Aopen+label%3Aplanned):** what's planned, as issues labeled `planned`.
 - **[CLAUDE.md](CLAUDE.md):** notes for agents working on this repo.
 
+## Credits
+
+Built by [Andrey Kurenkov](https://www.andreykurenkov.com/) and Claude, paid for by [Astrocade](https://www.astrocade.com/). Consider [joining him there](https://www.astrocade.com/careers)!
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

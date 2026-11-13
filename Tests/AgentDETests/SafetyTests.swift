@@ -65,7 +65,7 @@ struct BackgroundSessionTests {
         func entry(_ json: String) throws -> ClaudeSessionEntry { try JSONDecoder().decode(ClaudeSessionEntry.self, from: Data(json.utf8)) }
         let spare = try entry(#"{"pid": 1, "kind": "bg", "jobId": "7e2dbaf0", "name": "7e2dbaf0", "spare": true}"#)
         let placeholder = try entry(#"{"pid": 2, "kind": "bg", "jobId": "98c044a5", "name": "98c044a5"}"#)
-        let named = try entry(#"{"pid": 3, "kind": "bg", "jobId": "dc82e88a", "name": "cold_game_beam_plumbing"}"#)
+        let named = try entry(#"{"pid": 3, "kind": "bg", "jobId": "dc82e88a", "name": "seed_sweep_plumbing"}"#)
         #expect(!Store.opensAsTab(spare, isFork: { true }))
         #expect(!Store.opensAsTab(placeholder, isFork: { false }))
         #expect(Store.opensAsTab(placeholder, isFork: { true }))   // a fork opens even before it has a name
