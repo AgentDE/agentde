@@ -325,8 +325,9 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         let session = SafeID.session(tab.claudeSessionId)
         switch tab.kind {
         case .claude:
-            let flags = session.map { " --resume \($0)" + (tab.forkOnStart == true ? " --fork-session" : "") }
-                ?? tab.sessionName.flatMap { $0.isEmpty ? nil : " --name " + shellQuoted($0) } ?? ""
+            // A new session takes its name (`--name`): a fresh one, or a fork; a plain resume keeps its own.
+            let name = tab.sessionName.flatMap { $0.isEmpty ? nil : " --name " + shellQuoted($0) } ?? ""
+            let flags = session.map { " --resume \($0)" + (tab.forkOnStart == true ? " --fork-session" + name : "") } ?? name
             return background ? backgroundLaunch(flags: flags) : "claude" + flags
         case .codex:
             return "codex" + (SafeID.session(tab.codexSessionId).map { " resume \($0)" } ?? "")

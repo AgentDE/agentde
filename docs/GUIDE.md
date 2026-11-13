@@ -177,7 +177,7 @@ Tabs run a normal interactive login zsh with your dotfiles. The startup command 
 ## Forking a Claude session
 
 - **Type `/fork` in Claude.** Claude copies the conversation into a new background session and keeps working in the current tab. AgentDE opens the new session as a tab after the last tab you used in that folder, running `claude attach <id>`. The fork keeps running whether or not its tab is open. Any other named background session in a group's folder (say, from `claude --bg`) opens the same way.
-- **Or press ⌘⌥F** (also **Fork Session** in the tab's right-click menu, and ⇧⌘P): forks the active tab's conversation into a new interactive tab with `claude --resume <id> --fork-session`.
+- **Or press ⌘⌥F** (also **Fork Session** in the tab's right-click menu, and ⇧⌘P): forks the active tab's conversation into a new interactive tab with `claude --resume <id> --fork-session`. It asks for a name first (pre-filled "<name> (fork)"; Settings → Terminal can turn the question off), which the tab, the forked Claude session and its new workstream all take.
 
 A fork is an independent tab: renaming or closing either one doesn't affect the other. With the Workstreams extension, either way gives the fork a workstream of its own, starting with a copy of its parent's overview, rules and memory.
 

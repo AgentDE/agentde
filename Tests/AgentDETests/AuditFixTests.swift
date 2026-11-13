@@ -71,4 +71,15 @@ struct AuditFixTests {
         #expect(!Store.matches("login deploy", ["fix login", "app"]))
         #expect(Store.matches("  ", ["anything"]))
     }
+
+    /// A fork starts with its own name; a plain resume doesn't rename the session.
+    @Test func forksStartWithTheirName() {
+        var tab = TabModel(kind: .claude, cwd: "/tmp")
+        tab.claudeSessionId = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b"
+        tab.forkOnStart = true
+        tab.sessionName = "try the other seed"
+        #expect(TerminalSession.agentCommand(for: tab) == "claude --resume 4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b --fork-session --name 'try the other seed'")
+        tab.forkOnStart = nil
+        #expect(TerminalSession.agentCommand(for: tab) == "claude --resume 4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b")
+    }
 }

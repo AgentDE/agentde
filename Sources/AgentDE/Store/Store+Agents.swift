@@ -19,10 +19,32 @@ extension Store {
             alert.runModal()
             return
         }
+        // A name for the fork (pre-filled; Settings → Terminal can skip asking): its tab, its Claude session and,
+        // with Workstreams, its new workstream all take it.
+        let suggested = title(for: source) + " (fork)"
+        var name = suggested
+        if settings.askSessionName {
+            let alert = NSAlert()
+            alert.messageText = "Name the fork"
+            alert.informativeText = "A copy of \(title(for: source))'s conversation in a new tab. The name shows on the tab, in Recent and on its workstream."
+            let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+            field.stringValue = suggested
+            alert.accessoryView = field
+            alert.addButton(withTitle: "Fork")
+            alert.addButton(withTitle: "Cancel")
+            alert.window.initialFirstResponder = field
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            let typed = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " ")
+            if !typed.isEmpty { name = typed }
+        }
+        // The alert ran the event loop: find the source again.
+        guard let (sg, st) = locate(source.id) else { return }
         var fork = TabModel(kind: .claude, cwd: source.cwd)
         fork.claudeSessionId = sessionId
         fork.forkOnStart = true
-        groups[g].tabs.insert(fork, at: t + 1)
+        fork.customTitle = name
+        fork.sessionName = name
+        groups[sg].tabs.insert(fork, at: st + 1)
         selectTab(fork.id)
         scheduleSave()
         if let parent = tabInfo(source.id), let child = tabInfo(fork.id) {
