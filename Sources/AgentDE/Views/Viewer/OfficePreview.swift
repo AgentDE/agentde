@@ -20,19 +20,36 @@ enum OfficePreview {
         let key = SHA256.hash(data: Data(stamp.utf8)).prefix(10).map { String(format: "%02x", $0) }.joined()
         let folder = cache.appendingPathComponent(key)
         let page = folder.appendingPathComponent(file.lastPathComponent + ".qlpreview/Preview.html")
-        if FileManager.default.fileExists(atPath: page.path) { return page }
+        let pdf = folder.appendingPathComponent(file.deletingPathExtension().lastPathComponent + ".pdf")
+        let slides = folder.appendingPathComponent("slides.html")
+        // Rendered before: whichever way worked.
+        for done in [page, pdf, slides] where FileManager.default.fileExists(atPath: done.path) { return done }
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { prune(cache, keeping: folder) }
+        // 1. Quick Look: fast and faithful, but it gives up on some files (many script-made decks).
+        if run("/usr/bin/qlmanage", ["-p", "-o", folder.path, file.path]), FileManager.default.fileExists(atPath: page.path) { return page }
+        // 2. LibreOffice, when it's installed: an exact PDF.
+        let soffice = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+        if FileManager.default.isExecutableFile(atPath: soffice),
+           run(soffice, ["--headless", "--convert-to", "pdf", "--outdir", folder.path, file.path], timeout: 60),
+           FileManager.default.fileExists(atPath: pdf.path) { return pdf }
+        // 3. Slide decks: AgentDE's own plain rendering of every slide.
+        if ["pptx", "ppsx"].contains(file.pathExtension.lowercased()) { return PptxRenderer.render(file, into: folder) }
+        return nil
+    }
+
+    /// Runs a program to completion (or `timeout`); whether it finished in time.
+    private static func run(_ program: String, _ arguments: [String], timeout: TimeInterval = 30) -> Bool {
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/qlmanage")
-        task.arguments = ["-p", "-o", folder.path, file.path]
+        task.executableURL = URL(fileURLWithPath: program)
+        task.arguments = arguments
         task.standardOutput = FileHandle.nullDevice
         task.standardError = FileHandle.nullDevice
-        guard (try? task.run()) != nil else { return nil }
-        let deadline = Date().addingTimeInterval(30)
+        guard (try? task.run()) != nil else { return false }
+        let deadline = Date().addingTimeInterval(timeout)
         while task.isRunning, Date() < deadline { usleep(50_000) }
-        if task.isRunning { task.terminate(); return nil }
-        prune(cache, keeping: folder)
-        return FileManager.default.fileExists(atPath: page.path) ? page : nil
+        if task.isRunning { task.terminate(); return false }
+        return true
     }
 
     /// Drops renders older than a week, so the cache doesn't grow without end.

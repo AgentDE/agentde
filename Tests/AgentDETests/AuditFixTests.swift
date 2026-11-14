@@ -103,4 +103,16 @@ struct AuditFixTests {
         model.selection = dir.appendingPathComponent("sub")
         #expect(model.previewed == file)
     }
+
+    /// The fallback slide renderer: every slide, text escaped, light text on dark backgrounds by default.
+    @Test func pptxSlidesRenderAsAPage() {
+        var title = PptxRenderer.Shape(x: 0, y: 0, w: 6_096_000, h: 914_400)
+        title.paragraphs = [PptxRenderer.Paragraph(runs: [PptxRenderer.Run(text: "Q4 <goals> & plans", size: 36, bold: true)])]
+        let slides = [PptxRenderer.Slide(background: "12083A", shapes: [title]), PptxRenderer.Slide(background: nil, shapes: [])]
+        let html = PptxRenderer.html(slides, width: 12_192_000, height: 6_858_000)
+        #expect(html.components(separatedBy: "class=\"slide\"").count - 1 == 2)
+        #expect(html.contains("Q4 &lt;goals&gt; &amp; plans"))
+        #expect(html.contains("color:#ffffff"))     // dark slide, no run color: white text
+        #expect(html.contains("height: 540px"))      // 16:9 at 960 wide
+    }
 }
