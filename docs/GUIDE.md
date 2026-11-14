@@ -181,6 +181,8 @@ Tabs run a normal interactive login zsh with your dotfiles. The startup command 
 
 A fork is an independent tab: renaming or closing either one doesn't affect the other. With the Workstreams extension, either way gives the fork a workstream of its own, starting with a copy of its parent's overview, rules and memory.
 
+**Claude tools.** A faint row in a Claude tab's top-right corner, clear when the pointer is over it: **Rewind** (Esc Esc, ⌥⌘Z), **Compact** (`/compact`), **Fork** (⌥⌘F), and **Restart Claude** (keeps the session). Rewind and Compact work when Claude is idle. Turn the row off in Settings → Terminal; the keys and the tab's right-click menu still work.
+
 ## Agent status
 
 AgentDE reads Claude Code's registry of running sessions (`~/.claude/sessions/`) once a second and matches each session to its tab. Nothing needs configuring.
@@ -256,6 +258,7 @@ Background sessions inherit your startup command's environment, but Claude's bac
 | ⌘⇧E | New File Explorer tab |
 | ⌘W | Close the tab; for an agent tab that stops the agent (asks if it's working; the conversation is kept) |
 | ⌥⇧⌘T | Reopen the last closed tab where it was, resuming its session (the last 20, this run) |
+| ⌥⌘Z | Rewind: Claude's menu for going back to an earlier message (Esc Esc), in an idle Claude tab |
 | ⌘R, or double-click | Rename tab |
 | ⌘⇧F | Search all sessions |
 | ⌘F, ⌘G, ⌘⇧G | Find in this tab (or its viewer, when focused), next, previous |

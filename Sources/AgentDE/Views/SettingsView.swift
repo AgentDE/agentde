@@ -56,6 +56,7 @@ struct SettingsView: View {
                 Toggle("`open` shows files and pages in the tab's viewer", isOn: $store.settings.openInViewer)
                     .help("In tabs opened after the change, `open report.html` (also from Claude's ! and Bash commands) shows it in the viewer. /usr/bin/open always reaches the real one.")
                 Toggle("Ask for a name when starting a Claude or Codex tab", isOn: $store.settings.askSessionName)
+                Toggle("Claude tools in the chat's corner (Rewind, Compact, Fork, Restart)", isOn: $store.settings.chatTools)
                     .help("Claude's session takes the name (it shows in Recent and in Claude's resume list); a Codex tab takes it as its title.")
                 Toggle("Show recent sessions under each group", isOn: $store.settings.showRecentSessions)
                 Toggle("Include Codex sessions", isOn: $store.settings.showCodexSessions)

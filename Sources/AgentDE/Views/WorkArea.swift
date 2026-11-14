@@ -150,6 +150,9 @@ private struct TabPane: View {
             .padding(.leading, 10)
             .padding(.top, 6)
             .background(Color(nsColor: Theme.resolve(store.settings.theme, dark: TerminalSession.isDark(store.settings)).terminalBackground))
+            .overlay(alignment: .topTrailing) {
+                if tab.kind == .claude, store.settings.chatTools { ChatTools(tab: tab) }
+            }
     }
 }
 

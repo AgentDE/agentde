@@ -314,6 +314,7 @@ struct TabMenu: View {
         if tab.kind == .claude {
             if tab.claudeSessionId != nil {
                 Button("Fork Session") { store.forkTab(tab.id) }
+                Button("Rewind…") { store.rewind(tab.id) }
             }
             Button("Restart Claude (keeps the session)") { store.restartClaude(tab.id) }
                 .disabled(store.claudeRestartCheck(tab.id) != .eligible)
