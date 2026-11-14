@@ -144,6 +144,14 @@ struct AgentDECommands: Commands {
             Button("Viewer Back") { store.stepViewer(1) }.keyboardShortcut("[")
             Button("Viewer Forward") { store.stepViewer(-1) }.keyboardShortcut("]")
             Button("Side Panel") { store.togglePanel() }.keyboardShortcut("i", modifiers: [.command, .option])
+            Divider()
+            Button("Split Right") { store.split(vertical: false) }.keyboardShortcut("d")
+            Button("Split Down") { store.split(vertical: true) }.keyboardShortcut("d", modifiers: [.command, .option])
+            Button("Next Pane") { store.cyclePane(1) }.keyboardShortcut(.rightArrow, modifiers: [.command, .option])
+            Button("Previous Pane") { store.cyclePane(-1) }.keyboardShortcut(.leftArrow, modifiers: [.command, .option])
+            Button("Close Pane") { if let id = store.activeTab?.id { store.removePane(id) } }
+                .keyboardShortcut("w", modifiers: [.command, .option])
+            Button("Unsplit") { store.unsplit() }
             ForEach(1...3, id: \.self) { n in
                 Button("Side Panel Tab \(n)") { store.showPanelTab(n - 1) }.keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: [.command, .control])
             }

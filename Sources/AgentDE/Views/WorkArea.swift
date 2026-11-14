@@ -8,7 +8,10 @@ struct WorkArea: View {
 
     var body: some View {
         Group {
-            if let group = store.selectedGroup, let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.tabs.first {
+            if let group = store.selectedGroup, let layout = store.layout(of: group),
+               let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.tabs.first {
+                SplitArea(group: group, layout: layout, active: active).id(group.id)
+            } else if let group = store.selectedGroup, let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.tabs.first {
                 TabPane(tab: active).id(group.id)
             } else {
                 WithTabStrip { EmptyGroupView() }
@@ -35,8 +38,10 @@ struct WithTabStrip<Content: View>: View {
     }
 }
 
-private struct TabPane: View {
+struct TabPane: View {
     let tab: TabModel
+    /// In a split: only the viewer and terminal; the split shows the tab strip and side panel once.
+    var embedded = false
     @Environment(Store.self) private var store
     @Environment(\.theme) private var theme
 
@@ -47,7 +52,13 @@ private struct TabPane: View {
     @State private var panelOverlay = false
 
     var body: some View {
-        if tab.kind == .files || tab.kind == .command {
+        if embedded {
+            if tab.kind == .files || tab.kind == .command {
+                terminalStack
+            } else {
+                GeometryReader { geo in mainColumn(height: geo.size.height) }
+            }
+        } else if tab.kind == .files || tab.kind == .command {
             WithTabStrip { terminalStack }
         } else {
             GeometryReader { geo in
@@ -163,7 +174,7 @@ private struct TabPane: View {
 }
 
 /// A thin divider that resizes what's beside it; reports the drag distance (down or right is positive).
-private struct ResizeHandle: View {
+struct ResizeHandle: View {
     let axis: Axis
     let onDrag: (Double) -> Void
     let onEnd: () -> Void

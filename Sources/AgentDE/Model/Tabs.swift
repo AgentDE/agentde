@@ -72,6 +72,8 @@ struct GroupModel: Identifiable, Codable, Equatable {
     var selectedTabID: UUID?
     /// Saved by versions with split view. Ignored, and dropped on the next save.
     var splitPanes: [UUID]?
+    /// Tabs shown side by side or stacked (`PaneLayout`); nil shows the selected tab alone.
+    var layout: PaneLayout?
     /// Shell commands run in each new tab of this group before its agent starts. Nil uses the app-wide default.
     var startupCommand: String?
     /// Whether the sidebar folds away this group's recent-session list.

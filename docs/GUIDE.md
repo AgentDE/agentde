@@ -91,6 +91,8 @@ The **viewer** shows Markdown as a document, local HTML, PDFs, images, video and
 
 **Side panel.** Beside a tab's chat, with a tab for each thing it shows: **Workstream** (from the Workstreams extension), **Files** (the tab folder's tree; click a file to see it in the viewer) and **Changes** (the repository's uncommitted changes with lines added and removed, then the last 30 commits; click one to see its diff in the viewer). Changes is read-only: committing and pushing are your agent's job. It refreshes when the agent's status changes, or with ↻. Layout → Side Panel (⌥⌘I) hides or shows it for the tab; it shows by default when an extension adds a tab to it.
 
+**Side by side.** Layout → Split Right (⌘D) or Split Down (⌥⌘D) puts another tab of the group beside or below the active one: the one you used most recently that isn't showing, or pick one with a tab's right-click menu → Show in Split. Split again to make more panes, tmux style, and drag a divider to resize. The active pane has the group's color on top; the tab strip and side panel act on it. Click a pane or press ⌥⌘← / ⌥⌘→ to move between panes. Choosing a tab that isn't showing puts it in the active pane. A pane's ✕ (⌥⌘W) takes it out of the split; the tab stays open. Layout → Unsplit goes back to one tab. Each group keeps its own layout.
+
 ## Extensions
 
 An **extension** is a Swift package, built into the app, that adds features through the hooks in `Sources/AgentDEKit/Extension.swift`. `extensions.json` lists the ones a build includes:
@@ -271,6 +273,9 @@ Background sessions inherit your startup command's environment, but Claude's bac
 | ⌘J | Next tab that needs you, then finished ones |
 | ⌘-click, ⌥⌘-click | Open a path or link from the terminal (in the viewer / in its default app) |
 | ⌥⌘I | Show or hide the side panel |
+| ⌘D / ⌥⌘D | Split the active pane right / down |
+| ⌥⌘← / ⌥⌘→ | Previous / next pane |
+| ⌥⌘W | Take the active pane out of the split |
 | ⌃⌘1–3 | Show the side panel on its first, second or third tab (Workstream, Files, Changes) |
 | ⌘⇧B | Browser above the tab |
 | ⌘[, ⌘] | Viewer: back and forward through what it showed (⌘[ reopens a closed viewer) |

@@ -15,6 +15,7 @@ extension Store {
 
     func selectTab(_ id: UUID, focus: Bool = true) {
         guard let (g, _) = locate(id) else { return }
+        placeInLayout(id, group: g)
         selectedGroupID = groups[g].id
         groups[g].selectedTabID = id
         lastFocusedAt[id] = Date()
@@ -28,6 +29,11 @@ extension Store {
     /// Called when a terminal gains keyboard focus.
     func terminalFocused(_ id: UUID) {
         guard let group = selectedGroup, group.tabs.contains(where: { $0.id == id }) else { return }
+        // Clicking into another pane of a split makes it the active one.
+        if group.selectedTabID != id, let g = groups.firstIndex(where: { $0.id == group.id }) {
+            groups[g].selectedTabID = id
+            scheduleSave()
+        }
         lastFocusedAt[id] = Date()
         markSeen(id)
     }
