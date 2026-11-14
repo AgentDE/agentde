@@ -181,7 +181,7 @@ Tabs run a normal interactive login zsh with your dotfiles. The startup command 
 
 A fork is an independent tab: renaming or closing either one doesn't affect the other. With the Workstreams extension, either way gives the fork a workstream of its own, starting with a copy of its parent's overview, rules and memory.
 
-**Claude tools.** A faint row in a Claude tab's top-right corner, clear when the pointer is over it: **Rewind** (Esc Esc, ⌥⌘Z), **Compact** (`/compact`), **Fork** (⌥⌘F), and **Restart Claude** (keeps the session). Rewind and Compact work when Claude is idle. Turn the row off in Settings → Terminal; the keys and the tab's right-click menu still work.
+**Claude tools.** A faint row in a Claude tab's top-right corner, clear when the pointer is over it: **Rewind** (Esc Esc, ⌥⌘Z), **Compact** (`/compact`), **Fork** (⌥⌘F), and **Restart Claude** (keeps the session; the tab is covered with "Restarting Claude" and a progress bar until the new Claude is back, up to 25 seconds). Rewind and Compact work when Claude is idle. Turn the row off in Settings → Terminal; the keys and the tab's right-click menu still work.
 
 ## Agent status
 

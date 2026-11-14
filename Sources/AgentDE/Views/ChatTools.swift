@@ -103,3 +103,22 @@ private struct ChatToolButtonStyle: ButtonStyle {
             .onHover { hovering = $0 }
     }
 }
+
+/// Covers a tab while its Claude restarts, so the quit and relaunch don't flash by: "Restarting Claude", the
+/// session kept, and a moving bar until the new Claude is back.
+struct RestartCover: View {
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(Color(nsColor: theme.terminalBackground).opacity(0.94))
+            VStack(spacing: 10) {
+                Image(systemName: "arrow.clockwise").font(.system(size: 20, weight: .medium)).foregroundStyle(theme.secondary)
+                Text("Restarting Claude").font(.system(size: 14, weight: .semibold)).foregroundStyle(theme.text)
+                Text("Same session, newest version").font(.system(size: 12)).foregroundStyle(theme.muted)
+                ProgressView().progressViewStyle(.linear).frame(width: 180).tint(Theme.working)
+            }
+        }
+        .contentShape(Rectangle())   // keys and clicks wait until it's back
+    }
+}

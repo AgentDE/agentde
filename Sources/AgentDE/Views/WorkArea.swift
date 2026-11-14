@@ -153,6 +153,12 @@ private struct TabPane: View {
             .overlay(alignment: .topTrailing) {
                 if tab.kind == .claude, store.settings.chatTools { ChatTools(tab: tab) }
             }
+            .overlay {
+                if store.restartingClaude.contains(tab.id) || store.claudeComingBack[tab.id] != nil {
+                    RestartCover().transition(.opacity)
+                }
+            }
+            .animation(.easeOut(duration: 0.2), value: store.restartingClaude.contains(tab.id) || store.claudeComingBack[tab.id] != nil)
     }
 }
 

@@ -103,6 +103,8 @@ extension Store {
                 }
             }
             if rt.state != .needsYou { rt.waitingFor = nil }
+            // A restarted Claude is back once a new one registers in the tab.
+            if let old = claudeComingBack[tabID], rt.agentPresent, let pid = rt.agentPid, pid != old { claudeComingBack[tabID] = nil }
             if rt.state != before.state || rt.agentName != before.agentName || rt.sparkleToken != before.sparkleToken
                 || rt.waitingFor != before.waitingFor || rt.agentPresent != before.agentPresent || rt.missedPolls != before.missedPolls
                 || rt.agentPid != before.agentPid || rt.claudeVersion != before.claudeVersion {

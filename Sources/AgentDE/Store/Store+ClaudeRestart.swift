@@ -34,6 +34,12 @@ extension Store {
         let from = runtime[id]?.claudeVersion ?? "?", to = installedClaudeVersion ?? "?"
         restartingClaude.insert(id)
         let finish = { [weak self] (outcome: ClaudeRestartOutcome) in
+            if outcome == .restarted {
+                self?.claudeComingBack[id] = pid
+                DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in
+                    if self?.claudeComingBack[id] == pid { self?.claudeComingBack[id] = nil }
+                }
+            }
             self?.restartingClaude.remove(id)
             completion?(outcome)
         }
