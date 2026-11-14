@@ -60,12 +60,58 @@ extension Store {
             if let exact = Store.resolveFileLinkExact(path, relativeTo: folders) {
                 open(exact, "exact")
             } else {
+                // A partial path (`tmp/rail/handoff.html`) relative to somewhere else: the agent's own transcript
+                // has the full path of what it wrote or read, so that's asked first; then Spotlight and a walk.
+                let transcript = Store.transcript(of: owner)
                 DispatchQueue.global(qos: .userInitiated).async {
+                    if let transcript, let found = Store.findInTranscript(Store.trimmedLink(path), transcript: transcript) {
+                        DispatchQueue.main.async { open(found, "transcript") }
+                        return
+                    }
                     let found = Store.searchFileLink(Store.trimmedLink(path), in: folders)
                     DispatchQueue.main.async { open(found, found == nil ? "none" : "spotlight") }
                 }
             }
         }
+    }
+
+    /// The tab's agent transcript: Claude's session file, or Codex's session log.
+    static func transcript(of tab: TabModel) -> URL? {
+        let index = TranscriptIndex()
+        if tab.kind == .codex { return SafeID.session(tab.codexSessionId).flatMap { index.codexLogURL(sessionId: $0) } }
+        return SafeID.session(tab.claudeSessionId).flatMap { index.transcriptURL(sessionId: $0, cwd: tab.cwd) }
+    }
+
+    /// The newest existing absolute path in the transcript's last 8 MB that ends with `link` (a partial path or a
+    /// file name), as the agent wrote it in a tool call or reply.
+    static func findInTranscript(_ link: String, transcript: URL) -> URL? {
+        let suffix = link.hasPrefix("/") ? link : "/" + link
+        guard suffix.count > 2, let handle = try? FileHandle(forReadingFrom: transcript) else { return nil }
+        defer { try? handle.close() }
+        let size = (try? handle.seekToEnd()) ?? 0
+        try? handle.seek(toOffset: size > 8_000_000 ? size - 8_000_000 : 0)
+        guard let data = try? handle.readToEnd() else { return nil }
+        let text = String(decoding: data, as: UTF8.self)
+        // Where a path ends: JSON quoting, whitespace, or markdown punctuation.
+        let stops = CharacterSet(charactersIn: "\"'`<>()[]{}|,;").union(.whitespacesAndNewlines)
+        var searchEnd = text.endIndex
+        while let hit = text.range(of: suffix, options: .backwards, range: text.startIndex..<searchEnd) {
+            searchEnd = hit.lowerBound
+            var start = hit.lowerBound
+            while start > text.startIndex {
+                let before = text.index(before: start)
+                if text[before].unicodeScalars.allSatisfy(stops.contains) { break }
+                start = before
+            }
+            // JSON escapes a literal "\n" before a path as two characters ending in n: strip a leading "\n"/"\t".
+            var candidate = String(text[start..<hit.upperBound])
+            while let range = candidate.range(of: #"^\\[nt]"#, options: .regularExpression) { candidate.removeSubrange(range) }
+            if let slash = candidate.firstIndex(of: "/"), candidate[candidate.startIndex] != "/" { candidate = String(candidate[slash...]) }
+            guard candidate.hasPrefix("/") else { continue }
+            let expanded = (candidate as NSString).expandingTildeInPath
+            if FileManager.default.fileExists(atPath: expanded) { return URL(fileURLWithPath: expanded).standardizedFileURL }
+        }
+        return nil
     }
 
     /// Opens a resolved file link: its default app (⌥), a File Explorer tab for a folder, else the tab's viewer.

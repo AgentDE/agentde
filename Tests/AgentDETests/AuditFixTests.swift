@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import AgentDE
@@ -133,6 +134,41 @@ struct AuditFixTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         try "x".write(to: hidden.appendingPathComponent("fig.png"), atomically: true, encoding: .utf8)
         #expect(Store.walkSearch("fig.png", dir.path).map { URL(fileURLWithPath: $0).lastPathComponent } == ["fig.png"])
+    }
+
+    /// A partial path resolves through the agent's transcript, newest existing match first.
+    @Test func partialPathsResolveThroughTheTranscript() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-tx-\(UUID().uuidString)")
+        let job = dir.appendingPathComponent("jobs/abc/tmp/rail")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let file = job.appendingPathComponent("handoff.html")
+        try "<p>x</p>".write(to: file, atomically: true, encoding: .utf8)
+        let transcript = dir.appendingPathComponent("session.jsonl")
+        let lines = [
+            #"{"type":"assistant","message":{"content":[{"type":"tool_use","input":{"file_path":"/gone/tmp/rail/handoff.html"}}]}}"#,
+            #"{"type":"assistant","message":{"content":[{"type":"tool_use","input":{"file_path":"\#(file.path)","content":"x"}}]}}"#,
+            #"{"type":"assistant","message":{"content":[{"type":"text","text":"Handoff with screenshots: tmp/rail/handoff.html."}]}}"#,
+        ]
+        try lines.joined(separator: "\n").write(to: transcript, atomically: true, encoding: .utf8)
+        #expect(Store.findInTranscript("tmp/rail/handoff.html", transcript: transcript)?.path == file.standardizedFileURL.path)
+        #expect(Store.findInTranscript("tmp/rail/missing.html", transcript: transcript) == nil)
+    }
+
+    /// A 600-dpi image is shown by its pixels (one per screen pixel), not its tiny dpi-based size.
+    @Test func highDpiImagesKeepTheirPixelSize() throws {
+        let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 3120, pixelsHigh: 2700, bitsPerSample: 8,
+                                                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                                bytesPerRow: 0, bitsPerPixel: 0))
+        rep.size = NSSize(width: 3120 * 72 / 600, height: 2700 * 72 / 600)   // 600 dpi
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-dpi-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try #require(rep.representation(using: .png, properties: [:])).write(to: url)
+        let image = try #require(NSImage(contentsOf: url))
+        #expect(image.size.width < 400)                                     // what AppKit gives by default
+        let pixels = try #require(ZoomableImageView.pixelSize(of: image))
+        #expect(pixels == NSSize(width: 3120, height: 2700))
+        #expect(ZoomableImageView.displaySize(pixels: pixels, scale: 2) == NSSize(width: 1560, height: 1350))
     }
 }
 

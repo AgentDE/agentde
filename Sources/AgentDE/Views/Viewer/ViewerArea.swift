@@ -59,6 +59,10 @@ struct ViewerArea: View {
                 }
                 if item.hasPrefix("http"), let url = URL(string: ViewerLinks.openURL(item)) {
                     IconButton(symbol: "safari", help: "Open in browser") { NSWorkspace.shared.open(url) }
+                } else {
+                    IconButton(symbol: "folder", help: "Show in Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: item)])
+                    }
                 }
                 if let info = store.tabInfo(tab.id) {
                     ForEach(Array(store.extensions.compactMap { $0.viewerAccessory(for: info, item: item) }.enumerated()), id: \.offset) { $0.element }

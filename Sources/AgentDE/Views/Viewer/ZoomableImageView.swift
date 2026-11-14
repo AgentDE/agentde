@@ -27,10 +27,28 @@ final class ZoomableImageView: NSScrollView {
 
     /// Shows `image`. A new image (or a reload of a fitted one) fits; a reload while zoomed keeps the zoom.
     func show(_ image: NSImage?, keepZoom: Bool) {
+        // Actual size is one image pixel per screen pixel. An image's own size follows its dpi stamp, so a
+        // 600-dpi export of 3120 px would count as 374 points and fit at that, soft and small.
+        if let image, let pixels = Self.pixelSize(of: image) {
+            image.size = Self.displaySize(pixels: pixels, scale: window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2)
+        }
         imageView.image = image
         imageView.frame = NSRect(origin: .zero, size: image?.size ?? .zero)
         if !keepZoom { fitting = true }
         if fitting { fit() }
+    }
+
+    /// The largest bitmap's pixel dimensions, or nil for an image with none (a PDF or vector image).
+    static func pixelSize(of image: NSImage) -> NSSize? {
+        let reps = image.representations.filter { $0.pixelsWide > 0 && $0.pixelsHigh > 0 }
+        guard let rep = reps.max(by: { $0.pixelsWide < $1.pixelsWide }) else { return nil }
+        return NSSize(width: rep.pixelsWide, height: rep.pixelsHigh)
+    }
+
+    /// Points that show `pixels` one to one on a screen with this backing scale.
+    static func displaySize(pixels: NSSize, scale: CGFloat) -> NSSize {
+        let scale = max(scale, 1)
+        return NSSize(width: pixels.width / scale, height: pixels.height / scale)
     }
 
     /// The magnification that fits the whole image in view, never enlarging a small one past actual size.
