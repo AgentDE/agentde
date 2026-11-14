@@ -2,35 +2,70 @@ import SwiftTerm
 import SwiftUI
 
 extension Store {
-    /// Esc Esc in an idle Claude tab: Claude's menu for going back to an earlier message (as `/rewind`).
-    func rewind(_ id: UUID? = nil) {
-        guard let id = id ?? activeTab?.id, tab(id)?.kind == .claude, runtime[id]?.agentPresent == true, state(id) != .working else {
+    /// The agent a tab runs: Claude and Codex are built in, the rest come from extensions and plugins.
+    func agent(of tab: TabModel) -> AgentDefinition? {
+        switch tab.kind {
+        case .claude: AgentCatalog.claude
+        case .codex: AgentCatalog.codex
+        case .agent: AgentCatalog.definition(tab.agentID)
+        default: nil
+        }
+    }
+
+    /// The active tab's tool with this id (`rewind`, `compact`), for the menu and palette; beeps when it has none.
+    func runTool(_ toolID: String) {
+        guard let tab = activeTab, let tool = agent(of: tab)?.tools?.first(where: { $0.id == toolID }) else {
             NSSound.beep()
             return
         }
-        // With a draft in Claude's input, Esc Esc would just erase it: leave it alone and say so.
-        guard !draftInClaudeInput(id) else { return }
-        terminals.sendKey(id, [0x1B])
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.terminals.sendKey(id, [0x1B]) }
+        runTool(tool, in: tab.id)
     }
 
-    /// `/compact` in an idle Claude tab.
-    func compact(_ id: UUID? = nil) {
-        guard let id = id ?? activeTab?.id, tab(id)?.kind == .claude, runtime[id]?.agentPresent == true, state(id) != .working else {
+    /// Keys and commands need the agent waiting for you. A built-in tool with neither is the app's own
+    /// action: Fork and Restart, for Claude.
+    func toolEnabled(_ tool: AgentTool, in tab: TabModel) -> Bool {
+        guard tool.keys == nil, tool.command == nil else {
+            return state(tab.id) != .working && (tab.kind == .agent || runtime[tab.id]?.agentPresent == true)
+        }
+        switch tool.id {
+        case "fork": return tab.claudeSessionId != nil
+        case "restart": return claudeRestartCheck(tab.id) == .eligible
+        default: return false
+        }
+    }
+
+    func runTool(_ tool: AgentTool, in id: UUID) {
+        guard let tab = tab(id), toolEnabled(tool, in: tab) else {
             NSSound.beep()
             return
         }
-        guard !draftInClaudeInput(id) else { return }   // /compact would be appended to it
-        terminals.typeIntoTerminal(id, "/compact\r")
+        if tool.keys == nil, tool.command == nil {
+            if tool.id == "fork" { forkTab(id) } else if tool.id == "restart" { restartClaude(id) }
+            return
+        }
+        // With a draft in the agent's input, keys would erase it and a command would be appended to it.
+        guard !draftInInput(tab) else { return }
+        if let command = tool.command {
+            _ = terminals.typeIntoTerminal(id, command + "\r")
+            return
+        }
+        // A moment apart, so Esc Esc reads as two presses rather than one Alt+Esc.
+        for (index, key) in (tool.keys ?? "").enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12 * Double(index)) { [weak self] in
+                self?.terminals.sendKey(id, Array(String(key).utf8))
+            }
+        }
     }
 
-    /// Whether Claude's input in this tab holds text you typed; if so, beeps and says why nothing happened.
-    private func draftInClaudeInput(_ id: UUID) -> Bool {
-        guard terminals.session(id)?.claudeInputHasDraft() == true else { return false }
+    /// Whether the agent's input line (found by its `prompt`) holds text you typed; if so, beeps and says why
+    /// nothing happened.
+    private func draftInInput(_ tab: TabModel) -> Bool {
+        guard let agent = agent(of: tab), let prompt = agent.prompt?.first,
+              terminals.session(tab.id)?.inputHasDraft(prompt: prompt) == true else { return false }
         NSSound.beep()
-        activityNote = "Claude's input has a draft: send or clear it first"
+        activityNote = "\(agent.name)'s input has a draft: send or clear it first"
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
-            if self?.activityNote?.hasPrefix("Claude's input has a draft") == true { self?.activityNote = nil }
+            if self?.activityNote?.hasSuffix("send or clear it first") == true { self?.activityNote = nil }
         }
         return true
     }
@@ -41,22 +76,19 @@ extension Store {
     }
 }
 
-/// Claude actions in the chat's top-right corner (Settings → Terminal turns them off; Agent View is in the palette). Faint icons at rest; with
-/// the pointer over them, a small capsule with labels.
+/// The tab's agent tools in the chat's top-right corner (Settings → Terminal turns them off). Faint icons at rest;
+/// with the pointer over them, a small capsule with labels.
 struct ChatTools: View {
     let tab: TabModel
+    let tools: [AgentTool]
     @Environment(Store.self) private var store
     @State private var hovering = false
 
     var body: some View {
-        let idle = store.runtime[tab.id]?.agentPresent == true && store.state(tab.id) != .working
-        ChatToolsRow(tools: [
-            .init(symbol: "arrow.uturn.backward", label: "Rewind", help: "Go back to an earlier message (⌥⌘Z)", enabled: idle) { store.rewind(tab.id) },
-            .init(symbol: "rectangle.compress.vertical", label: "Compact", help: "Compact the conversation (/compact)", enabled: idle) { store.compact(tab.id) },
-            .init(symbol: "arrow.triangle.branch", label: "Fork", help: "Fork into a new tab (⌥⌘F)", enabled: tab.claudeSessionId != nil) { store.forkTab(tab.id) },
-            .init(symbol: "arrow.clockwise", label: "Restart", help: "Restart Claude, keeping the session",
-                  enabled: store.claudeRestartCheck(tab.id) == .eligible) { store.restartClaude(tab.id) },
-        ], expanded: hovering)
+        ChatToolsRow(tools: tools.map { tool in
+            .init(symbol: tool.symbol ?? "command", label: tool.label, help: tool.help ?? tool.command ?? tool.label,
+                  enabled: store.toolEnabled(tool, in: tab)) { store.runTool(tool, in: tab.id) }
+        }, expanded: hovering)
         .onHover { hovering = $0 }
         .animation(.snappy(duration: 0.16), value: hovering)
         .padding(.top, 6)
@@ -138,18 +170,18 @@ struct RestartCover: View {
     }
 }
 
-/// Reading Claude Code's input line from the screen: the bottom-most row that starts with `❯`. What follows it is
-/// either Claude's suggestion, drawn dim ("Try …"), or text you typed.
-enum ClaudeInput {
+/// Reading an agent's input line from the screen: the bottom-most row that starts with its prompt (`❯` for
+/// Claude Code). What follows is either a suggestion, drawn dim ("Try …"), or text you typed.
+enum AgentInput {
     struct Cell { let character: Character; let dim: Bool }
 
     /// True when the input holds typed text, false when it's empty, nil when no input line is on screen.
-    static func hasDraft(rows: [[Cell]]) -> Bool? {
+    static func hasDraft(rows: [[Cell]], prompt: Character = "❯") -> Bool? {
         // Blank: spaces, no-break spaces, and never-written cells (NUL).
         func blank(_ c: Character) -> Bool { c.isWhitespace || c == "\u{00A0}" || c.unicodeScalars.allSatisfy { $0.value < 0x20 } }
         for row in rows.reversed() {
             guard let start = row.firstIndex(where: { !blank($0.character) }) else { continue }
-            guard row[start].character == "❯" else { continue }
+            guard row[start].character == prompt else { continue }
             return row[(start + 1)...].contains { !blank($0.character) && !$0.dim }
         }
         return nil
@@ -157,21 +189,21 @@ enum ClaudeInput {
 }
 
 extension TerminalSession {
-    /// Whether Claude's input line (on screen now) holds a typed draft; nil when it can't tell.
-    func claudeInputHasDraft() -> Bool? { ClaudeInput.hasDraft(in: view.getTerminal()) }
+    /// Whether the agent's input line (on screen now) holds a typed draft; nil when it can't tell.
+    func inputHasDraft(prompt: Character) -> Bool? { AgentInput.hasDraft(in: view.getTerminal(), prompt: prompt) }
 }
 
-extension ClaudeInput {
-    static func hasDraft(in terminal: Terminal) -> Bool? {
-        var rows: [[ClaudeInput.Cell]] = []
+extension AgentInput {
+    static func hasDraft(in terminal: Terminal, prompt: Character) -> Bool? {
+        var rows: [[AgentInput.Cell]] = []
         for row in 0..<terminal.rows {
-            var cells: [ClaudeInput.Cell] = []
+            var cells: [AgentInput.Cell] = []
             for col in 0..<terminal.cols {
                 guard let data = terminal.getCharData(col: col, row: row) else { continue }
                 cells.append(.init(character: terminal.getCharacter(for: data), dim: data.attribute.style.contains(.dim)))
             }
             rows.append(cells)
         }
-        return ClaudeInput.hasDraft(rows: rows)
+        return AgentInput.hasDraft(rows: rows, prompt: prompt)
     }
 }

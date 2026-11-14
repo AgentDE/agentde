@@ -20,7 +20,9 @@ struct PluginTests {
         let theme = try #require(hello.manifest.themeDefinitions { Theme.resolve("claude", dark: $0) }.first)
         #expect(theme.id == "hello.dusk" && theme.alwaysDark)
         #expect(theme.resolve(true).terminalBackground.hexString == "1B1B2F")
-        #expect(hello.manifest.agents == [AgentDefinition(id: "hello.gemini", name: "Gemini", command: "gemini")])
+        #expect(hello.manifest.agents == [AgentDefinition(id: "hello.gemini", name: "Gemini", command: "gemini", tools: [
+            AgentTool(id: "compact", label: "Compact", symbol: "rectangle.compress.vertical", command: "/compress"),
+        ])])
     }
 
     @Test func badFilesAndUnsafeEntriesAreSkipped() throws {

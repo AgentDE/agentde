@@ -162,7 +162,7 @@ struct TabPane: View {
             .padding(.top, 6)
             .background(Color(nsColor: Theme.resolve(store.settings.theme, dark: TerminalSession.isDark(store.settings)).terminalBackground))
             .overlay(alignment: .topTrailing) {
-                if tab.kind == .claude, store.settings.chatTools { ChatTools(tab: tab) }
+                if store.settings.chatTools, let tools = store.agent(of: tab)?.tools, !tools.isEmpty { ChatTools(tab: tab, tools: tools) }
             }
             .overlay {
                 if store.restartingClaude.contains(tab.id) || store.claudeComingBack[tab.id] != nil {

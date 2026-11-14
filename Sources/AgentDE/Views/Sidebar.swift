@@ -318,13 +318,10 @@ struct TabMenu: View {
             }
         }
         Divider()
-        if tab.kind == .claude {
-            if tab.claudeSessionId != nil {
-                Button("Fork Session") { store.forkTab(tab.id) }
-                Button("Rewind…") { store.rewind(tab.id) }
+        if let tools = store.agent(of: tab)?.tools {
+            ForEach(tools) { tool in
+                Button(tool.label) { store.runTool(tool, in: tab.id) }.disabled(!store.toolEnabled(tool, in: tab))
             }
-            Button("Restart Claude (keeps the session)") { store.restartClaude(tab.id) }
-                .disabled(store.claudeRestartCheck(tab.id) != .eligible)
         }
         Button((tab.showBrowser ?? false) ? "Hide Browser" : "Show Browser Above") { store.toggleBrowser(tab.id) }
         Divider()

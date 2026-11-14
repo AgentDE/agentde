@@ -100,8 +100,8 @@ struct AgentDECommands: Commands {
                 .disabled(store.closedTabs.isEmpty)
             Button("Rename Tab") { if let id = store.activeTab?.id { store.renamingTabID = id } }.keyboardShortcut("r")
             Button("Fork Claude Session into New Tab") { store.forkTab() }.keyboardShortcut("f", modifiers: [.command, .option])
-            Button("Rewind to an Earlier Message") { store.rewind() }.keyboardShortcut("z", modifiers: [.command, .option])
-            Button("Compact Conversation") { store.compact() }
+            Button("Rewind to an Earlier Message") { store.runTool("rewind") }.keyboardShortcut("z", modifiers: [.command, .option])
+            Button("Compact Conversation") { store.runTool("compact") }
         }
         CommandGroup(replacing: .textEditing) {
             Button("Find in Tab…") { store.findInTab() }
