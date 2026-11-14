@@ -19,7 +19,9 @@ final class FileExplorerModel {
 
     let root: URL
     var expanded: Set<String> = []
-    var selection: URL?
+    var selection: URL? { didSet { if let selection, !Self.isFolder(selection) { previewed = selection } } }
+    /// The file the preview shows: the last file selected. Selecting a folder (to open or close it) keeps it.
+    private(set) var previewed: URL?
     var filter = "" { didSet { if filter != oldValue { refilter() } } }
     /// Dotfiles always show; this also shows the `noisy` generated folders.
     var showHidden = false { didSet { if showHidden != oldValue { reload() } } }
@@ -37,6 +39,7 @@ final class FileExplorerModel {
         self.root = URL(fileURLWithPath: root)
         rootNode = Node(url: self.root, isDirectory: true)
         self.selection = selection.map(URL.init(fileURLWithPath:))
+        previewed = self.selection.flatMap { Self.isFolder($0) ? nil : $0 }
         expanded = [self.root.path]
         if let selection {
             // Open the folders leading to the remembered selection.
@@ -47,6 +50,11 @@ final class FileExplorerModel {
             }
         }
         reload()
+    }
+
+    static func isFolder(_ url: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) && isDirectory.boolValue
     }
 
     /// Selects a file and opens the folders above it, clearing any filter (used when a link is opened here).

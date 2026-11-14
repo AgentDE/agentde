@@ -90,4 +90,17 @@ struct AuditFixTests {
         #expect(ViewerKind.of("/x/talk.key") == .office)
         #expect(ViewerKind.of("/x/archive.zip") == .other)
     }
+
+    /// Opening or closing a folder in the File Explorer keeps the preview on the last file.
+    @Test func selectingAFolderKeepsThePreviewedFile() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-explorer-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir.appendingPathComponent("sub"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let file = dir.appendingPathComponent("notes.md")
+        try "x".write(to: file, atomically: true, encoding: .utf8)
+        let model = FileExplorerModel(root: dir.path, selection: file.path)
+        #expect(model.previewed == file)
+        model.selection = dir.appendingPathComponent("sub")
+        #expect(model.previewed == file)
+    }
 }

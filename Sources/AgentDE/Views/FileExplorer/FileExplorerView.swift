@@ -1,3 +1,4 @@
+import WebKit
 import AppKit
 import Quartz
 import SwiftUI
@@ -104,7 +105,7 @@ struct FileExplorerView: View {
                    minHeight: narrow ? 140 : nil)
             .background(theme.sidebar.opacity(0.5))
 
-            FilePreview(url: model.selection, root: model.root, tab: tab)
+            FilePreview(url: model.previewed ?? model.selection, root: model.root, tab: tab)
                 .frame(minWidth: narrow ? nil : 280, maxWidth: .infinity, minHeight: narrow ? 160 : nil)
         }
         .onAppear { if model.selection == nil { filterFocused = true } }
@@ -260,11 +261,46 @@ private struct FilePreview: View {
             if let url {
                 if ["md", "markdown", "mdown"].contains(url.pathExtension.lowercased()) {
                     MarkdownView(url: url)
+                } else if OfficePreview.extensions.contains(url.pathExtension.lowercased()) {
+                    OfficePageView(url: url)
                 } else {
                     QuickLookView(url: url)
                 }
             } else {
                 AppLogo(size: 64).opacity(0.5).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+}
+
+/// Slides, documents and spreadsheets as the page Quick Look renders for them (`OfficePreview`): every slide,
+/// scrollable, in under a second, where the in-app Quick Look view is slow.
+private struct OfficePageView: NSViewRepresentable {
+    let url: URL
+
+    final class Coordinator { var showing: URL? }
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> WKWebView {
+        let view = WKWebView()
+        view.setValue(false, forKey: "drawsBackground")
+        return view
+    }
+
+    func updateNSView(_ view: WKWebView, context: Context) {
+        guard context.coordinator.showing != url else { return }
+        context.coordinator.showing = url
+        let file = url
+        DispatchQueue.global(qos: .userInitiated).async {
+            let page = OfficePreview.page(for: file)
+            DispatchQueue.main.async {
+                guard context.coordinator.showing == file else { return }
+                if let page {
+                    view.loadFileURL(page, allowingReadAccessTo: page.deletingLastPathComponent())
+                } else {
+                    view.loadHTMLString("<p style='font: 13px -apple-system; color: gray; text-align: center; margin-top: 40px'>"
+                                        + "Couldn't preview this file. Open it with the button above.</p>", baseURL: nil)
+                }
             }
         }
     }
