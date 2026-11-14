@@ -170,6 +170,23 @@ struct AuditFixTests {
         #expect(pixels == NSSize(width: 3120, height: 2700))
         #expect(ZoomableImageView.displaySize(pixels: pixels, scale: 2) == NSSize(width: 1560, height: 1350))
     }
+
+    /// Claude's input line: dim suggestion = empty, typed text = draft (as Claude Code 2.1 draws them).
+    @Test func claudeInputDraftsAreRecognized() {
+        // Cells as SwiftTerm reports them: never-written cells after the text are NUL.
+        func row(_ text: String, dimFrom: Int? = nil) -> [ClaudeInput.Cell] {
+            let cells = Array(text).enumerated().map { index, character in
+                ClaudeInput.Cell(character: character, dim: dimFrom.map { index >= $0 } ?? false)
+            }
+            return cells + Array(repeating: ClaudeInput.Cell(character: "\u{0}", dim: false), count: 20)
+        }
+        let placeholder = row("❯\u{00A0}Try \"how does <filepath> work?\"", dimFrom: 2)
+        let draft = row("❯\u{00A0}draft text here")
+        let other = row("  ●high · /effort")
+        #expect(ClaudeInput.hasDraft(rows: [other, placeholder, other]) == false)
+        #expect(ClaudeInput.hasDraft(rows: [other, draft, other]) == true)
+        #expect(ClaudeInput.hasDraft(rows: [other]) == nil)
+    }
 }
 
 private final class NullTerminalDelegate: TerminalDelegate {

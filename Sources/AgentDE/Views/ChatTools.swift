@@ -1,3 +1,4 @@
+import SwiftTerm
 import SwiftUI
 
 extension Store {
@@ -7,6 +8,8 @@ extension Store {
             NSSound.beep()
             return
         }
+        // With a draft in Claude's input, Esc Esc would just erase it: leave it alone and say so.
+        guard !draftInClaudeInput(id) else { return }
         terminals.sendKey(id, [0x1B])
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in self?.terminals.sendKey(id, [0x1B]) }
     }
@@ -17,7 +20,19 @@ extension Store {
             NSSound.beep()
             return
         }
+        guard !draftInClaudeInput(id) else { return }   // /compact would be appended to it
         terminals.typeIntoTerminal(id, "/compact\r")
+    }
+
+    /// Whether Claude's input in this tab holds text you typed; if so, beeps and says why nothing happened.
+    private func draftInClaudeInput(_ id: UUID) -> Bool {
+        guard terminals.session(id)?.claudeInputHasDraft() == true else { return false }
+        NSSound.beep()
+        activityNote = "Claude's input has a draft: send or clear it first"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+            if self?.activityNote?.hasPrefix("Claude's input has a draft") == true { self?.activityNote = nil }
+        }
+        return true
     }
 
     /// Claude's Agent View (`claude agents`) in a tab of its own.
@@ -120,5 +135,43 @@ struct RestartCover: View {
             }
         }
         .contentShape(Rectangle())   // keys and clicks wait until it's back
+    }
+}
+
+/// Reading Claude Code's input line from the screen: the bottom-most row that starts with `❯`. What follows it is
+/// either Claude's suggestion, drawn dim ("Try …"), or text you typed.
+enum ClaudeInput {
+    struct Cell { let character: Character; let dim: Bool }
+
+    /// True when the input holds typed text, false when it's empty, nil when no input line is on screen.
+    static func hasDraft(rows: [[Cell]]) -> Bool? {
+        // Blank: spaces, no-break spaces, and never-written cells (NUL).
+        func blank(_ c: Character) -> Bool { c.isWhitespace || c == "\u{00A0}" || c.unicodeScalars.allSatisfy { $0.value < 0x20 } }
+        for row in rows.reversed() {
+            guard let start = row.firstIndex(where: { !blank($0.character) }) else { continue }
+            guard row[start].character == "❯" else { continue }
+            return row[(start + 1)...].contains { !blank($0.character) && !$0.dim }
+        }
+        return nil
+    }
+}
+
+extension TerminalSession {
+    /// Whether Claude's input line (on screen now) holds a typed draft; nil when it can't tell.
+    func claudeInputHasDraft() -> Bool? { ClaudeInput.hasDraft(in: view.getTerminal()) }
+}
+
+extension ClaudeInput {
+    static func hasDraft(in terminal: Terminal) -> Bool? {
+        var rows: [[ClaudeInput.Cell]] = []
+        for row in 0..<terminal.rows {
+            var cells: [ClaudeInput.Cell] = []
+            for col in 0..<terminal.cols {
+                guard let data = terminal.getCharData(col: col, row: row) else { continue }
+                cells.append(.init(character: terminal.getCharacter(for: data), dim: data.attribute.style.contains(.dim)))
+            }
+            rows.append(cells)
+        }
+        return ClaudeInput.hasDraft(rows: rows)
     }
 }
