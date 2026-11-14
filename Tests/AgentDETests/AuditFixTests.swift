@@ -82,4 +82,12 @@ struct AuditFixTests {
         tab.forkOnStart = nil
         #expect(TerminalSession.agentCommand(for: tab) == "claude --resume 4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b")
     }
+
+    /// Slides, documents and spreadsheets go to the fast rendered page, not the in-app Quick Look view.
+    @Test func officeFilesAreRenderedPages() {
+        #expect(ViewerKind.of("/x/deck.pptx") == .office)
+        #expect(ViewerKind.of("/x/Plan.DOCX") == .office)
+        #expect(ViewerKind.of("/x/talk.key") == .office)
+        #expect(ViewerKind.of("/x/archive.zip") == .other)
+    }
 }

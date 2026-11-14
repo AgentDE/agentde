@@ -8,7 +8,7 @@ import WebKit
 
 /// What kind of content a viewer item is, which decides how it's shown.
 enum ViewerKind: Equatable {
-    case markdown, html, web, pdf, image, media, diff, text, other
+    case markdown, html, web, pdf, image, media, diff, text, office, other
 
     /// Whether the find bar can search it.
     var findable: Bool { ![.image, .media, .other].contains(self) }
@@ -24,6 +24,7 @@ enum ViewerKind: Equatable {
         case "diff", "patch": return .diff
         default: break
         }
+        if OfficePreview.extensions.contains(ext) { return .office }
         let known: Set<String> = ["txt", "log", "csv", "tsv", "json", "jsonl", "yml", "yaml", "toml", "ini", "cfg", "conf",
                                   "swift", "py", "js", "mjs", "cjs", "ts", "tsx", "jsx", "c", "h", "m", "mm", "cpp", "hpp",
                                   "cc", "rs", "go", "rb", "java", "kt", "sh", "zsh", "bash", "sql", "css", "scss", "xml",
@@ -119,7 +120,7 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
         guard !term.isEmpty, let item = shown?.item else { return done(true) }
         let options: NSString.CompareOptions = backwards ? [.caseInsensitive, .backwards] : [.caseInsensitive]
         switch ViewerKind.shown(item, raw: raw) {
-        case .markdown, .html, .web:
+        case .markdown, .html, .web, .office:
             guard let web else { return done(false) }
             let configuration = WKFindConfiguration()
             configuration.backwards = backwards
@@ -171,7 +172,7 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
         }
         let kind = ViewerKind.shown(item, raw: raw)
         // A ⌘-click's timing ends once the item is on screen: web content when it finishes loading, the rest here.
-        defer { if ![.markdown, .html, .web].contains(kind) { LinkTiming.shown(tabID, item: item, kind: "\(kind)") } }
+        defer { if ![.markdown, .html, .web, .office].contains(kind) { LinkTiming.shown(tabID, item: item, kind: "\(kind)") } }
         switch kind {
         case .markdown:
             webView().loadHTMLString(MarkdownView.page(for: url, theme: theme), baseURL: url.deletingLastPathComponent())
@@ -222,7 +223,41 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
                 view.player = AVPlayer(url: url)
                 install(view)
             }
+        case .office:
+            // Rendered to a page in the background (fast, and cached), then shown in the web view; Quick Look's
+            // own view takes many seconds for these. If it can't be rendered, Quick Look's view after all.
+            if !keepScroll { showNote("Opening \(url.lastPathComponent)…") }
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                let page = OfficePreview.page(for: url)
+                DispatchQueue.main.async {
+                    guard let self, self.shown?.item == item else { return }
+                    if let page {
+                        self.webView().loadFileURL(page, allowingReadAccessTo: page.deletingLastPathComponent())
+                    } else {
+                        self.showQuickLook(url)
+                    }
+                }
+            }
         case .other:
+            showQuickLook(url)
+        }
+    }
+
+    /// A short centered note while something loads.
+    private func showNote(_ text: String) {
+        let label = NSTextField(labelWithString: text)
+        label.alignment = .center
+        label.textColor = .secondaryLabelColor
+        let box = NSView()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        box.addSubview(label)
+        NSLayoutConstraint.activate([label.centerXAnchor.constraint(equalTo: box.centerXAnchor),
+                                     label.centerYAnchor.constraint(equalTo: box.centerYAnchor)])
+        install(box)
+    }
+
+    private func showQuickLook(_ url: URL) {
+        do {
             // Always a fresh view, and never reloaded as the file changes (see watch): Quick Look aborts the app
             // when its item changes or goes away while it's still loading.
             guard let preview = QLPreviewView(frame: .zero, style: .normal) else { return }
