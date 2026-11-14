@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import AgentDE
+import SwiftTerm
 
 @Suite("Audit fixes")
 struct AuditFixTests {
@@ -115,4 +116,26 @@ struct AuditFixTests {
         #expect(html.contains("color:#ffffff"))     // dark slide, no run color: white text
         #expect(html.contains("height: 540px"))      // 16:9 at 960 wide
     }
+
+    /// A bare file name an agent prints is a link; a domain isn't.
+    @Test func bareFileNamesAreLinks() {
+        let terminal = Terminal(delegate: NullTerminalDelegate(), options: TerminalOptions(cols: 80, rows: 5))
+        terminal.feed(text: "| fig_hours_to_great.png / .pdf | see example.com\r\n")
+        #expect(terminal.link(at: .screen(Position(col: 6, row: 0)), mode: .explicitAndImplicit) == "fig_hours_to_great.png")
+        #expect(terminal.link(at: .screen(Position(col: 40, row: 0)), mode: .explicitAndImplicit) == nil)
+    }
+
+    /// Spotlight's fallback: a walk finds files in hidden folders.
+    @Test func walkingFindsFilesInHiddenFolders() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-walk-\(UUID().uuidString)")
+        let hidden = dir.appendingPathComponent(".claude/out")
+        try FileManager.default.createDirectory(at: hidden, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try "x".write(to: hidden.appendingPathComponent("fig.png"), atomically: true, encoding: .utf8)
+        #expect(Store.walkSearch("fig.png", dir.path).map { URL(fileURLWithPath: $0).lastPathComponent } == ["fig.png"])
+    }
+}
+
+private final class NullTerminalDelegate: TerminalDelegate {
+    func send(source: Terminal, data: ArraySlice<UInt8>) {}
 }

@@ -136,7 +136,11 @@ extension Store {
         guard !name.isEmpty, name.contains(".") else { return nil }
         let fm = FileManager.default
         var seen = Set<String>()
-        let matches = folders.filter { seen.insert($0).inserted }.flatMap { fileSearch(name, $0) }.filter {
+        let unique = folders.filter { seen.insert($0).inserted }
+        // Spotlight skips hidden folders (.claude, where agents often write) and unindexed ones: walk those.
+        let found = unique.flatMap { fileSearch(name, $0) }
+        let candidates = found.isEmpty ? unique.flatMap { walkSearch(name, $0) } : found
+        let matches = candidates.filter {
             $0.hasSuffix("/" + relative) && fm.fileExists(atPath: $0)
         }
         let newest = matches.max { a, b in
@@ -145,6 +149,23 @@ extension Store {
             return da < db
         }
         return newest.map { URL(fileURLWithPath: $0).standardizedFileURL }
+    }
+
+    /// Files named `name` under `folder` by walking it: at most 6 levels and 20,000 entries, skipping
+    /// `node_modules`, `.git` and build folders. The fallback when Spotlight has nothing.
+    static func walkSearch(_ name: String, _ folder: String) -> [String] {
+        let skip: Set<String> = [".git", "node_modules", ".build", "build", "dist", "__pycache__", ".venv", "venv", "DerivedData"]
+        guard let walker = FileManager.default.enumerator(at: URL(fileURLWithPath: folder), includingPropertiesForKeys: [.isDirectoryKey]) else { return [] }
+        let base = URL(fileURLWithPath: folder).pathComponents.count
+        var found: [String] = []
+        var seen = 0
+        for case let url as URL in walker {
+            seen += 1
+            if seen > 20_000 { break }
+            if skip.contains(url.lastPathComponent) || url.pathComponents.count - base > 6 { walker.skipDescendants(); continue }
+            if url.lastPathComponent == name { found.append(url.path) }
+        }
+        return found
     }
 
     /// Files named `name` under `folder`, from Spotlight. Replaceable in tests, which can't wait for indexing.

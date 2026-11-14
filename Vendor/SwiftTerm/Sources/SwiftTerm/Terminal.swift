@@ -7508,7 +7508,12 @@ open class Terminal {
             noTrailingColon +
             trailingSpacesAtEOL
 
-        let regex = schemeURLBranch + "|" + rootedOrRelativePathBranch + "|" + bareRelativePathBranch
+        // AgentDE: a bare file name with a familiar extension (`fig_hours.png`, `report.pdf`), which agents
+        // print in tables and lists; the app finds the file. Domain-like endings (.com) aren't in the list.
+        let bareFileNameBranch =
+            #"(?<![\w\-.~\/$])[\w][\w\-]*(?:\.[\w\-]+)*\.(?i:png|jpe?g|gif|webp|svg|heic|pdf|html?|md|csv|tsv|json|jsonl|txt|log|ipynb|py|swift|ts|tsx|js|mjs|rs|go|rb|sh|ya?ml|toml|mp4|mov|webm|mp3|wav|pptx|docx|xlsx|key|diff|patch)(?![\w\-\/])"#
+
+        let regex = schemeURLBranch + "|" + rootedOrRelativePathBranch + "|" + bareRelativePathBranch + "|" + bareFileNameBranch
         return try? NSRegularExpression(pattern: regex, options: [])
     }()
 
