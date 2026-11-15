@@ -128,7 +128,8 @@ Status mapping, in `Store.applyClaudeSessions`:
 
 | Registry `status` | Tab state |
 |---|---|
-| `busy`, `shell` | working (records `busySince`) |
+| `busy` | working (records `busySince`) |
+| `shell` | idle: only background shells are open (dev servers, watchers) |
 | `waiting` | needs you |
 | `idle` after working | done, if the tab isn't visible in the active app; otherwise cleared. A sparkle plays if the turn ran at least `sparkleAfterSeconds` |
 | no entry | cleared |

@@ -18,6 +18,10 @@ struct TerminalPane: NSViewRepresentable {
         attach(to: container)
     }
 
+    static func dismantleNSView(_ container: NSView, coordinator: ()) {
+        (container as? TerminalContainer)?.releaseOwnership()
+    }
+
     private func attach(to container: NSView) {
         // SwiftUI can update a pane once more after its tab is closed. Starting it then would bring the
         // closed tab's holder back (and re-attach its background agent), so a tab no longer in the store gets nothing.
@@ -29,6 +33,10 @@ struct TerminalPane: NSViewRepresentable {
         let view = session.view
         // A reused container may still hold another tab's terminal, which would cover this one.
         for other in container.subviews where other !== view { other.removeFromSuperview() }
+        // The newest pane showing a tab owns its terminal. One SwiftUI is replacing (the single tab's pane as a
+        // split appears, say) can update once more before it goes; taking the terminal then would leave the new
+        // pane blank.
+        guard let owned = container as? TerminalContainer, owned.claim(tab.id) else { return }
         if view.superview !== container {
             view.removeFromSuperview()
             view.autoresizingMask = []
@@ -53,6 +61,35 @@ struct TerminalPane: NSViewRepresentable {
 /// rows than showed, and the shell's bottom lines (Claude's input box) ran under the status bar.
 final class TerminalContainer: NSView {
     private var observers: [NSObjectProtocol] = []
+    private var tabID: UUID?
+    private let serial: Int
+    private static var nextSerial = 0
+    /// Which container holds each tab's terminal.
+    private static var owners: [UUID: Int] = [:]
+
+    override init(frame: NSRect = .zero) {
+        Self.nextSerial += 1
+        serial = Self.nextSerial
+        super.init(frame: frame)
+    }
+
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    /// Whether this container may hold `tab`'s terminal: it becomes the owner when it starts showing the tab
+    /// (it's the newest) or when nothing owns it.
+    func claim(_ tab: UUID) -> Bool {
+        if tabID != tab {
+            if let old = tabID, Self.owners[old] == serial { Self.owners[old] = nil }
+            tabID = tab
+            Self.owners[tab] = serial
+        }
+        if Self.owners[tab] == nil { Self.owners[tab] = serial }
+        return Self.owners[tab] == serial
+    }
+
+    func releaseOwnership() {
+        if let tabID, Self.owners[tabID] == serial { Self.owners[tabID] = nil }
+    }
 
     override func layout() {
         super.layout()

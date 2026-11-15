@@ -42,6 +42,18 @@ struct PaneLayoutTests {
         #expect(three.pruned(to: [a]) == nil)
     }
 
+    /// The newest pane showing a tab owns its terminal; the one it replaced can't take it back, and once the
+    /// owner goes another pane can claim it.
+    @Test @MainActor func newestPaneOwnsTheTerminal() {
+        let tab = UUID()
+        let old = TerminalContainer(), new = TerminalContainer()
+        #expect(old.claim(tab))
+        #expect(new.claim(tab))
+        #expect(!old.claim(tab))   // the late update of the pane being replaced
+        new.releaseOwnership()
+        #expect(old.claim(tab))
+    }
+
     /// Saved layouts load back the same.
     @Test func roundTripsThroughJSON() throws {
         let layout = PaneLayout.tab(a).splitting(a, with: b, vertical: false).splitting(b, with: c, vertical: true)

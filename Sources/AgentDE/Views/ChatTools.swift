@@ -90,6 +90,9 @@ struct ChatTools: View {
                   enabled: store.toolEnabled(tool, in: tab)) { store.runTool(tool, in: tab.id) }
         }, expanded: hovering)
         .onHover { hovering = $0 }
+        .onContinuousHover { phase in
+            if case .active = phase { NSCursor.arrow.set() }
+        }
         .animation(.snappy(duration: 0.16), value: hovering)
         .padding(.top, 6)
         .padding(.trailing, 12)

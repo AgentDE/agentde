@@ -49,7 +49,8 @@ extension Store {
                 rt.agentPid = entry.pid
                 rt.claudeVersion = entry.version
                 switch entry.status {
-                case "busy", "shell":
+                // "shell" only means background shells are open (a dev server, a watcher): Claude itself is idle.
+                case "busy":
                     if rt.state != .working { rt.busySince = Date() }
                     rt.state = .working
                 case "waiting":
