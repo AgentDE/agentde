@@ -98,13 +98,6 @@ enum ClaudeRestart {
         return TerminalSession.agentCommand(for: TabModel(kind: .claude, cwd: "", claudeSessionId: id))
     }
 
-    /// What a background restart's fresh shell runs: the background launch (`claude --bg --resume <id>`, the
-    /// receipt, `claude attach`), as for any background tab.
-    static func backgroundCommand(sessionId: String?) -> String? {
-        guard let id = SafeID.session(sessionId) else { return nil }
-        return TerminalSession.agentCommand(for: TabModel(kind: .claude, cwd: "", claudeSessionId: id), background: true)
-    }
-
     /// The bulk action's summary: "Restarted 9, skipped 3 busy".
     static func summary(restarted: Int, busy: Int, failed: Int) -> String {
         var parts = ["Restarted \(restarted)"]

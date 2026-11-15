@@ -75,7 +75,6 @@ final class AgentMonitor {
     /// tick never waits on them: at launch they can take many seconds, and the dots would wait too.
     private let scanQueue = DispatchQueue(label: "agentde.agent-monitor.scans", qos: .utility)
     private var scanning = false
-    private let attachDir = URL(fileURLWithPath: AppBrand.configDirectory).appendingPathComponent("attach")
 
     /// What a tick needs from the main thread. The main thread refreshes it at the end of each tick, so the
     /// monitor never waits on the main thread (which can be busy drawing terminals).
@@ -154,23 +153,6 @@ final class AgentMonitor {
         }
         owners = owners.filter { livePids.contains($0.key) }
         versionsByPid = versionsByPid.filter { livePids.contains($0.key) }
-        // Job ids that background-mode tabs reported for themselves.
-        // Receipts are written to `.tmp` and renamed, so a file here is complete. Each is left in place until
-        // this instance confirms the tab is its own and the job id is valid (see Store.recordAttachedJob).
-        var reported: [(UUID, String, URL)] = []
-        for file in (try? FileManager.default.contentsOfDirectory(at: attachDir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [] {
-            guard file.pathExtension.isEmpty, let tab = UUID(uuidString: file.lastPathComponent) else { continue }
-            let job = (try? String(contentsOf: file, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? Date()
-            if Date().timeIntervalSince(modified) > 86_400 {
-                try? FileManager.default.removeItem(at: file)   // nobody claimed it in a day
-            } else if let job = SafeID.job(job) {
-                reported.append((tab, job, file))
-            } else if let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate,
-                      Date().timeIntervalSince(modified) > 60 {
-                try? FileManager.default.removeItem(at: file)   // unreadable and stale
-            }
-        }
         let openRequests = OpenInViewer.pending()
         let backgroundBySession = Dictionary(jobs.values.compactMap { e in e.sessionId.map { ($0, e.jobId ?? "") } },
                                              uniquingKeysWith: { a, _ in a })
@@ -208,9 +190,6 @@ final class AgentMonitor {
         }
         DispatchQueue.main.async { [weak self] in
             guard let store = self?.store else { return }
-            for (tab, job, file) in reported where store.recordAttachedJob(tab: tab, jobId: job) {
-                try? FileManager.default.removeItem(at: file)
-            }
             // `open` in a tab: show it in that tab's viewer. Another instance's requests wait for it (or a day).
             for request in openRequests where store.tab(request.tab) != nil {
                 try? FileManager.default.removeItem(at: request.file)

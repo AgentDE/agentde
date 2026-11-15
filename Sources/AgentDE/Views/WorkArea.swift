@@ -9,9 +9,9 @@ struct WorkArea: View {
     var body: some View {
         Group {
             if let group = store.selectedGroup, let layout = store.layout(of: group),
-               let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.tabs.first {
+               let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.shownTabs.first {
                 SplitArea(group: group, layout: layout, active: active).id(group.id)
-            } else if let group = store.selectedGroup, let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.tabs.first {
+            } else if let group = store.selectedGroup, let active = group.tabs.first(where: { $0.id == group.selectedTabID }) ?? group.shownTabs.first {
                 TabPane(tab: active).id(group.id)
             } else {
                 WithTabStrip { EmptyGroupView() }

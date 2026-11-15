@@ -22,8 +22,8 @@ extension Store {
     }
 
     /// Right-click → Restart Claude: an idle Claude tab's agent restarts on the installed version, resuming its
-    /// session. Foreground tabs get `/exit` and then `claude --resume <id>` in the same shell; background tabs
-    /// have their job stopped and a new background session resuming it attached, in a fresh shell.
+    /// session. Ordinary tabs get `/exit` and then `claude --resume <id>` in the same shell; a tab attached to a
+    /// background session has its job stopped and the session resumed in a fresh shell of its own.
     func restartClaude(_ id: UUID, completion: ((ClaudeRestartOutcome) -> Void)? = nil) {
         let check = claudeRestartCheck(id)
         guard check == .eligible, let tab = tab(id), let pid = runtime[id]?.agentPid else {
@@ -48,7 +48,7 @@ extension Store {
             DebugLog.log("restarting Claude in tab \(id.uuidString.prefix(8)) (\(from) -> \(to)): /exit, then resume", "agent")
             restartForeground(id, pid: pid, finish: finish)
         case .background:
-            DebugLog.log("restarting Claude in tab \(id.uuidString.prefix(8)) (\(from) -> \(to)): stop job \(tab.attachJobId ?? ""), then resume in the background", "agent")
+            DebugLog.log("restarting Claude in tab \(id.uuidString.prefix(8)) (\(from) -> \(to)): stop job \(tab.attachJobId ?? ""), then resume in the tab", "agent")
             restartBackground(id, pid: pid, finish: finish)
         }
     }
@@ -99,8 +99,7 @@ extension Store {
                 return
             }
             guard self.tab(id) != nil else { finish(.failed); return }
-            // A fresh shell runs the background launch (startup command, `claude --bg --resume <id>`, receipt,
-            // `claude attach`); the receipt attaches this same tab to the new job.
+            // A fresh shell resumes the session in the tab (startup command, then `claude --resume <id>`).
             let session = self.terminals.replaceTerminal(id)
             Store.waitForHolderToGo(id) { [weak self] gone in
                 guard let self, let (g, t) = self.locate(id) else { finish(.failed); return }
@@ -109,9 +108,8 @@ extension Store {
                 self.groups[g].tabs[t].forkOnStart = nil
                 self.save()
                 session.held = false
-                session.launchInBackground = true
                 session.startIfNeeded(self.groups[g].tabs[t])
-                DebugLog.log("restarted Claude in tab \(id.uuidString.prefix(8)): resuming session \(self.groups[g].tabs[t].claudeSessionId?.prefix(8) ?? "?") as a new background job", "agent")
+                DebugLog.log("restarted Claude in tab \(id.uuidString.prefix(8)): resuming session \(self.groups[g].tabs[t].claudeSessionId?.prefix(8) ?? "?") in the tab", "agent")
                 finish(.restarted)
             }
         }

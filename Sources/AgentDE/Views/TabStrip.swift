@@ -15,7 +15,7 @@ struct TabStrip: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 3) {
                         if let group {
-                            ForEach(Array(group.tabs.enumerated()), id: \.element.id) { index, tab in
+                            ForEach(Array(group.shownTabs.enumerated()), id: \.element.id) { index, tab in
                                 TabChip(group: group, tab: tab, index: index, color: color).id(tab.id)
                             }
                         }
@@ -129,7 +129,7 @@ private struct TabChip: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(theme.secondary)
                     .hint("Close tab (⌘W)")
-                } else if let key = index < 8 ? index + 1 : (index == group.tabs.count - 1 ? 9 : nil), !compact {
+                } else if let key = index < 8 ? index + 1 : (index == group.shownTabs.count - 1 ? 9 : nil), !compact {
                     Text("⌘\(key)").font(.system(size: 10)).foregroundStyle(theme.muted.opacity(active ? 1 : 0))
                 }
             }

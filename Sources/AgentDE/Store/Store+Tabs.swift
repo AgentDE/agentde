@@ -56,38 +56,53 @@ extension Store {
         return id
     }
 
-    /// Closes a tab. A background agent's tab stops its agent too, unless `keepAgent` (right-click → Close,
-    /// keep agent running).
-    func closeTab(_ id: UUID, confirmIfBusy: Bool = true, keepAgent: Bool = false) {
+    /// Closes a tab, stopping its agent (a background session's too); the conversation is kept. To leave an
+    /// agent running out of view, send its tab to the background instead.
+    func closeTab(_ id: UUID, confirmIfBusy: Bool = true) {
         guard let tab = tab(id) else { return }
-        if confirmIfBusy, state(id) == .working, !keepAgent,
+        if confirmIfBusy, state(id) == .working,
            !confirm("Stop a working agent?", detail: "\(title(for: tab)) is still running a turn, and closing stops it. "
                     + "The conversation is kept, so you can resume it from Recent.", button: "Close & Stop Agent") {
             return
         }
         // The alert ran the event loop, so the tab may have moved or gone: look it up again.
         guard let (g, t) = locate(id) else { return }
-        rememberClosed(groups[g].tabs[t], group: groups[g].id, at: t, keptAgent: keepAgent && groups[g].tabs[t].attachJobId != nil)
-        dispose(groups[g].tabs[t], keepAgent: keepAgent)
+        rememberClosed(groups[g].tabs[t], group: groups[g].id, at: t)
+        dispose(groups[g].tabs[t])
         let wasSelected = groups[g].selectedTabID == id
         groups[g].tabs.remove(at: t)
-        if wasSelected {
-            if !groups[g].tabs.isEmpty {
-                groups[g].selectedTabID = groups[g].tabs[min(t, groups[g].tabs.count - 1)].id
-            } else {
-                groups[g].selectedTabID = nil
-            }
-        }
+        if wasSelected { groups[g].selectedTabID = Store.neighbor(of: t, in: groups[g]) }
         scheduleSave()
         focusActiveTerminal()
     }
 
-    /// The last few closed tabs, newest last, for Reopen Closed Tab (this run only).
-    struct ClosedTab { var tab: TabModel; var group: UUID; var index: Int; var keptAgent = false }
+    /// Takes a tab out of view (the tab strip, a split) and leaves what runs in it running: its holder keeps
+    /// the agent going, it still reports its status, and the sidebar lists it under the group's Background.
+    /// Choosing it again (sidebar, ⌘J, a notification) brings it back.
+    func sendToBackground(_ id: UUID) {
+        guard let (g, t) = locate(id), groups[g].tabs[t].background != true else { return }
+        groups[g].tabs[t].background = true
+        if let layout = groups[g].layout {
+            groups[g].layout = layout.removing(id).flatMap { $0.tabs.count >= 2 ? $0 : nil }
+        }
+        if groups[g].selectedTabID == id { groups[g].selectedTabID = Store.neighbor(of: t, in: groups[g]) }
+        DebugLog.log("tab \(id.uuidString.prefix(8)) sent to the background", "tab")
+        scheduleSave()
+        focusActiveTerminal()
+    }
 
-    private func rememberClosed(_ tab: TabModel, group: UUID, at index: Int, keptAgent: Bool) {
+    /// The shown tab to select after the one at `index` leaves view: the next one, else the one before.
+    static func neighbor(of index: Int, in group: GroupModel) -> UUID? {
+        let shown = group.tabs.enumerated().filter { $0.element.background != true && $0.offset != index }
+        return (shown.first { $0.offset > index } ?? shown.last)?.element.id
+    }
+
+    /// The last few closed tabs, newest last, for Reopen Closed Tab (this run only).
+    struct ClosedTab { var tab: TabModel; var group: UUID; var index: Int }
+
+    private func rememberClosed(_ tab: TabModel, group: UUID, at index: Int) {
         guard tab.transient != true, tab.kind != .command else { return }
-        closedTabs.append(ClosedTab(tab: tab, group: group, index: index, keptAgent: keptAgent))
+        closedTabs.append(ClosedTab(tab: tab, group: group, index: index))
         if closedTabs.count > 20 { closedTabs.removeFirst(closedTabs.count - 20) }
     }
 
@@ -96,7 +111,7 @@ extension Store {
     func reopenClosedTab(waited: Int = 0) {
         // Its background job is still being stopped, or still listed as running: wait (up to 10 s), so the
         // session isn't attached to a job that's exiting, nor resumed beside one that's still alive.
-        if let last = closedTabs.last, !last.keptAgent, let job = last.tab.attachJobId, waited < 50,
+        if let last = closedTabs.last, let job = last.tab.attachJobId, waited < 50,
            stoppingJobs.contains(job) || (liveBackgroundJobs.values.contains(job) && !failedStops.contains(job)) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.reopenClosedTab(waited: waited + 1) }
             return
@@ -106,17 +121,15 @@ extension Store {
             var tab = closed.tab
             tab.id = UUID()
             tab.forkOnStart = nil
-            // A job kept running (Close, Keep Agent Running) is attached again. A stopped one resumes its session,
-            // unless that session is live in the background anyway (stopping can lag), then it's attached.
-            if !closed.keptAgent {
-                let original = closed.tab.attachJobId
-                if let original, liveBackgroundJobs.values.contains(original) {
-                    // Its stop failed or is still going: attach to it rather than start a second copy.
-                    tab.attachJobId = original
-                    DebugLog.log("reopen: background job \(original) is still running; attaching to it", "tab")
-                } else {
-                    tab.attachJobId = tab.claudeSessionId.flatMap { liveBackgroundJobs[$0] }.flatMap { stoppingJobs.contains($0) ? nil : $0 }
-                }
+            tab.background = nil
+            // A stopped background session resumes in the tab, unless it's still live (stopping can lag, or failed):
+            // then the tab attaches to it rather than start a second copy.
+            let original = closed.tab.attachJobId
+            if let original, liveBackgroundJobs.values.contains(original) {
+                tab.attachJobId = original
+                DebugLog.log("reopen: background job \(original) is still running; attaching to it", "tab")
+            } else {
+                tab.attachJobId = tab.claudeSessionId.flatMap { liveBackgroundJobs[$0] }.flatMap { stoppingJobs.contains($0) ? nil : $0 }
             }
             if tab.kind == .shell, tab.claudeSessionId == nil { tab.lastAgentName = nil }
             groups[g].tabs.insert(tab, at: min(closed.index, groups[g].tabs.count))
@@ -128,17 +141,15 @@ extension Store {
         NSSound.beep()
     }
 
-    /// Everything a tab owns goes with it: its terminal, its browser and its runtime state, and its background
-    /// agent. With `keepAgent` the background agent keeps running and stays in its workstream, so its workstream
-    /// tools keep working.
-    func dispose(_ tab: TabModel, keepAgent: Bool = false) {
+    /// Everything a tab owns goes with it: its terminal, its runtime state, and the background session it's
+    /// attached to.
+    func dispose(_ tab: TabModel) {
         if let info = tabInfo(tab.id) {
-            for ext in extensions { ext.tabClosing(info, keepAgent: keepAgent && tab.attachJobId != nil) }
+            for ext in extensions { ext.tabClosing(info) }
         }
-        if !keepAgent, let job = tab.attachJobId { stopBackgroundJob(job) }
+        if let job = tab.attachJobId { stopBackgroundJob(job) }
         terminals.terminate(tab.id)
         runtime[tab.id] = nil
-        pendingBackgroundLaunches[tab.id] = nil
         notifier?.clear(tab: tab.id)
         DebugLog.log("closed tab \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)", "tab")
     }

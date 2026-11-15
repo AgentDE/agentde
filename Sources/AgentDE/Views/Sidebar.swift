@@ -54,8 +54,9 @@ struct Sidebar: View {
                         if !activeOnly || !tabs.isEmpty {
                             GroupRow(group: group)
                             if !(group.collapsed ?? false) {
-                                ForEach(tabs) { tab in SidebarTabRow(group: group, tab: tab) }
+                                ForEach(tabs.filter { $0.background != true }) { tab in SidebarTabRow(group: group, tab: tab) }
                                     .transition(.opacity.combined(with: .move(edge: .top)))
+                                BackgroundTabsList(group: group, tabs: tabs.filter { $0.background == true })
                                 if store.settings.showRecentSessions, !activeOnly {
                                     RecentSessionsList(group: group)
                                 }
@@ -319,11 +320,13 @@ struct TabMenu: View {
             }
         }
         Divider()
+        if tab.background == true {
+            Button("Bring Back") { store.selectTab(tab.id) }
+        } else {
+            Button("Send to Background") { store.sendToBackground(tab.id) }
+        }
         // Named by what happens to the agent: closing an agent tab stops it (the conversation is kept).
         Button([.claude, .codex, .agent].contains(tab.kind) ? "Close & Stop Agent" : "Close Tab") { store.closeTab(tab.id) }
-        if tab.attachJobId != nil {
-            Button("Close, Keep Agent Running") { store.closeTab(tab.id, keepAgent: true) }
-        }
     }
 }
 
@@ -625,5 +628,29 @@ private struct MentionRow: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help(section.subtitle)
+    }
+}
+
+/// A group's tabs sent to the background: still running, listed under a small "Background" header with their
+/// status, a click away from coming back.
+private struct BackgroundTabsList: View {
+    let group: GroupModel
+    let tabs: [TabModel]
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        if !tabs.isEmpty {
+            HStack(spacing: 4) {
+                Image(systemName: "moon.zzz").font(.system(size: 8.5, weight: .semibold))
+                Text("Background").font(.system(size: 10.5, weight: .medium))
+                Text("\(tabs.count)").font(.system(size: 10.5))
+                Spacer()
+            }
+            .foregroundStyle(theme.muted.opacity(0.8))
+            .padding(.leading, 10)
+            .padding(.top, 4)
+            .hint("Still running, out of the tab strip. Click one to bring it back")
+            ForEach(tabs) { tab in SidebarTabRow(group: group, tab: tab).opacity(0.8) }
+        }
     }
 }

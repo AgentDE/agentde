@@ -82,15 +82,22 @@ struct SavedStateTests {
         #expect(store.closedTabs.isEmpty)
     }
 
-    /// A tab closed with Close, Keep Agent Running reopens attached to that same background job, never a
-    /// second copy of the session. (Keeping the agent means nothing is stopped, so no `claude` runs here.)
-    @Test func aKeptAgentReopensAttached() throws {
-        _ = NSApplication.shared
-        let a = UUID()
-        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(a.uuidString)", "kind": "claude", "cwd": "/tmp", "claudeSessionId": "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f", "attachJobId": "kept1234"}]}]}"#)
-        store.closeTab(a, confirmIfBusy: false, keepAgent: true)
-        store.reopenClosedTab()
-        #expect(store.groups[0].tabs.first?.attachJobId == "kept1234")
+    /// A tab sent to the background leaves the tab strip and its split but stays in the group (its holder keeps
+    /// running); the next shown tab is selected, and choosing it again brings it back.
+    @Test func sendingToTheBackgroundAndBack() throws {
+        let a = UUID(), b = UUID(), c = UUID()
+        func tab(_ id: UUID) -> String { #"{"id": "\#(id.uuidString)", "kind": "shell", "cwd": "/tmp"}"# }
+        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "selectedTabID": "\#(b.uuidString)", "tabs": [\#(tab(a)), \#(tab(b)), \#(tab(c))]}]}"#)
+        store.selectedGroupID = store.groups[0].id
+        store.groups[0].layout = PaneLayout.tab(a).splitting(a, with: b, vertical: false)
+        store.sendToBackground(b)
+        #expect(store.groups[0].tabs.count == 3)
+        #expect(store.groups[0].shownTabs.map(\.id) == [a, c])
+        #expect(store.groups[0].selectedTabID == c)
+        #expect(store.groups[0].layout == nil)   // one pane left: no split
+        store.selectTab(b)
+        #expect(store.groups[0].shownTabs.map(\.id) == [a, b, c])
+        #expect(store.groups[0].selectedTabID == b)
     }
 
     /// Text typed into a tab whose terminal never started counts as not delivered.

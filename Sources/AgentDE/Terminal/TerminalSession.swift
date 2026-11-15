@@ -28,8 +28,6 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     weak var store: Store?
     /// A replacement session waits for the old holder to go before starting (`TerminalRegistry.replaceTerminal`).
     var held = false
-    /// Start Claude as a background session even if background mode is off (a background tab's restart).
-    var launchInBackground = false
 
     private var connection: PtyConnection?
     /// Input typed now reaches the shell: the current connection has said hello and hasn't closed, the shell
@@ -257,9 +255,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             args = ["-l", "-i", "-c", tab.command ?? "true"]
         } else {
             // Startup command first (e.g. `conda activate myenv`), then the agent, if any.
-            let background = (store.settings.backgroundAgents || launchInBackground) && tab.kind == .claude && tab.attachJobId == nil
-            if background { store.pendingBackgroundLaunches[tab.id] = Date() }
-            let run = [store.startupCommand(for: tab), TerminalSession.agentCommand(for: tab, background: background)]
+            let run = [store.startupCommand(for: tab), TerminalSession.agentCommand(for: tab)]
                 .compactMap { $0 }
                 .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
                 .joined(separator: "\n")
@@ -318,7 +314,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     }
 
     /// The agent a tab runs after its startup command, or nil for a plain shell.
-    static func agentCommand(for tab: TabModel, background: Bool = false) -> String? {
+    static func agentCommand(for tab: TabModel) -> String? {
         // Ids are validated before they reach the shell; an invalid one is treated as absent.
         if let job = SafeID.job(tab.attachJobId) { return "claude attach \(job)" }
         let session = SafeID.session(tab.claudeSessionId)
@@ -327,7 +323,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             // A new session takes its name (`--name`): a fresh one, or a fork; a plain resume keeps its own.
             let name = tab.sessionName.flatMap { $0.isEmpty ? nil : " --name " + shellQuoted($0) } ?? ""
             let flags = session.map { " --resume \($0)" + (tab.forkOnStart == true ? " --fork-session" + name : "") } ?? name
-            return background ? backgroundLaunch(flags: flags) : "claude" + flags
+            return "claude" + flags
         case .codex:
             return "codex" + (SafeID.session(tab.codexSessionId).map { " resume \($0)" } ?? "")
         case .shell:
@@ -338,25 +334,6 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         case .command, .files:
             return nil
         }
-    }
-
-    /// Starts Claude as a background session and attaches to it, so the agent outlives the tab and the app.
-    /// The job id goes to `~/.config/<data folder>/attach/<tab id>`, where `AgentMonitor` picks it up, so the
-    /// tab re-attaches after a relaunch. Falls back to a foreground Claude if the background start fails.
-    static func backgroundLaunch(flags: String) -> String {
-        """
-        _mf_out=$(NO_COLOR=1 FORCE_COLOR=0 claude --bg\(flags) 2>&1)
-        _mf_id=$(printf '%s\\n' "$_mf_out" | perl -pe 's/\\e\\[[0-9;]*m//g' | sed -nE 's/^backgrounded[^a-f0-9]+([a-f0-9]+).*$/\\1/p' | head -1)
-        if [ -n "$_mf_id" ]; then
-          _mf_receipt="$HOME/.config/\(AppBrand.dataFolder)/attach/$AGENTDE_TAB_ID"
-          mkdir -p "${_mf_receipt:h}" && printf '%s\\n' "$_mf_id" > "$_mf_receipt.tmp" && mv -f "$_mf_receipt.tmp" "$_mf_receipt"
-          claude attach "$_mf_id"
-        else
-          printf '%s\\n' "$_mf_out"; echo "\(AppBrand.name): couldn't start a background session, so Claude runs in this tab instead."
-          claude\(flags)
-        fi
-        unset _mf_out _mf_id _mf_receipt
-        """
     }
 
     private func environment(for tab: TabModel) -> [String: String] {

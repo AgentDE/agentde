@@ -35,7 +35,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `agentSessionsChanged()` | After the app re-reads which agent session each tab runs (Claude started, `/clear`, a resume) |
 | `liveSessionsChanged(_:)` | After each registry poll (once a second): the agent sessions running anywhere on the Mac |
 | `agentWentIdle(_:)` | A tab's agent finished a turn or is waiting |
-| `tabClosing(_:keepAgent:)` | A tab is closing; with `keepAgent` its background agent keeps running |
+| `tabClosing(_:)` | A tab is closing, and its agent with it |
 | `backgroundSessionOpened(_:session:forkParent:)` | The app opened a tab for a background session (`/fork`, `claude --bg`); `forkParent` is the session it was forked from, when known |
 | `tabForked(_:from:)` | The user forked a tab's Claude session into a new tab (right-click → Fork Session). The new tab has no `agentSession` until Claude gives the fork its own id |
 | `wantsAttention(_:)` | Whether a tab gets a soft attention ring without its agent being stopped |

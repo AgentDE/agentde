@@ -15,6 +15,9 @@ struct TabModel: Identifiable, Codable, Equatable {
     var lastActiveAt: Date?
     /// Agent tabs: which `AgentDefinition` they run.
     var agentID: String?
+    /// Sent to the background: out of the tab strip and splits, still running in its holder. The sidebar lists
+    /// it under the group's Background; choosing it brings it back.
+    var background: Bool?
     /// Background Claude session (job id) this tab attaches to, e.g. one created by `/fork`.
     var attachJobId: String?
     /// Start by forking `claudeSessionId` (`--fork-session`) instead of resuming it. Cleared once the fork has its own id.
@@ -81,6 +84,9 @@ struct GroupModel: Identifiable, Codable, Equatable {
     var pinnedSessions: [RecentSession]?
     /// Whether the sidebar hides this group's tabs. Sticky: independent of which group is selected.
     var collapsed: Bool?
+
+    /// The tabs in the tab strip: all but those sent to the background.
+    var shownTabs: [TabModel] { tabs.filter { $0.background != true } }
 }
 
 /// Live, unsaved state for a tab.

@@ -44,9 +44,6 @@ struct AgentDESettings: Codable, Equatable {
     var notifyNeedsYou: Bool = true
     var notifyDone: Bool = true
     var notificationSound: Bool = true
-    /// Run new Claude tabs as Claude background sessions (`claude --bg` + `claude attach`), so closing
-    /// a tab leaves the agent running.
-    var backgroundAgents: Bool = false
     /// Show the branch's pull request and its checks in the header.
     var showPullRequests: Bool = true
     var openPullRequestsIn: PullRequestHost = .github

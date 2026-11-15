@@ -25,8 +25,8 @@ public protocol AgentDEExtension: AnyObject {
     func liveSessionsChanged(_ live: Set<String>)
     /// A tab's agent went idle (finished a turn or is waiting).
     func agentWentIdle(_ tab: TabInfo)
-    /// A tab is closing. With `keepAgent` its background agent keeps running.
-    func tabClosing(_ tab: TabInfo, keepAgent: Bool)
+    /// A tab is closing, and its agent with it.
+    func tabClosing(_ tab: TabInfo)
     /// The app opened a tab for a background session (a `/fork`, or `claude --bg`); `forkParent` is the
     /// session it was forked from, when Claude recorded one.
     func backgroundSessionOpened(_ tab: TabInfo, session: String?, forkParent: String?)
@@ -77,7 +77,7 @@ public extension AgentDEExtension {
     func agentSessionsChanged() {}
     func liveSessionsChanged(_ live: Set<String>) {}
     func agentWentIdle(_ tab: TabInfo) {}
-    func tabClosing(_ tab: TabInfo, keepAgent: Bool) {}
+    func tabClosing(_ tab: TabInfo) {}
     func backgroundSessionOpened(_ tab: TabInfo, session: String?, forkParent: String?) {}
     func tabForked(_ tab: TabInfo, from parent: TabInfo) {}
     func wantsAttention(_ tab: TabInfo) -> Bool { false }

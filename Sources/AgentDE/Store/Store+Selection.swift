@@ -5,7 +5,7 @@ extension Store {
     func selectGroup(_ id: UUID) {
         selectedGroupID = id
         defer { refreshActivePullRequest() }
-        if let group = selectedGroup, group.selectedTabID == nil, let first = group.tabs.first {
+        if let group = selectedGroup, group.selectedTabID == nil, let first = group.shownTabs.first {
             selectTab(first.id)
         }
         markSeenVisibleTabs()
@@ -14,7 +14,12 @@ extension Store {
     }
 
     func selectTab(_ id: UUID, focus: Bool = true) {
-        guard let (g, _) = locate(id) else { return }
+        guard let (g, t) = locate(id) else { return }
+        if groups[g].tabs[t].background == true {
+            groups[g].tabs[t].background = nil
+            DebugLog.log("tab \(id.uuidString.prefix(8)) back from the background", "tab")
+            scheduleSave()
+        }
         placeInLayout(id, group: g)
         selectedGroupID = groups[g].id
         groups[g].selectedTabID = id
@@ -39,16 +44,16 @@ extension Store {
     }
 
     func cycleTab(_ delta: Int) {
-        guard let group = selectedGroup, !group.tabs.isEmpty else { return }
-        let current = group.tabs.firstIndex { $0.id == group.selectedTabID } ?? 0
-        let next = (current + delta + group.tabs.count) % group.tabs.count
-        selectTab(group.tabs[next].id)
+        guard let tabs = selectedGroup?.shownTabs, !tabs.isEmpty else { return }
+        let current = tabs.firstIndex { $0.id == selectedGroup?.selectedTabID } ?? 0
+        let next = (current + delta + tabs.count) % tabs.count
+        selectTab(tabs[next].id)
     }
 
     func selectTab(number: Int) {
-        guard let group = selectedGroup, !group.tabs.isEmpty else { return }
-        let index = number == 9 ? group.tabs.count - 1 : min(number - 1, group.tabs.count - 1)
-        selectTab(group.tabs[index].id)
+        guard let tabs = selectedGroup?.shownTabs, !tabs.isEmpty else { return }
+        let index = number == 9 ? tabs.count - 1 : min(number - 1, tabs.count - 1)
+        selectTab(tabs[index].id)
     }
 
     func cycleGroup(_ delta: Int) {

@@ -82,15 +82,12 @@ extension Store {
     }
 
     /// Opens a new background Claude session (from `/fork`, or `claude --bg` run anywhere) as an ordinary tab
-    /// that attaches to it, beside the last tab used in its folder (see `opensAsTab` for which ones). A background-mode tab in that folder that
-    /// hasn't reported its own job yet makes this wait (`retryLater`), so its job isn't opened twice.
+    /// that attaches to it, beside the last tab used in its folder (see `opensAsTab` for which ones).
     func adoptBackgroundSession(_ entry: ClaudeSessionEntry) -> BackgroundAdoption {
         guard let jobId = SafeID.job(entry.jobId), let cwd = entry.cwd,
               !groups.contains(where: { $0.tabs.contains { $0.attachJobId == jobId || $0.claudeSessionId == entry.sessionId } })
         else { return .ignored }
         guard Store.opensAsTab(entry, isFork: { Store.forkParent(job: jobId) != nil }) else { return .notYet }
-        pendingBackgroundLaunches = pendingBackgroundLaunches.filter { Date().timeIntervalSince($0.value) < 60 }
-        if pendingBackgroundLaunches.keys.contains(where: { tab($0)?.cwd == cwd }) { return .retryLater }
         guard let (g, index) = Store.placement(forBackgroundIn: cwd, groups: groups, lastFocusedAt: lastFocusedAt)
         else { return .ignored }
         DebugLog.log("opened background job \(jobId) (\(entry.name ?? "unnamed")) in a new tab in \(groups[g].name)", "agent")
@@ -168,25 +165,6 @@ extension Store {
     }
 
     // MARK: Background agents
-
-    /// A background-mode tab reported its job id; from now on it re-attaches instead of starting anew.
-    /// Returns whether the receipt was this instance's to consume: the tab exists here, and the job id is
-    /// now saved to disk (immediately, not debounced, so a crash can't lose the attachment).
-    @discardableResult
-    func recordAttachedJob(tab id: UUID, jobId: String) -> Bool {
-        guard let (g, t) = locate(id) else {
-            // Another AgentDE instance's tab, or a tab closed since; stale receipts are cleaned up after a day.
-            return false
-        }
-        if groups[g].tabs[t].attachJobId != jobId {
-            groups[g].tabs[t].attachJobId = jobId
-            groups[g].tabs[t].forkOnStart = nil
-            DebugLog.log("tab \(id.uuidString.prefix(8)) attached to background job \(jobId)", "agent")
-        }
-        pendingBackgroundLaunches[id] = nil
-        // The receipt is deleted only once the job id is on disk; a failed save keeps it for the next poll.
-        return save()
-    }
 
     /// Stops a background session (`claude stop`): its tab closed, so the agent ends too. The conversation is
     /// kept, so it can be resumed from the group's recent sessions. A failure only goes to the log.

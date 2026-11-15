@@ -81,11 +81,6 @@ struct SettingsView: View {
                     Toggle("When an agent finishes and you're elsewhere", isOn: $store.settings.notifyDone)
                     Toggle("Play a sound", isOn: $store.settings.notificationSound)
                 }
-                Section("Background agents") {
-                    Toggle("Run Claude as background sessions", isOn: $store.settings.backgroundAgents)
-                    Text("Every tab already keeps running when \(AppBrand.name) quits or updates. With this on, new Claude tabs also start as Claude background sessions (`claude --bg`) and attach. Closing a tab still stops its agent (the conversation is kept); right-click → Close, Keep Agent Running leaves it running. Background sessions keep your conda env, but Claude's background service reorders PATH, so check `which python` if that matters.")
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
-                }
                 Section("Pull requests") {
                     Toggle("Show the branch's PR and checks in the header", isOn: $store.settings.showPullRequests)
                     Picker("Open PRs in", selection: $store.settings.openPullRequestsIn) {

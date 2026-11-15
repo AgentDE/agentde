@@ -6,18 +6,18 @@ import SwiftUI
 extension Store {
     /// The group's split layout, without tabs that have gone; nil when it shows one tab.
     func layout(of group: GroupModel) -> PaneLayout? {
-        group.layout?.pruned(to: Set(group.tabs.map(\.id)))
+        group.layout?.pruned(to: Set(group.shownTabs.map(\.id)))
     }
 
     /// Splits the active pane (⌘D right, ⌥⌘D down), showing `tabID` in the new half, or else the tab used most
     /// recently that isn't showing yet. The new pane becomes active.
     func split(vertical: Bool, with tabID: UUID? = nil) {
         guard let group = selectedGroup, let g = groups.firstIndex(where: { $0.id == group.id }),
-              let active = group.selectedTabID ?? group.tabs.first?.id else { return }
+              let active = group.selectedTabID ?? group.shownTabs.first?.id else { return }
         let current = layout(of: group) ?? .tab(active)
         let showing = Set(current.tabs)
         let candidate = tabID.flatMap { id in showing.contains(id) ? nil : id }
-            ?? group.tabs.filter { !showing.contains($0.id) }
+            ?? group.shownTabs.filter { !showing.contains($0.id) }
                 .max { (lastFocusedAt[$0.id] ?? .distantPast) < (lastFocusedAt[$1.id] ?? .distantPast) }?.id
         guard let other = candidate else {
             NSSound.beep()

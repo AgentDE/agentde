@@ -220,7 +220,7 @@ Claude Code updates itself on disk, but each running `claude` keeps its old vers
 | Right-click a Claude tab → **Restart Claude (keeps the session)** | Restarts that tab's Claude on the installed version and resumes its session. Enabled only when Claude is idle (not working, not waiting on you) |
 | **Claude update · N tabs**, or **AgentDE → Restart Idle Claude Tabs (N)** | Restarts every idle outdated Claude tab, one after another, skips busy ones, then shows a summary ("Restarted 9, skipped 3 busy") |
 
-The tab keeps its place, name, workstream and viewer. An interactive tab gets Ctrl-C (which clears anything typed but not sent), `/exit`, then `claude --resume <id>` at the same prompt. A background-session tab has its job stopped (`claude stop`) and a new background session resuming the conversation attached in a fresh shell, which runs the startup command again. Sleeping tabs need nothing: they start on the installed version when opened.
+The tab keeps its place, name, workstream and viewer. An interactive tab gets Ctrl-C (which clears anything typed but not sent), `/exit`, then `claude --resume <id>` at the same prompt. A tab attached to a Claude background session (a `/fork`, say) has its job stopped (`claude stop`) and the conversation resumed in a fresh shell in the tab, which runs the startup command again. Sleeping tabs need nothing: they start on the installed version when opened.
 
 ## Pull requests
 
@@ -243,11 +243,9 @@ PR info comes from `gh pr view` (the GitHub CLI, logged in), at most once a minu
 
 Quitting saves groups, tabs, colors, names and settings. Closing a tab is the way to end what runs in it.
 
-### Background mode
+### Sending a tab to the background
 
-Turn on **Settings → Agents → Run Claude as background sessions**. New Claude tabs then start as Claude background sessions (`claude --bg`) and attach with `claude attach <id>`. Closing a tab stops its agent (`claude stop`); the conversation is kept, so you can resume it from Recent. To close the tab and leave the agent working, right-click it → **Close, Keep Agent Running** (**Close & Stop Agent** stops it); reattach from Claude's Agent View (⇧⌘P → **Open Agent View**).
-
-Background sessions inherit your startup command's environment, but Claude's background service reorders `PATH`, so a conda env's `python` may not come first.
+Right-click a tab → **Send to Background** to take it out of the tab strip (and any split) while it keeps running: its agent works on, its status dot and notifications keep coming, and the sidebar lists it under the group's **Background**. Click it there (or jump to it with ⌘J, a notification or ⇧⌘P) to bring it back, scrollback and all. It works for every tab, whatever agent or program runs in it. Closing a tab, by contrast, stops its agent; the conversation is kept, so you can resume it from Recent.
 
 ## Keys
 
@@ -293,7 +291,7 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 | Look | Light, dark or match system; theme (Claude warm, Graphite cool, Midnight, High contrast, plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); density; sidebar width |
 | Terminal | Font, size, scrollback (default 10,000 lines), startup command, ask for a name when starting a Claude or Codex tab (on by default; Claude's session takes it with `--name`, a Codex tab as its title), recent sessions (on/off, Codex too, how many days), what kind of tab new tabs start as, `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
 | Fun | Animated status dots, the finish sparkle and how long a turn must run to earn one, Termi in the tab strip |
-| Agents | Notifications (needs you, done, sound), background mode, PR status (on/off, open in GitHub or Graphite) |
+| Agents | Notifications (needs you, done, sound), PR status (on/off, open in GitHub or Graphite) |
 | Extensions | Each loaded extension's own settings |
 | Icon | The Dock icon; shown only when the build ships more than one |
 

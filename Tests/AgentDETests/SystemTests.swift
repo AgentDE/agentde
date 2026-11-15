@@ -35,37 +35,6 @@ struct GitInfoTests {
     }
 }
 
-@Suite("Background launch script")
-struct BackgroundLaunchTests {
-    /// Runs the generated script in zsh with a stand-in `claude` that prints what `claude --bg` prints,
-    /// color codes included, and records the commands it receives.
-    @Test func parsesTheJobIdRecordsItAndAttaches() throws {
-        let home = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-bg-\(UUID().uuidString)")
-        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
-        let fake = """
-        claude() {
-          if [[ $1 == --bg ]]; then
-            printf 'Starting background service…\\n\\e[1mbackgrounded\\e[0m · \\e[36m00c99926\\e[0m · scratch-1 (idle)\\n'
-          else
-            echo "CALLED: claude $*"
-          fi
-        }
-        """
-        let script = fake + "\n" + TerminalSession.backgroundLaunch(flags: " --resume 6e6ebd7e-d01c-4352-acfd-67b044cfc314")
-        let zsh = Process()
-        zsh.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        zsh.arguments = ["-f", "-c", script]
-        zsh.environment = ["HOME": home.path, "AGENTDE_TAB_ID": "TAB-1", "PATH": "/usr/bin:/bin"]
-        let out = Pipe()
-        zsh.standardOutput = out
-        try zsh.run()
-        zsh.waitUntilExit()
-        let output = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        #expect(output.contains("CALLED: claude attach 00c99926"))
-        let receipt = try String(contentsOf: home.appendingPathComponent(".config/\(AppBrand.dataFolder)/attach/TAB-1"), encoding: .utf8)
-        #expect(receipt.trimmingCharacters(in: .whitespacesAndNewlines) == "00c99926")
-    }
-}
 
 @Suite("Process tree")
 struct ProcessTreeTests {

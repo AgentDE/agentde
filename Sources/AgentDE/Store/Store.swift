@@ -66,8 +66,6 @@ final class Store {
     /// Bumped by ⌘K to put the cursor in the sidebar's search box.
     var sidebarSearchFocus = 0
     @ObservationIgnored lazy var pullRequestMonitor = PullRequestMonitor(store: self)
-    /// Tabs that just ran `claude --bg` and haven't reported their job id yet, so `/fork` detection ignores their session.
-    @ObservationIgnored var pendingBackgroundLaunches: [UUID: Date] = [:]
     /// When each tab last had focus; used to work out which tab a `/fork` came from.
     @ObservationIgnored var lastFocusedAt: [UUID: Date] = [:]
     @ObservationIgnored private var saveWork: DispatchWorkItem?
