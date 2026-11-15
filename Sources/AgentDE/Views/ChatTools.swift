@@ -21,14 +21,13 @@ extension Store {
         runTool(tool, in: tab.id)
     }
 
-    /// Commands need the agent there; keys also need it idle. A built-in tool with neither is the app's own
+    /// Keys and commands need the agent there. A built-in tool with neither is the app's own
     /// action: Fork and Restart, for Claude.
     func toolEnabled(_ tool: AgentTool, in tab: TabModel) -> Bool {
         guard tool.keys == nil, tool.command == nil else {
-            let present = tab.kind == .agent || runtime[tab.id]?.agentPresent == true
-            // A command is typed as you'd type it, so it works whenever the agent is there (Claude takes input while
-            // it works, or waits on workflows). Keys can interrupt a running turn (Esc does), so they wait for idle.
-            return present && (tool.keys == nil || state(tab.id) != .working)
+            // A tool does what typing it would, so it works whenever the agent is there, mid-turn too (Rewind's
+            // Esc Esc then stops the turn first, as it would from the keyboard).
+            return tab.kind == .agent || runtime[tab.id]?.agentPresent == true
         }
         switch tool.id {
         case "fork": return tab.claudeSessionId != nil

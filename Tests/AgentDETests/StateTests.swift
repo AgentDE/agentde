@@ -99,9 +99,8 @@ struct SavedStateTests {
         #expect(store.tab(id)?.cwd == "/Users" && store.tab(id)?.explorerSelection == nil)
     }
 
-    /// While Claude works (or waits on workflows), Compact still runs (it's typed, as you would), but Rewind's
-    /// Esc Esc would interrupt the turn, so it waits.
-    @Test func commandToolsRunWhileWorkingKeysWait() throws {
+    /// Tools do what typing them would, so they work mid-turn too; with no agent there's nothing to type to.
+    @Test func toolsWorkWhileTheAgentIsThere() throws {
         let id = UUID()
         let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(id.uuidString)", "kind": "claude", "cwd": "/tmp"}]}]}"#)
         var rt = TabRuntime()
@@ -111,8 +110,7 @@ struct SavedStateTests {
         let tab = try #require(store.tab(id))
         let tools = try #require(AgentCatalog.claude.tools)
         let compact = try #require(tools.first { $0.id == "compact" }), rewind = try #require(tools.first { $0.id == "rewind" })
-        #expect(store.toolEnabled(compact, in: tab))
-        #expect(!store.toolEnabled(rewind, in: tab))
+        #expect(store.toolEnabled(compact, in: tab) && store.toolEnabled(rewind, in: tab))
         store.runtime[id]?.agentPresent = false
         #expect(!store.toolEnabled(compact, in: tab))   // no agent to type to
     }
