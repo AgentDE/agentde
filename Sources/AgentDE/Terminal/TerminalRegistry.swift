@@ -8,6 +8,8 @@ final class TerminalRegistry {
     private var retiring: [UUID: TerminalSession] = [:]
     let viewers = ViewerRegistry()
     private var explorers: [UUID: FileExplorerModel] = [:]
+    /// Folders shown in tabs' viewers, one per tab.
+    private var viewerExplorers: [UUID: FileExplorerModel] = [:]
 
     func existingExplorer(_ id: UUID) -> FileExplorerModel? { explorers[id] }
 
@@ -17,6 +19,14 @@ final class TerminalRegistry {
         if let existing = explorers[tab.id], existing.root.path == URL(fileURLWithPath: tab.cwd).path { return existing }
         let model = FileExplorerModel(root: tab.cwd, selection: tab.explorerSelection)
         explorers[tab.id] = model
+        return model
+    }
+
+    /// The explorer for a folder shown in the tab's viewer; a new one when the folder changes.
+    func viewerExplorer(for id: UUID, root: String) -> FileExplorerModel {
+        if let existing = viewerExplorers[id], existing.root.path == URL(fileURLWithPath: root).path { return existing }
+        let model = FileExplorerModel(root: root, selection: nil)
+        viewerExplorers[id] = model
         return model
     }
 
@@ -52,6 +62,7 @@ final class TerminalRegistry {
         sessions[id] = nil
         viewers.remove(id)
         explorers[id] = nil
+        viewerExplorers[id] = nil
     }
 
     /// Ends a tab's shell (like closing it) but keeps the tab's viewer and explorer, and puts a new,

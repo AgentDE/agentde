@@ -15,17 +15,14 @@ protocol Agent {
     var namesSessions: Bool { get }
     /// A scanner for the sessions you started and named, for the Recent and Older lists; nil when none.
     func sessionScanner() -> SessionScanner?
-    /// How its conversations are kept, for search and partial-path links; nil when AgentDE can't read them.
-    var transcript: TranscriptKind? { get }
+    /// Where and how its conversations are kept, for search and partial-path links; nil when AgentDE can't read them.
+    var transcript: TranscriptFormat? { get }
     /// Its last reply in a session, for the Done notification; nil when it can't say.
     func lastReply(session: String, cwd: String) -> String?
     /// A background job already running `session`, which a resuming tab attaches to instead of starting a
     /// second copy (Claude's background sessions); nil when there's none.
     func liveBackgroundJob(session: String, store: Store) -> String?
 }
-
-/// The transcript formats AgentDE reads (`TranscriptIndex`).
-enum TranscriptKind { case claude, codex }
 
 /// Finds an agent's named sessions on disk, newest first; caches what it read between scans.
 protocol SessionScanner: AnyObject {
@@ -38,7 +35,7 @@ extension Agent {
     var symbol: String { definition.symbol ?? TabKind.agent.symbol }
     var namesSessions: Bool { false }
     func sessionScanner() -> SessionScanner? { nil }
-    var transcript: TranscriptKind? { nil }
+    var transcript: TranscriptFormat? { nil }
     func lastReply(session: String, cwd: String) -> String? { nil }
     func liveBackgroundJob(session: String, store: Store) -> String? { nil }
 }

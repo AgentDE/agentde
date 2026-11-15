@@ -74,7 +74,7 @@ The **+** after the last tab opens a new tab of any kind. Closing a tab's proces
 |---|---|
 | Files and local pages (`localhost`, `127.0.0.1`) | The tab's **viewer**, above the chat |
 | Claude artifact links, and links an extension or plugin claims | The viewer |
-| Folders | A new **File Explorer** tab, rooted there |
+| Folders (`shots/`, `a/b/c`) | The tab's **viewer**, as a File Explorer there (a new File Explorer tab from a tab without a viewer) |
 | Other web links | Your browser |
 | ⌥⌘-click on a file or local page | Its default app |
 

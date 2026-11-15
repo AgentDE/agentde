@@ -18,6 +18,9 @@ final class Store {
     var runtime: [UUID: TabRuntime] = [:]
     /// Claude sessions active in the last `recentSessionDays`, newest first (filled by AgentMonitor).
     var recentSessions: [RecentSession] = []
+    /// How often you've opened each file or page in a viewer (`openInViewer`), for the Most opened sorts. Saved;
+    /// at most `ViewerOpens.limit` items, the least opened dropped first.
+    @ObservationIgnored var viewerOpenCounts: [String: Int] = [:]
     /// Sessions older than that, scanned when a group's Older list opens; nil until the first scan is in.
     var olderSessions: [RecentSession]?
     /// Groups whose Older list is open (not saved).
@@ -178,7 +181,8 @@ final class Store {
             snapshot[g].tabs.removeAll { $0.transient == true }
             snapshot[g].splitPanes = nil
         }
-        let state = SavedState(groups: snapshot, selectedGroupID: selectedGroupID, settings: settings)
+        let state = SavedState(groups: snapshot, selectedGroupID: selectedGroupID, settings: settings,
+                               viewerOpens: viewerOpenCounts.isEmpty ? nil : viewerOpenCounts)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         do {
@@ -221,6 +225,7 @@ final class Store {
             }
             groups.append(group)
         }
+        viewerOpenCounts = object["viewerOpens"] as? [String: Int] ?? [:]
         if let selected = object["selectedGroupID"] as? String, let id = UUID(uuidString: selected),
            groups.contains(where: { $0.id == id }) {
             selectedGroupID = id

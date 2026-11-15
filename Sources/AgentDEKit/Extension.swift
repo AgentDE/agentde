@@ -106,6 +106,8 @@ public protocol AgentDEHost: AnyObject {
     var activeTabID: UUID? { get }
     /// Agent sessions running anywhere on this Mac.
     var liveSessions: Set<String> { get }
+    /// How many times you've opened `item` (a file path or a link) in a viewer.
+    func viewerOpens(_ item: String) -> Int
     /// Whether the user wants motion (Settings → Fun, and Reduce Motion).
     var animations: Bool { get }
     /// The extensions loaded, for working with each other (`extensions.compactMap { $0 as? SomeProtocol }`).

@@ -60,6 +60,8 @@ struct SavedState: Codable {
     var groups: [GroupModel]
     var selectedGroupID: UUID?
     var settings: AgentDESettings
+    /// How often you've opened each file or page in a viewer (`Store.viewerOpenCounts`).
+    var viewerOpens: [String: Int]?
 }
 
 extension AgentDESettings {

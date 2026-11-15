@@ -25,6 +25,9 @@ final class SessionSearch {
         let color: SwiftUI.Color?
         let hits: [Hit]
         let total: Int
+        /// The agent whose transcript it is: its name and icon label its lines.
+        var agentName = "Agent"
+        var agentSymbol = "cpu"
         var newest: Date? { hits.compactMap(\.timestamp).max() }
     }
 
@@ -51,8 +54,8 @@ final class SessionSearch {
         let sessionId: String?
         let cwd: String
         let scrollback: [String]?
-        /// The session is a Codex thread (its log, not a Claude transcript).
-        var codex = false
+        /// The agent whose transcript it reads.
+        var agent: (any Agent)?
     }
 
     func schedule() {
@@ -77,11 +80,11 @@ final class SessionSearch {
         for group in store.groups {
             let color = SwiftUI.Color(nsColor: store.groupColor(group))
             for tab in group.tabs where tab.kind != .command {
-                let codex = store.agent(of: tab)?.transcript == .codex
-                let session = tab.agentSession
+                let agent = store.agent(of: tab)
+                let session = agent?.transcript == nil ? nil : tab.agentSession
                 sources.append(Source(id: tab.id.uuidString, source: .tab(tab.id), title: store.title(for: tab),
                                       subtitle: group.name, color: color, sessionId: session, cwd: tab.cwd,
-                                      scrollback: session == nil ? store.terminals.scrollback(tab.id) : nil, codex: codex))
+                                      scrollback: session == nil ? store.terminals.scrollback(tab.id) : nil, agent: agent))
             }
         }
         if includeRecent {
@@ -90,7 +93,7 @@ final class SessionSearch {
             for recent in store.recentSessions where !open.contains(recent.sessionId) {
                 sources.append(Source(id: recent.sessionId, source: .recent(recent), title: recent.name,
                                       subtitle: "recent · " + (recent.cwd as NSString).lastPathComponent, color: nil,
-                                      sessionId: recent.sessionId, cwd: recent.cwd, scrollback: nil, codex: Agents.byID(recent.agent)?.transcript == .codex))
+                                      sessionId: recent.sessionId, cwd: recent.cwd, scrollback: nil, agent: Agents.byID(recent.agent)))
             }
         }
         progress = (0, sources.count)
@@ -121,8 +124,8 @@ final class SessionSearch {
 
     private func search(_ source: Source, _ terms: [String]) -> Section? {
         var matches: [SearchEntry] = []
-        if let sessionId = source.sessionId {
-            matches = index.entries(sessionId: sessionId, cwd: source.cwd, codex: source.codex).filter { SearchMatch.matches($0, terms) }
+        if let sessionId = source.sessionId, let format = source.agent?.transcript {
+            matches = index.entries(sessionId: sessionId, cwd: source.cwd, format: format).filter { SearchMatch.matches($0, terms) }
         } else if let lines = source.scrollback {
             for (i, line) in lines.enumerated() where !line.isEmpty {
                 let lower = line.lowercased()
@@ -138,7 +141,8 @@ final class SessionSearch {
                 timestamp: entry.timestamp, text: entry.text)
         }
         return Section(id: source.id, source: source.source, title: source.title, subtitle: source.subtitle,
-                       color: source.color, hits: Array(hits), total: matches.count)
+                       color: source.color, hits: Array(hits), total: matches.count,
+                       agentName: source.agent?.name ?? "Agent", agentSymbol: source.agent?.symbol ?? "cpu")
     }
 
     /// Jumps to a result: selects the tab, or resumes a recent session, then highlights the match in the terminal.
@@ -169,7 +173,7 @@ extension SessionSearch {
         stamp.dateFormat = "MMM d, HH:mm"
         var page = "# “\(query)” in \(section.title)\n\n"
         for hit in section.hits {
-            let who = hit.role == .you ? "You" : hit.role == .codex ? "Codex" : hit.role == .claude ? "Claude" : "Terminal"
+            let who = switch hit.role { case .you: "You"; case .agent: section.agentName; case .terminal: "Terminal" }
             page += "**\(who)**" + (hit.timestamp.map { " · " + stamp.string(from: $0) } ?? "") + "\n\n" + hit.text + "\n\n---\n\n"
         }
         if section.total > section.hits.count { page += "_\(section.total - section.hits.count) more matches, older._\n" }

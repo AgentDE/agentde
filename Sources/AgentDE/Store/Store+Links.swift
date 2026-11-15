@@ -77,17 +77,15 @@ extension Store {
 
     /// The tab's agent transcript: Claude's session file, or Codex's session log.
     static func transcript(of tab: TabModel) -> URL? {
-        let index = TranscriptIndex()
-        guard let session = SafeID.session(tab.agentSession), let kind = Agents.of(tab)?.transcript else { return nil }
-        switch kind {
-        case .claude: return index.transcriptURL(sessionId: session, cwd: tab.cwd)
-        case .codex: return index.codexLogURL(sessionId: session)
-        }
+        guard let session = SafeID.session(tab.agentSession) else { return nil }
+        return Agents.of(tab)?.transcript?.url(session: session, cwd: tab.cwd)
     }
 
     /// The newest existing absolute path in the transcript's last 8 MB that ends with `link` (a partial path or a
     /// file name), as the agent wrote it in a tool call or reply.
     static func findInTranscript(_ link: String, transcript: URL) -> URL? {
+        // A folder (`shots/r43_videos/`) is often named without its slash.
+        let link = link.count > 1 && link.hasSuffix("/") ? String(link.dropLast()) : link
         let suffix = link.hasPrefix("/") ? link : "/" + link
         guard suffix.count > 2, let handle = try? FileHandle(forReadingFrom: transcript) else { return nil }
         defer { try? handle.close() }
@@ -123,7 +121,8 @@ extension Store {
         if defaultApp {
             NSWorkspace.shared.open(file)
         } else if Store.isFolder(file.path) {
-            _ = newTab(kind: .files, in: groups[g].id, cwd: file.path)   // a folder: a File Explorer tab there
+            // A folder: in the viewer above the chat when there is one, else a File Explorer tab there.
+            if hasViewer { openInViewer(file.path, tab: owner.id) } else { _ = newTab(kind: .files, in: groups[g].id, cwd: file.path) }
         } else if hasViewer {
             LinkTiming.start(owner.id)
             openInViewer(file.path, tab: owner.id)
@@ -279,7 +278,10 @@ extension Store {
     func openInViewer(_ item: String, tab id: UUID, select: Bool, record: Bool) {
         guard let (g, t) = locate(id) else { return }
         groups[g].tabs[t].viewerItem = item
-        if record { groups[g].tabs[t].viewerHistory = ViewerHistory.recording(item, in: groups[g].tabs[t].viewerHistory) }
+        if record {
+            groups[g].tabs[t].viewerHistory = ViewerHistory.recording(item, in: groups[g].tabs[t].viewerHistory)
+            viewerOpenCounts = ViewerOpens.counting(item, in: viewerOpenCounts)
+        }
         groups[g].tabs[t].viewerExpanded = nil
         DebugLog.log("viewer \(id.uuidString.prefix(8)): \((item as NSString).lastPathComponent)", "link")
         if select, groups[g].selectedTabID != id { selectTab(id, focus: false) }

@@ -28,6 +28,7 @@ extension Store: AgentDEHost {
 
     var activeTabID: UUID? { activeTab?.id }
     var liveSessions: Set<String> { liveSessionIds }
+    func viewerOpens(_ item: String) -> Int { viewerOpenCounts[item] ?? 0 }
     var animations: Bool { settings.animations && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
 

@@ -41,7 +41,7 @@ struct AgentToolTests {
         #expect(ClaudeAgent.shared.definition.stash == "\u{13}" && CodexAgent.shared.definition.stash == nil)
         // What each agent brings beyond buttons: Claude and Codex read their own transcripts and Recent lists,
         // only Claude names sessions; a plugin agent has none of these.
-        #expect(ClaudeAgent.shared.transcript == .claude && CodexAgent.shared.transcript == .codex && plugin.transcript == nil)
+        #expect(ClaudeAgent.shared.transcript is ClaudeTranscript && CodexAgent.shared.transcript is CodexTranscript && plugin.transcript == nil)
         #expect(ClaudeAgent.shared.sessionScanner() != nil && CodexAgent.shared.sessionScanner() != nil && plugin.sessionScanner() == nil)
         #expect(ClaudeAgent.shared.namesSessions && !CodexAgent.shared.namesSessions && !plugin.namesSessions)
         #expect(Agents.byID("claude")?.id == "claude" && Agents.byID("codex")?.id == "codex" && Agents.byID("nope") == nil)

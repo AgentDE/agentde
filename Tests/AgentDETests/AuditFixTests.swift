@@ -40,10 +40,10 @@ struct AuditFixTests {
             #"{"timestamp":"2026-11-10T12:55:09.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Renamed it to testRetriesOnce."}]}}"#,
         ]
         try (lines.joined(separator: "\n") + "\n").write(to: day.appendingPathComponent("rollout-2026-11-10T04-54-41-\(id).jsonl"), atomically: true, encoding: .utf8)
-        let index = TranscriptIndex(projectsDir: dir, codexDir: dir)
-        let entries = index.entries(sessionId: id, cwd: "/tmp", codex: true)
+        let index = TranscriptIndex()
+        let entries = index.entries(sessionId: id, cwd: "/tmp", format: CodexTranscript(sessionsDir: dir))
         #expect(entries.map(\.text) == ["rename the flaky test", "Renamed it to testRetriesOnce."])
-        #expect(entries.map(\.role) == [.you, .codex])
+        #expect(entries.map(\.role) == [.you, .agent])
     }
 
     /// A new Claude tab with a name starts `claude --name '<name>'`, safely quoted; a resume ignores it.
@@ -126,6 +126,34 @@ struct AuditFixTests {
         #expect(terminal.link(at: .screen(Position(col: 40, row: 0)), mode: .explicitAndImplicit) == nil)
     }
 
+    /// A relative folder is a link too, with or without its slash (and a sentence's period after it), but not
+    /// `w/`, `and/or` or a date; it resolves from the tab's folder, or through the transcript without its slash.
+    @Test func folderPathsAreLinks() throws {
+        func link(_ line: String, at marker: String) -> String? {
+            let terminal = Terminal(delegate: NullTerminalDelegate(), options: TerminalOptions(cols: 120, rows: 3))
+            terminal.feed(text: line + "\r\n")
+            let col = line.range(of: marker)!.lowerBound.utf16Offset(in: line)
+            return terminal.link(at: .screen(Position(col: col, row: 0)), mode: .explicitAndImplicit)
+        }
+        #expect(link("clips in repel_horde_v2/shots/r43_videos/. Once", at: "shots") == "repel_horde_v2/shots/r43_videos/.")
+        #expect(link("clips in repel_horde_v2/shots/r43_videos/ now", at: "shots") == "repel_horde_v2/shots/r43_videos/")
+        #expect(link("clips in repel_horde_v2/shots/r43_videos now", at: "shots") == "repel_horde_v2/shots/r43_videos")
+        #expect(link("see shots/ for them", at: "shots") == "shots/")
+        for (line, marker) in [("w/ that", "w/"), ("and/or that", "and"), ("on 11/14/2026 we", "14"), ("yes/no here", "yes")] {
+            #expect(link(line, at: marker) == nil)
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-folders-\(UUID().uuidString)")
+        let folder = root.appendingPathComponent("game/repel_horde_v2/shots/r43_videos")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let fromTab = Store.resolveFileLinkExact("repel_horde_v2/shots/r43_videos/.", relativeTo: [root.appendingPathComponent("game").path])
+        #expect(fromTab?.standardizedFileURL.path == folder.standardizedFileURL.path)
+        let transcript = root.appendingPathComponent("t.jsonl")
+        try #"{"text": "saved to \#(folder.path) for review"}"#.write(to: transcript, atomically: true, encoding: .utf8)
+        let found = Store.findInTranscript("repel_horde_v2/shots/r43_videos/", transcript: transcript)
+        #expect(found?.path == folder.standardizedFileURL.path)
+    }
+
     /// Spotlight's fallback: a walk finds files in hidden folders.
     @Test func walkingFindsFilesInHiddenFolders() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-walk-\(UUID().uuidString)")
@@ -189,6 +217,6 @@ struct AuditFixTests {
     }
 }
 
-private final class NullTerminalDelegate: TerminalDelegate {
+final class NullTerminalDelegate: TerminalDelegate {
     func send(source: Terminal, data: ArraySlice<UInt8>) {}
 }

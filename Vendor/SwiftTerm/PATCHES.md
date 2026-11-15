@@ -13,3 +13,10 @@ Vendored from SwiftTerm v1.20.0 (MIT, https://github.com/migueldeicaza/SwiftTerm
 8. **Bare file names are implicit links.** `Terminal.ghosttyImplicitLinkRegex` has a fourth branch for a file name with no folder and a familiar extension (`fig_hours.png`, `report.pdf`); AgentDE resolves it against the tab's folder and below. Tests are in AgentDE's `AuditFixTests`.
 
 To update: copy a new SwiftTerm release over `Sources/SwiftTerm`, then re-apply patches 2–5, 7 and 8.
+
+## 9. Relative folder paths are links
+
+`Terminal.swift`, `ghosttyImplicitLinkRegex`: `bareFolderPathBranch` makes a relative folder path a link when it has no
+dot (the relative-path branch needs one): one ending in `/` (`shots/`, `a/b/c/`), or three or more parts that start
+with a letter (`a/b/c`; dates like `11/14/2026` start with digits and stay plain). AgentDE opens a folder in a File
+Explorer tab.

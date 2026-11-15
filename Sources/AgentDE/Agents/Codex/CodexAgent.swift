@@ -17,5 +17,5 @@ struct CodexAgent: Agent {
 
     var actions: [AgentAction] { (definition.tools ?? []).compactMap(AgentAction.init) }
     func sessionScanner() -> SessionScanner? { CodexSessionScanner() }
-    var transcript: TranscriptKind? { .codex }
+    var transcript: TranscriptFormat? { CodexTranscript() }
 }

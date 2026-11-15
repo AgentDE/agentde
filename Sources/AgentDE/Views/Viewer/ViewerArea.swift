@@ -78,7 +78,11 @@ struct ViewerArea: View {
             if store.viewerFindTab == tab.id, ViewerKind.of(item).findable {
                 ViewerFindBar(tabID: tab.id)
             }
-            ViewerPane(tabID: tab.id, item: item, store: store)
+            if Store.isFolder(item) {
+                FileExplorerView(tab: tab, folder: item).id(item)
+            } else {
+                ViewerPane(tabID: tab.id, item: item, store: store)
+            }
         }
         .background(theme.sidebar.opacity(0.35))
     }

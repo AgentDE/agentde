@@ -7513,7 +7513,15 @@ open class Terminal {
         let bareFileNameBranch =
             #"(?<![\w\-.~\/$])[\w][\w\-]*(?:\.[\w\-]+)*\.(?i:png|jpe?g|gif|webp|svg|heic|pdf|html?|md|csv|tsv|json|jsonl|txt|log|ipynb|py|swift|ts|tsx|js|mjs|rs|go|rb|sh|ya?ml|toml|mp4|mov|webm|mp3|wav|pptx|docx|xlsx|key|diff|patch)(?![\w\-\/])"#
 
+        // AgentDE: a relative folder path without a dot, which the branches above need: one ending in a slash
+        // (`shots/`, `repel_horde_v2/shots/r43_videos/`; not a one-letter `w/`), or three or more parts that start with a letter
+        // (`repel_horde_v2/shots/r43_videos`; not dates like 11/14/2026).
+        let bareFolderPathBranch =
+            #"(?<![\w\-.~\/$])[A-Za-z_][\w\-]+(?:\/[A-Za-z_][\w\-]*)*\/(?![\w\-])"# + "|" +
+            #"(?<![\w\-.~\/$])[A-Za-z_][\w\-]*(?:\/[A-Za-z_][\w\-]*){2,}(?![\w\-\/.])"#
+
         let regex = schemeURLBranch + "|" + rootedOrRelativePathBranch + "|" + bareRelativePathBranch + "|" + bareFileNameBranch
+            + "|" + bareFolderPathBranch
         return try? NSRegularExpression(pattern: regex, options: [])
     }()
 

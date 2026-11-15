@@ -72,11 +72,23 @@ struct ViewerHistoryTests {
         #expect(ViewerHistory.distinct(alike) == ["https://example.com/p"])
     }
 
+    /// Each open counts; past the cap, the least opened go first.
+    @Test func viewerOpensAreCounted() {
+        var counts = ViewerOpens.counting("/a.md", in: [:])
+        counts = ViewerOpens.counting("/a.md", in: counts)
+        counts = ViewerOpens.counting("https://x.com/p", in: counts)
+        #expect(counts == ["/a.md": 2, "https://x.com/p": 1])
+        var full = Dictionary(uniqueKeysWithValues: (0..<ViewerOpens.limit).map { ("/f\($0)", 2) })
+        full = ViewerOpens.counting("/new", in: full)
+        #expect(full.count == ViewerOpens.limit && full["/new"] == nil)   // one open doesn't beat the others' two
+    }
+
     /// Web pages and files look different in the menu, local pages included.
     @Test func iconsTellPagesFromFiles() {
         #expect(ViewerHistory.symbol("https://example.com/report.html") == "globe")
         #expect(ViewerHistory.symbol("/Users/x/report.html") == "doc")
         #expect(ViewerHistory.symbol("/Users/x/notes.md") == "doc.text")
+        #expect(ViewerHistory.symbol(FileManager.default.temporaryDirectory.path) == "folder")   // a folder shown in the viewer
     }
 
     @Test func reopeningMovesAnItemToTheFrontAndTheListStaysShort() {

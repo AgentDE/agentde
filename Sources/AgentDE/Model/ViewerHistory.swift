@@ -22,7 +22,7 @@ enum ViewerHistory {
     /// The menu's icon: a globe for a web page, the file's kind for a file (a local page is a file here).
     static func symbol(_ item: String) -> String {
         if item.hasPrefix("http") { return "globe" }
-        let symbol = FileIcons.symbol(for: URL(fileURLWithPath: item), isDirectory: false)
+        let symbol = FileIcons.symbol(for: URL(fileURLWithPath: item), isDirectory: Store.isFolder(item))
         return symbol == "globe" ? "doc" : symbol
     }
 
@@ -46,5 +46,19 @@ enum ViewerHistory {
         guard let current, let index = history.firstIndex(of: current) else { return step > 0 ? history.first : nil }
         let target = index + step
         return history.indices.contains(target) ? history[target] : nil
+    }
+}
+
+/// How often each item was opened in a viewer.
+enum ViewerOpens {
+    static let limit = 1000
+
+    /// `counts` with `item` opened once more; over `limit`, the least opened (then alphabetically last) go.
+    static func counting(_ item: String, in counts: [String: Int]) -> [String: Int] {
+        var counts = counts
+        counts[item, default: 0] += 1
+        guard counts.count > limit else { return counts }
+        let keep = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(limit)
+        return Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0.value) })
     }
 }

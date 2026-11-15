@@ -14,7 +14,7 @@ struct ClaudeAgent: Agent {
 
     var namesSessions: Bool { true }
     func sessionScanner() -> SessionScanner? { ClaudeSessionScanner() }
-    var transcript: TranscriptKind? { .claude }
+    var transcript: TranscriptFormat? { ClaudeTranscript() }
     func lastReply(session: String, cwd: String) -> String? { TranscriptPeek.lastAssistantText(sessionId: session, cwd: cwd) }
     func liveBackgroundJob(session: String, store: Store) -> String? { store.liveBackgroundJobs[session] }
 

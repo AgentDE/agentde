@@ -15,6 +15,8 @@ private struct ExplorerSplit<Content: View>: View {
 
 struct FileExplorerView: View {
     let tab: TabModel
+    /// In the viewer above a chat: the folder it shows (Up and Open Here move the viewer). Nil: a File Explorer tab.
+    var folder: String? = nil
     @Environment(Store.self) private var store
     @Environment(\.theme) private var theme
     @FocusState private var filterFocused: Bool
@@ -26,13 +28,13 @@ struct FileExplorerView: View {
     }
 
     @ViewBuilder private func explorer(narrow: Bool) -> some View {
-        let model = store.terminals.explorer(for: tab)
+        let model = folder.map { store.terminals.viewerExplorer(for: tab.id, root: $0) } ?? store.terminals.explorer(for: tab)
         @Bindable var bindable = model
         ExplorerSplit(vertical: narrow) {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
                     let parent = model.root.deletingLastPathComponent()
-                    Button { store.explorerUp(tab.id) } label: { Image(systemName: "chevron.up").font(.system(size: 11, weight: .semibold)) }
+                    Button { goUp(from: model.root) } label: { Image(systemName: "chevron.up").font(.system(size: 11, weight: .semibold)) }
                         .buttonStyle(.plain)
                         .foregroundStyle(theme.muted)
                         .disabled(parent.path == model.root.path)
@@ -75,7 +77,7 @@ struct FileExplorerView: View {
                                             if row.node.isDirectory { model.toggle(row.node) }
                                             select(model, row.node.url)
                                         }
-                                        .contextMenu { FileMenu(url: row.node.url, root: model.root, tab: tab) }
+                                        .contextMenu { FileMenu(url: row.node.url, root: model.root, tab: tab, inViewer: folder != nil) }
                                 }
                             } else {
                                 ForEach(model.filtered, id: \.self) { path in
@@ -85,7 +87,7 @@ struct FileExplorerView: View {
                                         .id(url.path)
                                         .onTapGesture(count: 2) { open(url) }
                                         .onTapGesture { treeFocused = true; select(model, url) }
-                                        .contextMenu { FileMenu(url: url, root: model.root, tab: tab) }
+                                        .contextMenu { FileMenu(url: url, root: model.root, tab: tab, inViewer: folder != nil) }
                                 }
                                 if model.filtered.isEmpty {
                                     Text("No files match").font(.system(size: 12)).foregroundStyle(theme.muted).padding(12)
@@ -119,7 +121,15 @@ struct FileExplorerView: View {
 
     private func select(_ model: FileExplorerModel, _ url: URL) {
         model.selection = url
-        store.setExplorerSelection(tab.id, url.path)
+        if folder == nil { store.setExplorerSelection(tab.id, url.path) }
+    }
+
+    private func goUp(from root: URL) {
+        if folder != nil {
+            store.openInViewer(root.deletingLastPathComponent().path, tab: tab.id)
+        } else {
+            store.explorerUp(tab.id)
+        }
     }
 
     /// Moves the selection through whatever list is showing: the tree, or filter results.
@@ -197,11 +207,14 @@ struct FileMenu: View {
     let url: URL
     let root: URL
     let tab: TabModel
+    var inViewer = false
     @Environment(Store.self) private var store
 
     var body: some View {
         if url.hasDirectoryPath || (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
-            Button("Open Here") { store.explorerOpen(tab.id, folder: url.path) }
+            Button("Open Here") {
+                if inViewer { store.openInViewer(url.path, tab: tab.id) } else { store.explorerOpen(tab.id, folder: url.path) }
+            }
         }
         Button("Open") { NSWorkspace.shared.open(url) }
         Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
