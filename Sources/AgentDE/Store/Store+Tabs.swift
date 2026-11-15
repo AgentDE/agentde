@@ -192,21 +192,6 @@ extension Store {
     }
 
 
-    // MARK: Browser
-
-    func toggleBrowser(_ id: UUID? = nil) {
-        guard let id = id ?? activeTab?.id, let (g, t) = locate(id) else { return }
-        let showing = groups[g].tabs[t].showBrowser ?? false
-        groups[g].tabs[t].showBrowser = !showing
-        scheduleSave()
-    }
-
-    func setBrowserURL(_ id: UUID, _ url: String) {
-        guard let (g, t) = locate(id), groups[g].tabs[t].browserURL != url else { return }
-        groups[g].tabs[t].browserURL = url
-        scheduleSave()
-    }
-
     /// The side panel on Changes, for the active tab (⇧⌘D).
     func showChanges() {
         guard let tab = activeTab, tab.kind != .files, tab.kind != .command, let (g, t) = locate(tab.id) else {
@@ -218,30 +203,15 @@ extension Store {
         scheduleSave()
     }
 
-    func openInEditor() {
+    /// The active tab's folder (or the group's) in a Finder window (⇧⌘O).
+    func openInFinder() {
         guard let dir = activeTab?.cwd ?? selectedGroup?.dir else { return }
-        openInCursor(dir)
-    }
-
-    func openInCursor(_ path: String) {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        task.arguments = ["-a", "Cursor", path]
-        try? task.run()
+        NSWorkspace.shared.open(URL(fileURLWithPath: dir, isDirectory: true))
     }
 
     func setExplorerSelection(_ id: UUID, _ path: String) {
         guard let (g, t) = locate(id), groups[g].tabs[t].explorerSelection != path else { return }
         groups[g].tabs[t].explorerSelection = path
-        scheduleSave()
-    }
-
-    /// Shows a local file (e.g. an HTML report) in the tab's browser pane.
-    func openInBrowserPane(_ id: UUID, _ url: URL) {
-        guard let (g, t) = locate(id) else { return }
-        groups[g].tabs[t].browserURL = url.absoluteString
-        groups[g].tabs[t].showBrowser = true
-        terminals.browsers.webView(for: id).loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
         scheduleSave()
     }
 

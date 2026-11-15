@@ -133,21 +133,8 @@ struct TabPane: View {
         }
     }
 
-    /// The tab's terminal (or File Explorer), with the browser pane above it when that's open.
+    /// The tab's terminal, or File Explorer.
     @ViewBuilder private var terminalStack: some View {
-        if tab.showBrowser ?? false {
-            VSplitView {
-                BrowserPane(tab: tab, store: store)
-                    .id(tab.id)
-                    .frame(minHeight: 120, maxHeight: .infinity)
-                terminal.frame(minHeight: 120, maxHeight: .infinity)
-            }
-        } else {
-            terminal
-        }
-    }
-
-    @ViewBuilder private var terminal: some View {
         if tab.kind == .files {
             FileExplorerView(tab: tab).id(tab.id)
         } else {

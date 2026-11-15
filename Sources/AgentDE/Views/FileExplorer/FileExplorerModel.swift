@@ -1,7 +1,7 @@
 import AppKit
 
 /// A File Explorer tab: a lazily loaded folder tree with a Quick Look preview, and a filter that finds
-/// any file in the repo by name. Read-only on purpose; editing belongs in Cursor or with Claude.
+/// any file in the repo by name. Read-only on purpose; editing belongs in your editor or with the agent.
 @Observable
 final class FileExplorerModel {
     final class Node: Identifiable {

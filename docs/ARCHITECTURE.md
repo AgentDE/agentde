@@ -8,7 +8,6 @@ AgentDE.app (one process)
 ├── Store (@Observable)      groups, tabs, settings, live per-tab runtime state; the extensions' host
 ├── extensions               AgentDEExtension instances, in extensions.json order, then JSON plugins
 ├── TerminalRegistry         tab id → TerminalSession (SwiftTerm view ↔ agentde-pty holder)
-│   └── BrowserRegistry      tab id → WKWebView
 ├── AgentMonitor             1 Hz poll of ~/.claude/sessions → tab states
 └── ~/.config/agentde/state.json
 ```
@@ -75,7 +74,7 @@ The core is a library so that the app's `main` can live in a package that also s
 | `Search/` | `SessionSearchIndex.swift` | `TranscriptIndex` (incremental index of conversational text) and `SearchMatch`. Foundation-only, so it can be tested on its own |
 | | `SessionSearch.swift`, `SessionSearchPanel.swift` | ⌘⇧F: the search model (snapshot, background scan, streamed results), jumping to hits, in-tab find, and the panel |
 | `Views/` | `RootView.swift`, `HeaderBar.swift`, `TabStrip.swift`, `WorkArea.swift`, `StatusBar.swift` | The window's layout, top to bottom; `RootView` adds extensions' window overlays, `WorkArea` the side panel (`SidePanel.swift`: the switcher; `SidePanelTabs.swift`: Files and Changes); `SplitArea.swift` draws a group's split layout (`Model/PaneLayout.swift`, a tree of tabs and splits saved on `GroupModel.layout`; changed by `Store+Layout`) |
-| | `Sidebar.swift`, `Palette.swift`, `SettingsView.swift`, `Browser.swift`, `PullRequestChip.swift` | Sidebar (with an extension's footer), ⌘K, Settings (with an Extensions tab, and an Icon tab when the build has more than one icon), browser pane, PR chip |
+| | `Sidebar.swift`, `Palette.swift`, `SettingsView.swift`, `PullRequestChip.swift` | Sidebar (with an extension's footer), ⌘K, Settings (with an Extensions tab, and an Icon tab when the build has more than one icon), browser pane, PR chip |
 | | `Viewer/` | The viewer above a tab's chat: `ViewerArea` (header with extensions' accessories, and the find bar ⌘F opens when the viewer has focus: `Store.findInTab` decides between it and the terminal), `ViewerPane`, and `ViewerHost`/`ViewerRegistry`, which own each tab's web, PDF, image, AVKit player, text and Quick Look views, reload files when they change (not Quick Look: it aborts the app when its file changes mid-load, so only ↻ refreshes it), and search them (`ViewerHost.find`: WebKit's find, PDFKit's, or a text search) |
 | | `FileExplorer/` | The File Explorer tab: `FileExplorerModel` (lazy tree, `git ls-files -z` filter), its views, the Quick Look preview, and the Markdown preview (`MarkdownRenderer`, `MarkdownView`) |
 | | `Components.swift` | Status dot (Core Animation), sparkle burst, icon button, rename field, app logo (a theme's `logo`, else the app icon) |
@@ -110,7 +109,7 @@ The host side (`Store+Extensions.swift`) stores per-tab values in `TabModel.exte
 
 **Tabs outlive the app.** A tab's shell doesn't run under AgentDE. `TerminalSession` connects a SwiftTerm `TerminalView` to an `agentde-pty` holder: a small C program, one per tab, that owns the pseudo-terminal and the shell. Quitting, updating or crashing the app only drops the connection, and the next launch reconnects. See "Terminal holders" below.
 
-**Terminal views outlive SwiftUI.** SwiftUI rebuilds views freely, but a terminal must keep its process and scrollback. Each tab gets one `TerminalSession`, owned by `TerminalRegistry` and keyed by tab id. `TerminalPane` is a thin `NSViewRepresentable` that reparents the session's view into whatever container SwiftUI currently shows. That container (`TerminalContainer`) sets the terminal's frame to its own bounds on every layout and whenever the terminal's frame changes, rather than relying on autoresizing, which only adds size changes to a frame that may already be wrong; a terminal taller than its pane reported rows that hung under the status bar. Switching tabs or groups never recreates a terminal. Browser panes work the same way through `BrowserRegistry`.
+**Terminal views outlive SwiftUI.** SwiftUI rebuilds views freely, but a terminal must keep its process and scrollback. Each tab gets one `TerminalSession`, owned by `TerminalRegistry` and keyed by tab id. `TerminalPane` is a thin `NSViewRepresentable` that reparents the session's view into whatever container SwiftUI currently shows. That container (`TerminalContainer`) sets the terminal's frame to its own bounds on every layout and whenever the terminal's frame changes, rather than relying on autoresizing, which only adds size changes to a frame that may already be wrong; a terminal taller than its pane reported rows that hung under the status bar. Switching tabs or groups never recreates a terminal. When a layout change (a split, the viewer) replaces the container, SwiftUI's order of making, updating and removing containers doesn't matter: the newest container showing a tab holds its terminal, an older one can't take it back, and a container leaving the window hands the terminal to another still showing that tab (`TerminalContainer.show`, `viewDidMoveToWindow`; `TerminalHandoffTests`).
 
 **Lazy start.** At launch, `Store.reattachRunningTabs` connects every tab whose holder is still running, so their status shows at once. Before that, `Store.adoptLegacyDrawers` turns a shell drawer saved by an older version into an ordinary shell tab beside its owner when its shell is still running (same id, so it reattaches to the same holder), and drops drawers with nothing running. Holders with no matching tab are only logged, never killed: the state file may be the thing that's wrong. Any other tab's shell launches in `startIfNeeded` the first time its view is attached; until then the tab is "sleeping" (`Store.isSleeping`) and shows `lastAgentName` (saved whenever the registry reports a name), else the name from the recent-sessions scan. Restoring 20 tabs spawns nothing until you look at them. That matters because each Claude Code process takes far more memory than AgentDE itself.
 
@@ -178,7 +177,7 @@ Terminal titles are kept out of observed state except for shell tabs, which publ
 - **Ids:** session and job ids pass through `SafeID` (UUIDs, short hex) before they reach any shell command. Invalid ones count as absent.
 - **Typing into terminals:** `typeIntoTerminal` strips control characters, and only an explicit trailing return submits. Fix with Claude types only into a confirmed idle agent, and rechecks right before typing.
 - **Ending processes:** `TerminalSession.terminate` sends SIGHUP to the shell and all its descendants (`ProcessTree`), like closing a terminal window, then SIGKILL to survivors after 3 s. SwiftTerm's own `terminate()` sends SIGTERM, which interactive zsh ignores, so it isn't used. The heartbeat logs any shell this app started that no tab owns.
-- **Closing:** tabs leave through `Store.dispose`, which tells extensions (`tabClosing`) and ends the terminal, browser and runtime state. Anything that runs a modal alert looks its tab or group up again afterwards.
+- **Closing:** tabs leave through `Store.dispose`, which tells extensions (`tabClosing`) and ends the terminal and runtime state. Anything that runs a modal alert looks its tab or group up again afterwards.
 - **Agent tracking:** an agent's presence (`agentPresent`) is tracked separately from its name. It counts as gone only after 3 missed polls.
 - **Background jobs:** receipts are written atomically (`.tmp` plus `mv`) and consumed only by the instance that owns the tab, after the job id validates and the state is saved.
 - **Background-session tabs:** a job seen while a background launch is pending in its folder is retried for up to 90 s, then opened if no tab claimed it.
@@ -234,7 +233,6 @@ Terminal titles are kept out of observed state except for shell tabs, which publ
       "forkOnStart": "optional, start with --fork-session",
       "lastAgentName": "optional, shown while the tab sleeps",
       "explorerSelection": "optional, File Explorer tabs",
-      "browserURL": "optional", "showBrowser": false,
       "viewerItem": "optional file path or link", "viewerHeight": 0, "viewerExpanded": false, "viewerRaw": false,
       "panelWidth": 0, "panelHidden": false,
       "extensionData": { "<extension id>.<key>": "value" },

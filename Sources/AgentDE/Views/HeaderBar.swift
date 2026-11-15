@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The bar above the tabs: group name, folder, branch and PR, and the browser, diff and Cursor buttons.
+/// The bar above the tabs: group name, folder, branch and PR, and a button to open the folder in Finder.
 struct HeaderBar: View {
     @Environment(Store.self) private var store
     @Environment(\.theme) private var theme
@@ -35,10 +35,7 @@ struct HeaderBar: View {
                 }
             }
             Spacer(minLength: 12)
-            let activeTab = store.activeTab
-            IconButton(symbol: "globe", help: "Browser above tab (⌘⇧B)",
-                       active: activeTab?.showBrowser ?? false) { store.toggleBrowser() }
-            IconButton(symbol: "arrow.up.forward.app", help: "Open folder in Cursor (⌘⇧O)") { store.openInEditor() }
+            IconButton(symbol: "folder", help: "Open the folder in Finder (⌘⇧O)") { store.openInFinder() }
         }
         .padding(.leading, 16)
         .padding(.trailing, 12)

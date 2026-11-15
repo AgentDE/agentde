@@ -15,8 +15,6 @@ struct TabModel: Identifiable, Codable, Equatable {
     var lastActiveAt: Date?
     /// Agent tabs: which `AgentDefinition` they run.
     var agentID: String?
-    var browserURL: String?
-    var showBrowser: Bool?
     /// Background Claude session (job id) this tab attaches to, e.g. one created by `/fork`.
     var attachJobId: String?
     /// Start by forking `claudeSessionId` (`--fork-session`) instead of resuming it. Cleared once the fork has its own id.

@@ -195,10 +195,9 @@ struct FileMenu: View {
 
     var body: some View {
         Button("Open") { NSWorkspace.shared.open(url) }
-        Button("Open in Cursor") { store.openInCursor(url.path) }
         Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
         if url.pathExtension.lowercased() == "html" || url.pathExtension.lowercased() == "htm" {
-            Button("Open in browser pane") { store.openInBrowserPane(tab.id, url) }
+            Button("Show in Viewer") { store.openInViewer(url.path, tab: tab.id) }
         }
         Divider()
         Button("Copy path") { copy(url.path) }
@@ -243,9 +242,6 @@ private struct FilePreview: View {
                     Spacer()
                     LabeledButton(title: "Open", symbol: "arrow.up.right.square", help: "Open in its default app") {
                         NSWorkspace.shared.open(url)
-                    }
-                    LabeledButton(title: "Cursor", symbol: "chevron.left.forwardslash.chevron.right", help: "Open in Cursor") {
-                        store.openInCursor(url.path)
                     }
                     LabeledButton(title: "Finder", symbol: "folder", help: "Reveal in Finder") {
                         NSWorkspace.shared.activateFileViewerSelecting([url])

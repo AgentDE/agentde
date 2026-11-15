@@ -318,7 +318,6 @@ struct TabMenu: View {
                 Button(tool.label) { store.runTool(tool, in: tab.id) }.disabled(!store.toolEnabled(tool, in: tab))
             }
         }
-        Button((tab.showBrowser ?? false) ? "Hide Browser" : "Show Browser Above") { store.toggleBrowser(tab.id) }
         Divider()
         // Named by what happens to the agent: closing an agent tab stops it (the conversation is kept).
         Button([.claude, .codex, .agent].contains(tab.kind) ? "Close & Stop Agent" : "Close Tab") { store.closeTab(tab.id) }

@@ -86,8 +86,6 @@ The **viewer** shows Markdown as a document, local HTML, PDFs, images, video and
 
 **Paths:** relative paths are found in the tab's folder, then the group's, and a `:line:col` suffix is fine. Punctuation right after a path is ignored. A bare file name with a common extension (`fig_hours.png`, `report.pdf`) is a link too. A partial path relative to some other folder (`tmp/rail/handoff.html`) is found in the tab's agent transcript, which has the full path of files the agent wrote or read. A path written from a subfolder, or a bare file name, is otherwise found with a Spotlight search of the tab's and group's folders, or, when Spotlight has nothing (it skips hidden folders like `.claude`), by looking through them; if several match, the most recently changed opens. AgentDE sets `FORCE_HYPERLINK=1`, so Claude Code prints its paths as proper links.
 
-**Browser above a tab.** ⌘⇧B adds a small browser pane above the active tab. The address bar accepts `5173` or `:5173` for `http://localhost:5173`, a path like `~/report.html`, or any URL. Each tab remembers its last URL.
-
 **Side panel.** Beside a tab's chat, with a tab for each thing it shows: **Workstream** (from the Workstreams extension), **Files** (the tab folder's tree; click a file to see it in the viewer) and **Changes** (the repository's uncommitted changes with lines added and removed, then the last 30 commits; click one to see its diff in the viewer). Changes is read-only: committing and pushing are your agent's job. It refreshes when the agent's status changes, or with ↻. Layout → Side Panel (⌥⌘I) hides or shows it for the tab; it shows by default when an extension adds a tab to it.
 
 **Side by side.** Drag a tab (from the tab strip, the sidebar or a pane's header) onto the chat: the edge nearest the pointer lights up, and dropping shows the tab there, left, right, above or below. Or right-click a tab → Show on the Right / Show Below, or Layout → Split Right (⌘D) / Split Down (⌥⌘D), which bring in the tab you used most recently that isn't showing. Dragging a pane's header onto another pane moves it. Split again to make more panes, tmux style, and drag a divider to resize. The active pane has the group's color on top; the tab strip and side panel act on it. Click a pane or press ⌥⌘← / ⌥⌘→ to move between panes. Choosing a tab that isn't showing puts it in the active pane. A pane's ✕ (⌥⌘W) takes it out of the split; the tab stays open. Layout → Unsplit goes back to one tab. Each group keeps its own layout.
@@ -133,8 +131,8 @@ A **JSON plugin** is a folder in `~/.config/agentde/plugins/` with a `plugin.jso
 
 - **Tree:** folders load as you open them. Dotfiles show. Generated folders like `.git`, `node_modules`, `__pycache__` and `.venv` are hidden; the eye button shows them. ↑↓ move, → and ← open and close folders, Return opens a file in its default app.
 - **Find a file:** type in the box at the top to search the whole folder by path. In a git repo it uses `git ls-files`, so it respects `.gitignore`. Every word must appear; matches in the file name rank first.
-- **Preview:** the right side shows the selected file with Quick Look. Buttons open it in the default app or Cursor, or reveal it in Finder.
-- **Right-click a file:** open it, open it in Cursor, reveal it in Finder, show an HTML file in the tab's browser pane, copy its full or relative path, or **Send Path to Agent**, which types the path into the group's most recently used agent tab (Claude, Codex or another), relative to that agent's folder when the file is inside it, without pressing Return, and switches to it.
+- **Preview:** the right side shows the selected file with Quick Look. Buttons open it in the default app or reveal it in Finder.
+- **Right-click a file:** open it, reveal it in Finder, show an HTML file in the tab's viewer, copy its full or relative path, or **Send Path to Agent**, which types the path into the group's most recently used agent tab (Claude, Codex or another), relative to that agent's folder when the file is inside it, without pressing Return, and switches to it.
 
 The selected file is remembered across relaunches.
 
@@ -243,7 +241,7 @@ PR info comes from `gh pr view` (the GitHub CLI, logged in), at most once a minu
 | After a reboot | Holders are gone; Claude tabs resume their session with `claude --resume <id>` |
 | Tabs with nothing running | Start lazily, the first time you view them; until then they show a moon icon and the session's last name |
 
-Quitting saves groups, tabs, colors, names, browser URLs and settings. Closing a tab is the way to end what runs in it.
+Quitting saves groups, tabs, colors, names and settings. Closing a tab is the way to end what runs in it.
 
 ### Background mode
 
@@ -276,10 +274,9 @@ Background sessions inherit your startup command's environment, but Claude's bac
 | ⌥⌘← / ⌥⌘→ | Previous / next pane |
 | ⌥⌘W | Take the active pane out of the split |
 | ⌃⌘1–3 | Show the side panel on its first, second or third tab (Workstream, Files, Changes) |
-| ⌘⇧B | Browser above the tab |
 | ⌘[, ⌘] | Viewer: back and forward through what it showed (⌘[ reopens a closed viewer) |
 | ⌘⇧D | Side panel on Changes |
-| ⌘⇧O | Open the tab's folder in Cursor |
+| ⌘⇧O | Open the tab's folder in Finder |
 | ⌘⇧N | New group |
 | ⌘0 | Show or hide the sidebar |
 | ⌘=, ⌘- | Bigger or smaller terminal text |

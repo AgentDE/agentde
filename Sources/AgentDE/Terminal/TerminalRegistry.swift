@@ -1,12 +1,11 @@
 import AppKit
 
-/// Owns every tab's terminal session, browser and viewer, keyed by tab id.
+/// Owns every tab's terminal session and viewer, keyed by tab id.
 final class TerminalRegistry {
     weak var store: Store?
     private var sessions: [UUID: TerminalSession] = [:]
     /// Closed tabs whose terminal was still starting, kept until they've ended what they started.
     private var retiring: [UUID: TerminalSession] = [:]
-    let browsers = BrowserRegistry()
     let viewers = ViewerRegistry()
     private var explorers: [UUID: FileExplorerModel] = [:]
 
@@ -51,12 +50,11 @@ final class TerminalRegistry {
             session.view.removeFromSuperview()
         }
         sessions[id] = nil
-        browsers.remove(id)
         viewers.remove(id)
         explorers[id] = nil
     }
 
-    /// Ends a tab's shell (like closing it) but keeps the tab's browser, viewer and explorer, and puts a new,
+    /// Ends a tab's shell (like closing it) but keeps the tab's viewer and explorer, and puts a new,
     /// held terminal session in its place. It starts only once `held` is cleared, after the old holder is gone,
     /// so it can't reconnect to the dying one.
     func replaceTerminal(_ id: UUID) -> TerminalSession {

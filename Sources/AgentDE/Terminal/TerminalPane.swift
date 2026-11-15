@@ -18,10 +18,6 @@ struct TerminalPane: NSViewRepresentable {
         attach(to: container)
     }
 
-    static func dismantleNSView(_ container: NSView, coordinator: ()) {
-        (container as? TerminalContainer)?.releaseOwnership()
-    }
-
     private func attach(to container: NSView) {
         // SwiftUI can update a pane once more after its tab is closed. Starting it then would bring the
         // closed tab's holder back (and re-attach its background agent), so a tab no longer in the store gets nothing.
@@ -33,15 +29,7 @@ struct TerminalPane: NSViewRepresentable {
         let view = session.view
         // A reused container may still hold another tab's terminal, which would cover this one.
         for other in container.subviews where other !== view { other.removeFromSuperview() }
-        // The newest pane showing a tab owns its terminal. One SwiftUI is replacing (the single tab's pane as a
-        // split appears, say) can update once more before it goes; taking the terminal then would leave the new
-        // pane blank.
-        guard let owned = container as? TerminalContainer, owned.claim(tab.id) else { return }
-        if view.superview !== container {
-            view.removeFromSuperview()
-            view.autoresizingMask = []
-            container.addSubview(view)   // TerminalContainer sizes it
-        }
+        guard let owned = container as? TerminalContainer, owned.show(tab.id, terminal: view) else { return }
         session.startIfNeeded(tab)
         if store.activeTab?.id == tab.id, !store.paletteOpen, store.renamingTabID == nil, store.renamingGroupID == nil {
             DispatchQueue.main.async {
@@ -59,36 +47,62 @@ struct TerminalPane: NSViewRepresentable {
 /// Autoresizing alone only adds size changes to whatever frame the view had, so a frame set at the wrong moment
 /// (say, as the viewer opened and the terminal moved into a new pane) stayed wrong: the terminal reported more
 /// rows than showed, and the shell's bottom lines (Claude's input box) ran under the status bar.
+///
+/// It also keeps a tab's terminal on screen whatever order SwiftUI builds and tears down panes in (a split, the
+/// viewer opening): the newest container showing a tab holds its terminal, one being replaced can't take it back,
+/// and a container leaving the window hands the terminal to another one still showing that tab.
 final class TerminalContainer: NSView {
     private var observers: [NSObjectProtocol] = []
-    private var tabID: UUID?
-    private let serial: Int
+    private(set) var tabID: UUID?
+    private weak var terminal: NSView?
+    /// Larger for the container that started showing its tab more recently.
+    private var serial = 0
     private static var nextSerial = 0
-    /// Which container holds each tab's terminal.
-    private static var owners: [UUID: Int] = [:]
+    private static let live = NSHashTable<TerminalContainer>.weakObjects()
 
     override init(frame: NSRect = .zero) {
-        Self.nextSerial += 1
-        serial = Self.nextSerial
         super.init(frame: frame)
+        Self.live.add(self)
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
 
-    /// Whether this container may hold `tab`'s terminal: it becomes the owner when it starts showing the tab
-    /// (it's the newest) or when nothing owns it.
-    func claim(_ tab: UUID) -> Bool {
+    /// Shows `tab`'s terminal here unless a newer container on screen has it. Returns whether it's here.
+    @discardableResult func show(_ tab: UUID, terminal: NSView) -> Bool {
         if tabID != tab {
-            if let old = tabID, Self.owners[old] == serial { Self.owners[old] = nil }
             tabID = tab
-            Self.owners[tab] = serial
+            Self.nextSerial += 1
+            serial = Self.nextSerial
         }
-        if Self.owners[tab] == nil { Self.owners[tab] = serial }
-        return Self.owners[tab] == serial
+        self.terminal = terminal
+        if terminal.superview !== self, mayTake(terminal) { adopt(terminal) }
+        return terminal.superview === self
     }
 
-    func releaseOwnership() {
-        if let tabID, Self.owners[tabID] == serial { Self.owners[tabID] = nil }
+    /// From a container on screen, only a newer one takes it; otherwise (held off screen, or not at all) anyone.
+    private func mayTake(_ terminal: NSView) -> Bool {
+        guard let holder = terminal.superview as? TerminalContainer, holder !== self, holder.window != nil else { return true }
+        return serial > holder.serial
+    }
+
+    private func adopt(_ terminal: NSView) {
+        terminal.removeFromSuperview()
+        terminal.autoresizingMask = []
+        addSubview(terminal)   // sized by `fit`
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard let terminal, let tabID else { return }
+        if window != nil {
+            if terminal.superview !== self, mayTake(terminal) { adopt(terminal) }
+        } else if terminal.superview === self {
+            // Leaving with the terminal: the newest other container still showing this tab gets it.
+            let heir = Self.live.allObjects
+                .filter { $0 !== self && $0.tabID == tabID && $0.window != nil }
+                .max { $0.serial < $1.serial }
+            heir?.adopt(terminal)
+        }
     }
 
     override func layout() {
