@@ -10,7 +10,7 @@ struct ClaudeAgent: Agent {
     let definition = AgentDefinition(id: ClaudeAgent.id, name: "Claude", command: "claude", tools: [
         .init(id: "rewind", label: "Rewind", symbol: "arrow.uturn.backward", keys: "\u{1B}\u{1B}", help: "Go back to an earlier message (⌥⌘Z)"),
         .init(id: "compact", label: "Compact", symbol: "rectangle.compress.vertical", command: "/compact", help: "Compact the conversation (/compact)"),
-    ], prompt: "❯", stash: "\u{13}", symbol: "sparkle")
+    ], prompt: "❯", stash: "\u{13}", symbol: AgentIcons.claude)
 
     var namesSessions: Bool { true }
     func sessionScanner() -> SessionScanner? { ClaudeSessionScanner() }

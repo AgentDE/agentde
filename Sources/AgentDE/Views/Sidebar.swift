@@ -227,13 +227,7 @@ private struct SidebarTabRow: View {
         let state = store.state(tab.id)
         HStack(spacing: 7) {
             ZStack {
-                if state == .none {
-                    Image(systemName: store.isSleeping(tab) ? "moon.zzz" : tab.kind.symbol)
-                        .font(.system(size: 10))
-                        .foregroundStyle(theme.muted)
-                } else {
-                    StatusDot(state: state, animated: store.animations, size: 6)
-                }
+                StatusIcon(name: store.icon(for: tab), state: state, idle: NSColor(theme.muted), animated: store.animations, size: 12)
                 if state != .needsYou, store.wantsAttention(tab) { AskRing(size: 13) }
             }
             .frame(width: 14)
@@ -431,7 +425,7 @@ private struct RecentSessionPill: View {
         let live = store.liveSessionIds.contains(session.sessionId)
         Button { store.resumeRecentSession(session, in: groupID) } label: {
             HStack(spacing: 5) {
-                Image(systemName: live ? "dot.radiowaves.left.and.right"
+                Image.icon(live ? "dot.radiowaves.left.and.right"
                       : pinned ? "pin.fill"
                       : session.agent == ClaudeAgent.id ? "arrow.counterclockwise" : Agents.byID(session.agent)?.symbol ?? "arrow.counterclockwise")
                     .font(.system(size: 8.5, weight: .semibold))

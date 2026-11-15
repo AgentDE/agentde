@@ -187,12 +187,14 @@ A fork is an independent tab: renaming or closing either one doesn't affect the 
 
 AgentDE reads Claude Code's registry of running sessions (`~/.claude/sessions/`) once a second and matches each session to its tab. Nothing needs configuring.
 
-| Dot | Means |
+A tab's icon (Claude's is a small pixel critter) takes the color of its agent's state:
+
+| Icon | Means |
 |---|---|
 | Green, breathing | Claude is working on a turn |
 | Amber, pulsing | Claude is waiting on you, for example a permission prompt |
 | Blue | A turn finished while you were looking elsewhere; clears when you view the tab |
-| Icon only | Idle, or no agent running |
+| Gray (the group's color when selected) | Idle, or no agent running |
 
 - **Sparkle:** a turn of 45 seconds or more ends with a small sparkle (adjustable in Settings → Fun).
 - **Termi** (Settings → Fun, off by default): the mascot hangs out in the free end of the tab strip. Amber and hopping while an agent waits on you, green and typing while agents work, blue and wandering otherwise, and asleep after two quiet minutes. Clicks pass through him.
@@ -246,7 +248,7 @@ Quitting saves groups, tabs, colors, names and settings. Closing a tab is the wa
 
 ### Sending a tab to the background
 
-Right-click a tab → **Send to Background** to take it out of the tab strip (and any split) while it keeps running: its agent works on, its status dot and notifications keep coming, and the sidebar lists it under the group's **Background**. Click it there (or jump to it with ⌘J, a notification or ⇧⌘P) to bring it back, scrollback and all. It works for every tab, whatever agent or program runs in it. Closing a tab, by contrast, stops its agent; the conversation is kept, so you can resume it from Recent.
+Right-click a tab → **Send to Background** to take it out of the tab strip (and any split) while it keeps running: its agent works on, its status and notifications keep coming, and the sidebar lists it under the group's **Background**. Click it there (or jump to it with ⌘J, a notification or ⇧⌘P) to bring it back, scrollback and all. It works for every tab, whatever agent or program runs in it. Closing a tab, by contrast, stops its agent; the conversation is kept, so you can resume it from Recent.
 
 ## Keys
 
@@ -291,7 +293,7 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 |---|---|
 | Look | Light, dark or match system; theme (Claude warm, Graphite cool, Midnight, High contrast, plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); density; sidebar width |
 | Terminal | Font, size, scrollback (default 10,000 lines), startup command, ask for a name when starting a Claude or Codex tab (on by default; Claude's session takes it with `--name`, a Codex tab as its title), recent sessions (on/off, Codex too, how many days), what new tabs start (any agent, or a shell), `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
-| Fun | Animated status dots, the finish sparkle and how long a turn must run to earn one, Termi in the tab strip |
+| Fun | Animated status icons, the finish sparkle and how long a turn must run to earn one, Termi in the tab strip |
 | Agents | Notifications (needs you, done, sound), PR status (on/off, open in GitHub or Graphite) |
 | Extensions | Each loaded extension's own settings |
 | Icon | The Dock icon; shown only when the build ships more than one |
@@ -366,7 +368,7 @@ make run-test   # run a second copy with its own state and logs, leaving yours a
 make debug      # build a debug app
 make icons      # redraw the AgentDE icon
 make register-workstream   # show (YES=1 applies) the workstream MCP server and hooks for Claude Code and Codex
-make register-agent-status # show (YES=1 applies) Codex hooks for Codex tabs' status dot
+make register-agent-status # show (YES=1 applies) Codex hooks for Codex tabs' status
 ```
 
 The version is in `VERSION`; the build number is the commit count.

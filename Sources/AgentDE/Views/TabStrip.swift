@@ -90,13 +90,9 @@ private struct TabChip: View {
         let compact = store.settings.density == .compact
         HStack(spacing: 6) {
             ZStack {
-                if state == .none {
-                    Image(systemName: store.isSleeping(tab) ? "moon.zzz" : tab.kind.symbol)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(active ? color : theme.muted)
-                } else {
-                    StatusDot(state: state, animated: store.animations)
-                }
+                // The icon carries the state: green working, amber needs you, blue done.
+                StatusIcon(name: store.icon(for: tab), state: state, idle: NSColor(active ? color : theme.muted),
+                           animated: store.animations, size: 12)
                 if state != .needsYou, store.wantsAttention(tab) { AskRing(size: 14) }
                 SparkleBurst(token: store.runtime[tab.id]?.sparkleToken ?? 0, firedAt: store.runtime[tab.id]?.sparkleAt, color: color)
             }
@@ -165,7 +161,7 @@ struct NewTabItems: View {
 
     var body: some View {
         ForEach(Agents.all.map { Choice(id: $0.id, name: $0.name, symbol: $0.symbol) }) { agent in
-            Button { store.startTab(agent: agent.id, in: groupID) } label: { Label(agent.name, systemImage: agent.symbol) }
+            Button { store.startTab(agent: agent.id, in: groupID) } label: { Label { Text(agent.name) } icon: { Image.icon(agent.symbol) } }
         }
         Button { store.newTab(kind: .shell, in: groupID) } label: { Label("Shell", systemImage: TabKind.shell.symbol) }
         Button { store.newTab(kind: .files, in: groupID) } label: { Label("File Explorer", systemImage: TabKind.files.symbol) }

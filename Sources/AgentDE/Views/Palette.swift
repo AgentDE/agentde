@@ -27,7 +27,7 @@ struct CommandPalette: View {
                 let asking = store.wantsAttention(tab)
                 let waiting = store.runtime[tab.id]?.waitingFor.map { " · " + Notifier.describeWaiting($0) } ?? (asking ? " · a question for you" : "")
                 all.append(PaletteItem(id: tab.id.uuidString, title: store.title(for: tab), subtitle: group.name + waiting,
-                                       symbol: tab.kind.symbol, color: color, state: store.state(tab.id), asking: asking) {
+                                       symbol: store.icon(for: tab), color: color, state: store.state(tab.id), asking: asking) {
                     store.selectTab(tab.id)
                 })
             }
@@ -139,9 +139,9 @@ struct CommandPalette: View {
         HStack(spacing: 10) {
             ZStack {
                 if item.state != .none {
-                    StatusDot(state: item.state, animated: store.animations)
+                    StatusIcon(name: item.symbol, state: item.state, idle: NSColor(theme.secondary), animated: store.animations, size: 13)
                 } else {
-                    Image(systemName: item.symbol).font(.system(size: 12)).foregroundStyle(item.color ?? theme.secondary)
+                    Image.icon(item.symbol).font(.system(size: 12)).foregroundStyle(item.color ?? theme.secondary)
                 }
             }
             .frame(width: 18)

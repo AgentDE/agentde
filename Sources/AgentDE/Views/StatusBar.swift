@@ -9,7 +9,7 @@ struct StatusBar: View {
         HStack(spacing: 14) {
             if let tab = store.activeTab {
                 let state = store.state(tab.id)
-                Label(tab.kind.label, systemImage: tab.kind.symbol)
+                Label { Text(store.agent(of: tab)?.name ?? tab.kind.label) } icon: { Image.icon(store.icon(for: tab), size: 12) }
                 switch state {
                 case .working: Text("working").foregroundStyle(Theme.working)
                 case .needsYou:

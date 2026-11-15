@@ -167,6 +167,11 @@ extension Store {
         DebugLog.log("closed tab \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)", "tab")
     }
 
+    /// The tab's icon: a moon while it sleeps, else its agent's (Claude's critter, say) or its kind's.
+    func icon(for tab: TabModel) -> String {
+        isSleeping(tab) ? "moon.zzz" : agent(of: tab)?.symbol ?? tab.kind.symbol
+    }
+
     /// A tab that hasn't launched its process yet in this run but will resume its agent's session when opened.
     func isSleeping(_ tab: TabModel) -> Bool {
         runtime[tab.id]?.started != true && (tab.agentSession != nil || tab.attachJobId != nil)

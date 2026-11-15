@@ -78,7 +78,7 @@ private struct PaneView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 7) {
-                StatusDot(state: store.state(tab.id), animated: store.animations, size: 6)
+                StatusIcon(name: store.icon(for: tab), state: store.state(tab.id), idle: NSColor(theme.muted), animated: store.animations, size: 11)
                 Text(store.title(for: tab))
                     .font(.system(size: 11.5, weight: active ? .semibold : .regular))
                     .foregroundStyle(active ? theme.text : theme.muted)
