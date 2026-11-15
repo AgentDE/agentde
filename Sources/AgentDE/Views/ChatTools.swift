@@ -43,8 +43,19 @@ extension Store {
             if tool.id == "fork" { forkTab(id) } else if tool.id == "restart" { restartClaude(id) }
             return
         }
-        // With a draft in the agent's input, keys would erase it and a command would be appended to it.
-        guard !draftInInput(tab) else { return }
+        // With a draft in the agent's input, keys would erase it and a command would be appended to it. An agent
+        // that can stash it (Claude's Ctrl+S) sets it aside for a command and brings it back after.
+        if hasDraft(tab) {
+            guard tool.command != nil, let stash = agent(of: tab)?.stash, !stash.isEmpty else {
+                noteDraft(tab)
+                return
+            }
+            terminals.sendKey(id, Array(stash.utf8))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                _ = self?.terminals.typeIntoTerminal(id, (tool.command ?? "") + "\r")
+            }
+            return
+        }
         if let command = tool.command {
             _ = terminals.typeIntoTerminal(id, command + "\r")
             return
@@ -57,17 +68,20 @@ extension Store {
         }
     }
 
-    /// Whether the agent's input line (found by its `prompt`) holds text you typed; if so, beeps and says why
-    /// nothing happened.
-    private func draftInInput(_ tab: TabModel) -> Bool {
-        guard let agent = agent(of: tab), let prompt = agent.prompt?.first,
-              terminals.session(tab.id)?.inputHasDraft(prompt: prompt) == true else { return false }
+    /// Whether the agent's input line (found by its `prompt`) holds text you typed.
+    private func hasDraft(_ tab: TabModel) -> Bool {
+        guard let prompt = agent(of: tab)?.prompt?.first else { return false }
+        return terminals.session(tab.id)?.inputHasDraft(prompt: prompt) == true
+    }
+
+    /// Beeps and says why a tool did nothing: the draft in the way.
+    private func noteDraft(_ tab: TabModel) {
+        guard let agent = agent(of: tab) else { return }
         NSSound.beep()
         activityNote = "\(agent.name)'s input has a draft: send or clear it first"
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
             if self?.activityNote?.hasSuffix("send or clear it first") == true { self?.activityNote = nil }
         }
-        return true
     }
 }
 

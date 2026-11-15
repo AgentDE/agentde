@@ -42,12 +42,18 @@ public struct AgentDefinition: Codable, Equatable {
     /// The character that starts the agent's input line (`❯` for Claude Code). With it, tools leave a draft
     /// you're typing alone instead of erasing it or appending to it.
     public var prompt: String?
-    public init(id: String, name: String, command: String, tools: [AgentTool]? = nil, prompt: String? = nil) {
+    /// Keys that set a draft aside, for agents that bring it back by themselves after the next command runs
+    /// (Claude Code's Ctrl+S). With it, a command tool runs even when you've typed something; without it, the
+    /// tool waits for an empty input.
+    public var stash: String?
+    public init(id: String, name: String, command: String, tools: [AgentTool]? = nil, prompt: String? = nil,
+                stash: String? = nil) {
         self.id = id
         self.name = name
         self.command = command
         self.tools = tools
         self.prompt = prompt
+        self.stash = stash
     }
 }
 

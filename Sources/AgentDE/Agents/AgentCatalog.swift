@@ -22,7 +22,7 @@ enum AgentCatalog {
         .init(id: "compact", label: "Compact", symbol: "rectangle.compress.vertical", command: "/compact", help: "Compact the conversation (/compact)"),
         .init(id: "fork", label: "Fork", symbol: "arrow.triangle.branch", help: "Fork into a new tab (⌥⌘F)"),
         .init(id: "restart", label: "Restart", symbol: "arrow.clockwise", help: "Restart Claude, keeping the session"),
-    ], prompt: "❯")
+    ], prompt: "❯", stash: "\u{13}")
 
     static let codex = AgentDefinition(id: "codex", name: "Codex", command: "codex", tools: [
         .init(id: "rewind", label: "Rewind", symbol: "arrow.uturn.backward", keys: "\u{1B}\u{1B}", help: "Edit an earlier message (⌥⌘Z)"),

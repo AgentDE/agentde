@@ -8,7 +8,7 @@ struct AgentToolTests {
     /// A plugin's agent with tools loads; one without stays loadable.
     @Test func pluginAgentsDecodeTools() throws {
         let json = """
-        [{ "id": "hello.gemini", "name": "Gemini", "command": "gemini", "prompt": ">",
+        [{ "id": "hello.gemini", "name": "Gemini", "command": "gemini", "prompt": ">", "stash": "\\u0013",
            "tools": [{ "id": "compact", "label": "Compact", "command": "/compress" },
                      { "id": "rewind", "label": "Rewind", "keys": "\\u001b\\u001b" }] },
          { "id": "plain", "name": "Plain", "command": "plain" }]
@@ -16,7 +16,7 @@ struct AgentToolTests {
         let agents = try JSONDecoder().decode([AgentDefinition].self, from: Data(json.utf8))
         #expect(agents[0].tools?.map(\.id) == ["compact", "rewind"])
         #expect(agents[0].tools?[1].keys == "\u{1B}\u{1B}")
-        #expect(agents[0].prompt == ">")
+        #expect(agents[0].prompt == ">" && agents[0].stash == "\u{13}")
         #expect(agents[1].tools == nil)
     }
 
@@ -34,5 +34,7 @@ struct AgentToolTests {
         #expect(AgentCatalog.claude.tools?.map(\.id) == ["rewind", "compact", "fork", "restart"])
         #expect(AgentCatalog.codex.tools?.map(\.id) == ["rewind", "compact"])
         #expect(AgentCatalog.codex.tools?.allSatisfy { $0.keys != nil || $0.command != nil } == true)
+        // Claude stashes a draft for a command (Ctrl+S, checked against Claude Code 2.1.325); Codex waits for an empty input.
+        #expect(AgentCatalog.claude.stash == "\u{13}" && AgentCatalog.codex.stash == nil)
     }
 }
