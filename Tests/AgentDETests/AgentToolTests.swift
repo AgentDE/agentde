@@ -37,4 +37,19 @@ struct AgentToolTests {
         // Claude stashes a draft for a command (Ctrl+S, checked against Claude Code 2.1.325); Codex waits for an empty input.
         #expect(AgentCatalog.claude.stash == "\u{13}" && AgentCatalog.codex.stash == nil)
     }
+
+    /// Claude says "busy" while it only waits on workflows: a quiet screen without a spinner means idle; a recent
+    /// redraw, or a spinner on screen, means a turn is running.
+    @Test func quietClaudeWithoutSpinnerIsIdle() {
+        let now = Date()
+        let waiting = ["* Waiting for 3 dynamic workflows to finish", "* Baked for 59s · done 11:12 AM", "❯ "]
+        let running = ["✽ Zesting… (4m 43s · ↓ 15.4k tokens)", "❯ "]
+        #expect(ClaudeActivity.looksIdle(screen: { waiting }, lastOutput: now.addingTimeInterval(-30), now: now))
+        #expect(!ClaudeActivity.looksIdle(screen: { waiting }, lastOutput: now.addingTimeInterval(-1), now: now))
+        #expect(!ClaudeActivity.looksIdle(screen: { running }, lastOutput: now.addingTimeInterval(-30), now: now))
+        #expect(!ClaudeActivity.looksIdle(screen: { waiting }, lastOutput: nil, now: now))   // nothing seen yet
+        #expect(ClaudeActivity.isSpinner("✻ Cogitating… (12s · ↓ 1.2k tokens · esc to interrupt)"))
+        #expect(ClaudeActivity.isSpinner("· Pondering… (1h 2m 3s)"))
+        #expect(!ClaudeActivity.isSpinner("* Churned for 17m 48s · done 11:27 AM"))
+    }
 }

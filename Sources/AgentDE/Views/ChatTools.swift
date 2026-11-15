@@ -21,11 +21,14 @@ extension Store {
         runTool(tool, in: tab.id)
     }
 
-    /// Keys and commands need the agent waiting for you. A built-in tool with neither is the app's own
+    /// Commands need the agent there; keys also need it idle. A built-in tool with neither is the app's own
     /// action: Fork and Restart, for Claude.
     func toolEnabled(_ tool: AgentTool, in tab: TabModel) -> Bool {
         guard tool.keys == nil, tool.command == nil else {
-            return state(tab.id) != .working && (tab.kind == .agent || runtime[tab.id]?.agentPresent == true)
+            let present = tab.kind == .agent || runtime[tab.id]?.agentPresent == true
+            // A command is typed as you'd type it, so it works whenever the agent is there (Claude takes input while
+            // it works, or waits on workflows). Keys can interrupt a running turn (Esc does), so they wait for idle.
+            return present && (tool.keys == nil || state(tab.id) != .working)
         }
         switch tool.id {
         case "fork": return tab.claudeSessionId != nil
@@ -186,6 +189,24 @@ struct LoadingCover: View {
     }
 }
 
+/// Claude Code reports "busy" while it waits on background work (dynamic workflows, say) with its prompt open
+/// and nothing running. A turn that's really running shows a spinner that redraws every second,
+/// `✽ Zesting… (4m 43s · ↓ 15.4k tokens)`; when output has been quiet and no spinner is on screen, Claude is idle
+/// whatever the registry says. (A finished turn reads `Baked for 59s · done`, which isn't a spinner.)
+enum ClaudeActivity {
+    /// The screen is read only once output has been quiet that long.
+    static func looksIdle(screen: () -> [String], lastOutput: Date?, now: Date = Date(), quiet: TimeInterval = 5) -> Bool {
+        guard let lastOutput, now.timeIntervalSince(lastOutput) >= quiet else { return false }
+        return !screen().contains(where: isSpinner)
+    }
+
+    /// A word ending in "…", then the elapsed time in parentheses; or the older "esc to interrupt" hint.
+    static func isSpinner(_ line: String) -> Bool {
+        line.range(of: #"…\s*\((\d+h\s*)?(\d+m\s*)?\d+s\b"#, options: .regularExpression) != nil
+            || line.localizedCaseInsensitiveContains("esc to interrupt")
+    }
+}
+
 /// Reading an agent's input line from the screen: the bottom-most row that starts with its prompt (`❯` for
 /// Claude Code). What follows is either a suggestion, drawn dim ("Try …"), or text you typed.
 enum AgentInput {
@@ -207,6 +228,14 @@ enum AgentInput {
 extension TerminalSession {
     /// Whether the agent's input line (on screen now) holds a typed draft; nil when it can't tell.
     func inputHasDraft(prompt: Character) -> Bool? { AgentInput.hasDraft(in: view.getTerminal(), prompt: prompt) }
+
+    /// The screen's text, row by row.
+    func screenText() -> [String] {
+        let terminal = view.getTerminal()
+        return (0..<terminal.rows).map { row in
+            String((0..<terminal.cols).compactMap { col in terminal.getCharData(col: col, row: row).map { terminal.getCharacter(for: $0) } })
+        }
+    }
 }
 
 extension AgentInput {

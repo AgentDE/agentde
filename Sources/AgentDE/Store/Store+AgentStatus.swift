@@ -48,7 +48,13 @@ extension Store {
                 rt.agentName = entry.name
                 rt.agentPid = entry.pid
                 rt.claudeVersion = entry.version
-                switch entry.status {
+                var status = entry.status
+                // "busy" while only waiting on background work: the tab's quiet screen says idle (`ClaudeActivity`).
+                if status == "busy", entry.fromHook != true, let session = terminals.session(tabID),
+                   ClaudeActivity.looksIdle(screen: { session.screenText() }, lastOutput: session.lastOutputAt) {
+                    status = "idle"
+                }
+                switch status {
                 // "shell" only means background shells are open (a dev server, a watcher): Claude itself is idle.
                 case "busy":
                     if rt.state != .working { rt.busySince = Date() }

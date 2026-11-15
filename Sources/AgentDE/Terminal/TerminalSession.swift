@@ -44,6 +44,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     private var reconnecting = false
     /// Bytes of output since the last heartbeat; a stuck agent spewing output shows up in the log.
     private var bytesSinceHeartbeat = 0
+    /// When live output last arrived (not a replay). A working Claude's spinner redraws every second.
+    private(set) var lastOutputAt: Date?
 
     init(tabID: UUID, store: Store) {
         self.tabID = tabID
@@ -170,6 +172,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             if terminating { endProcesses(); retire() }
         case .output(let bytes, let replay):
             bytesSinceHeartbeat += bytes.count
+            if !replay { lastOutputAt = Date() }
             replaying = replay
             view.feed(byteArray: bytes[...])
             replaying = false
