@@ -43,6 +43,8 @@ public protocol AgentDEExtension: AnyObject {
     func sidePanelTabs(for tab: TabInfo) -> [SidePanelTab]
     /// The area at the bottom of the sidebar. The first extension that returns one owns it.
     func sidebarFooter() -> AnyView?
+    /// Something small at the trailing end of the status bar (usage figures, say), in extension order.
+    func statusBarItem() -> AnyView?
     /// Something drawn over the whole window, passing clicks through (an animation, say).
     func windowOverlay() -> AnyView?
     /// Controls in the viewer's header for the item it shows (a file path or a link).
@@ -81,6 +83,7 @@ public extension AgentDEExtension {
     func wantsAttention(_ tab: TabInfo) -> Bool { false }
     func sidePanelTabs(for tab: TabInfo) -> [SidePanelTab] { [] }
     func sidebarFooter() -> AnyView? { nil }
+    func statusBarItem() -> AnyView? { nil }
     func windowOverlay() -> AnyView? { nil }
     func viewerAccessory(for tab: TabInfo, item: String) -> AnyView? { nil }
     func title(forLink link: String, in tab: TabInfo) -> String? { nil }
@@ -103,8 +106,6 @@ public protocol AgentDEHost: AnyObject {
     var activeTabID: UUID? { get }
     /// Agent sessions running anywhere on this Mac.
     var liveSessions: Set<String> { get }
-    /// Claude's 5-hour and 7-day limits used, 0–100, when known.
-    var rateLimitsUsed: (fiveHour: Double?, sevenDay: Double?) { get }
     /// Whether the user wants motion (Settings → Fun, and Reduce Motion).
     var animations: Bool { get }
     /// The extensions loaded, for working with each other (`extensions.compactMap { $0 as? SomeProtocol }`).

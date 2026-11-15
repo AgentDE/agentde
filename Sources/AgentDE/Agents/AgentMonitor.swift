@@ -64,7 +64,6 @@ final class AgentMonitor {
     private var timer: DispatchSourceTimer?
     private let queue = DispatchQueue(label: "agentde.agent-monitor", qos: .utility)
     private let registry = SessionRegistryReader(dir: URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".claude/sessions"))
-    private let rateLimitsURL = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".claude/state/rate_limits.json")
     private var ticks = 0
     /// Background jobs already decided on. Jobs present at launch count as decided, so only sessions that
     /// appear while AgentDE runs can become tabs. Undecided ones are retried for up to 90 seconds.
@@ -183,7 +182,6 @@ final class AgentMonitor {
                               uniquingKeysWith: { a, _ in a })
         ticks += 1
         if ticks % 60 == 0 { DispatchQueue.main.async { [weak self] in self?.heartbeat() } }
-        let limits = ticks % 15 == 1 ? readRateLimits() : nil
         // The installed Claude Code every 3 minutes (the target of ~/.local/bin/claude, else `claude --version`)
         // and recent sessions every 30 s, both on the scan queue.
         let wantInstalled = ticks % 180 == 1
@@ -230,7 +228,6 @@ final class AgentMonitor {
                 }
             }
             store.applyClaudeSessions(matches, jobs: jobs, trackedTabs: Set(shellPids.values))
-            if let limits, limits != store.rateLimits { store.rateLimits = limits }
             store.updateLiveSessions(liveIds)
             self?.refreshInputs(from: store)
         }
@@ -285,15 +282,5 @@ final class AgentMonitor {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
         guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
         return info.kp_eproc.e_ppid
-    }
-
-    private func readRateLimits() -> RateLimits? {
-        guard let data = try? Data(contentsOf: rateLimitsURL),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let limits = object["rate_limits"] as? [String: Any] else { return nil }
-        func pct(_ key: String) -> Double? {
-            ((limits[key] as? [String: Any])?["used_percentage"] as? NSNumber)?.doubleValue
-        }
-        return RateLimits(fiveHour: pct("five_hour"), sevenDay: pct("seven_day"))
     }
 }

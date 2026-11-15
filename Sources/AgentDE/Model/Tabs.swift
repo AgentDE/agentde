@@ -104,7 +104,3 @@ struct TabRuntime {
     var claudeVersion: String?
 }
 
-struct RateLimits: Equatable {
-    var fiveHour: Double?
-    var sevenDay: Double?
-}

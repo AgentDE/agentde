@@ -17,23 +17,22 @@ struct WorkArea: View {
                 WithTabStrip { EmptyGroupView() }
             }
         }
-        // The group's color line, on the tab strip's side, across the whole width (over the side panel too).
-        .overlay(alignment: store.settings.tabsPosition == .top ? .top : .bottom) {
+        // The group's color line, above the tab strip, across the whole width (over the side panel too).
+        .overlay(alignment: .top) {
             Rectangle().fill(store.selectedGroup.map { Color(nsColor: store.groupColor($0)) } ?? theme.border).frame(height: 2)
         }
     }
 }
 
-/// A column with the tab strip above (or below, per Settings) its content.
+/// A column with the tab strip above its content.
 struct WithTabStrip<Content: View>: View {
     @ViewBuilder let content: Content
     @Environment(Store.self) private var store
 
     var body: some View {
         VStack(spacing: 0) {
-            if store.settings.tabsPosition == .top { TabStrip() }
+            TabStrip()
             content
-            if store.settings.tabsPosition == .bottom { TabStrip() }
         }
     }
 }

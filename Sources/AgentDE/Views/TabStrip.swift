@@ -10,7 +10,6 @@ struct TabStrip: View {
     var body: some View {
         let group = store.selectedGroup
         let color = group.map { Color(nsColor: store.groupColor($0)) } ?? theme.border
-        let top = store.settings.tabsPosition == .top
         HStack(spacing: 0) {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -73,7 +72,7 @@ struct TabStrip: View {
             }
         }
         .frame(height: store.settings.density == .compact ? 34 : 40)
-        .overlay(alignment: top ? .bottom : .top) { Rectangle().fill(theme.border).frame(height: 0.5) }
+        .overlay(alignment: .bottom) { Rectangle().fill(theme.border).frame(height: 0.5) }
     }
 }
 

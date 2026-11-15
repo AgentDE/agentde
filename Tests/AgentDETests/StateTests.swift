@@ -10,7 +10,7 @@ struct SettingsTests {
         #expect(Theme.definition(settings.theme).id == "claude")   // unknown theme → the default
         #expect(settings.fontSize == 15)
         #expect(settings.sparkles == false)
-        #expect(settings.metalRenderer == false) // missing key → default
+        #expect(settings.animations == true) // missing key → default
     }
 
     @Test func garbageGivesDefaults() {

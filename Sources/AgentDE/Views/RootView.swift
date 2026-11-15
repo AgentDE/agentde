@@ -20,13 +20,7 @@ struct RootView: View {
             if store.sidebarVisible {
                 Sidebar()
                     .frame(width: store.settings.sidebarWidth)
-                    .background {
-                        if store.settings.translucentSidebar, theme.outline == nil {
-                            ZStack { VisualEffect(); theme.sidebar.opacity(0.55) }
-                        } else {
-                            theme.sidebar
-                        }
-                    }
+                    .background(theme.sidebar)
                     .overlay(alignment: .trailing) { Rectangle().fill(theme.border).frame(width: 0.5) }
                     .transition(.move(edge: .leading))
             }

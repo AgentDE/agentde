@@ -69,11 +69,6 @@ extension Store {
         }
         return true
     }
-
-    /// Claude's Agent View (`claude agents`) in a tab of its own.
-    func openAgentView() {
-        newTab(kind: .command, command: "claude agents", transient: true)
-    }
 }
 
 /// The tab's agent tools in the chat's top-right corner (Settings → Terminal turns them off). Faint icons at rest;

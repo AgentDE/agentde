@@ -97,7 +97,7 @@ An **extension** is a Swift package, built into the app, that adds features thro
 | Extension | Repo | Adds |
 |---|---|---|
 | Widgets | `agentde-widgets` | The sidebar widget spot and its menu, the Calendar widget, JSON plugins' widgets |
-| Workstreams | `agentde-workstreams` | The workstream panel beside each agent's chat, New → Workstream… (a git worktree per piece of work), the Usage widget; bundles the `workstream` MCP server from `workstream-mcp` |
+| Workstreams | `agentde-workstreams` | The workstream panel beside each agent's chat, New → Workstream… (a git worktree per piece of work), the Usage widget, Claude's 5-hour and 7-day limits in the status bar; bundles the `workstream` MCP server from `workstream-mcp` |
 | Linear | `agentde-linear` | Linear ticket lookups for workstreams, and the Linear widget |
 
 Each repo's README has its features and settings.
@@ -290,8 +290,8 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 
 | Tab | Options |
 |---|---|
-| Look | Light, dark or match system; theme (Claude warm, Graphite cool, Midnight, High contrast, plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); translucent sidebar; density; tabs on top or bottom; sidebar width |
-| Terminal | Font, size, GPU rendering (experimental, off by default), scrollback (default 10,000 lines), startup command, ask for a name when starting a Claude or Codex tab (on by default; Claude's session takes it with `--name`, a Codex tab as its title), recent sessions (on/off, Codex too, how many days), what kind of tab new tabs start as, `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
+| Look | Light, dark or match system; theme (Claude warm, Graphite cool, Midnight, High contrast, plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); density; sidebar width |
+| Terminal | Font, size, scrollback (default 10,000 lines), startup command, ask for a name when starting a Claude or Codex tab (on by default; Claude's session takes it with `--name`, a Codex tab as its title), recent sessions (on/off, Codex too, how many days), what kind of tab new tabs start as, `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
 | Fun | Animated status dots, the finish sparkle and how long a turn must run to earn one, Termi in the tab strip |
 | Agents | Notifications (needs you, done, sound), background mode, PR status (on/off, open in GitHub or Graphite) |
 | Extensions | Each loaded extension's own settings |
@@ -307,7 +307,6 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 | `~/.config/agentde/plugins/` | JSON plugins |
 | `~/Library/Logs/AgentDE/agentde.log` | Debug log; hang samples beside it |
 | `~/.claude/sessions/*.json` | Claude Code's live session registry, read-only |
-| `~/.claude/state/rate_limits.json` | Optional. If your status line script writes it, the status bar shows 5-hour and 7-day usage |
 
 A renamed build (see [Building](#building)) uses its own folder names in place of `agentde` and `AgentDE`.
 
@@ -321,7 +320,6 @@ Each tab's environment includes `TERM_PROGRAM=AgentDE` and `AGENTDE_TAB_ID=<uuid
 | A Claude tab says `claude: command not found` | Tabs run your login shell (`zsh -l`), so `claude` must be on the `PATH` your `.zprofile` or `.zshrc` sets |
 | Status dots never appear | Check that `~/.claude/sessions/` has a JSON file for the running session; older Claude Code versions don't write it |
 | Hard to see what's active | Settings → Look → High contrast: black and white with orange outlines on the active tab and group |
-| Slow or spinning while agents work | Keep **GPU rendering** off (Settings → Terminal) |
 | Tabs or groups missing after an update | Unreadable parts of the saved state are dropped one by one, and the original is kept as `state.json.unreadable-<time>`; the debug log says what was dropped |
 | `make` stops with "No package at …" or "Couldn't clone …" | An extension in `extensions.json` isn't beside this repo and couldn't be cloned: check its `repo` and your network, clone it yourself, or take it out of the file |
 | Starting fresh | Quit, delete `~/.config/agentde/state.json`, reopen |
@@ -329,7 +327,7 @@ Each tab's environment includes `TERM_PROGRAM=AgentDE` and `AGENTDE_TAB_ID=<uuid
 | Plain `swift build` or `swift test` fails with macro plugin errors (`@State`, `TestingMacros`) | Use `make` and `make test`: they set the SDK and the plugin path that the Command Line Tools need |
 | `make install` stops before installing | It runs the tests first, and a failing test stops it. `make test` shows which; `make` builds without testing |
 
-**Debug log.** Help → **Open Debug Log** opens `~/Library/Logs/AgentDE/agentde.log`: launches and quits, tabs starting and exiting, agent state changes, failed lookups, and a once-a-minute heartbeat with memory, CPU and any tab producing heavy output.
+**Debug log.** Help → **Show Debug Logs** shows `~/Library/Logs/AgentDE/agentde.log` in Finder: launches and quits, tabs starting and exiting, agent state changes, failed lookups, and a once-a-minute heartbeat with memory, CPU and any tab producing heavy output.
 
 **Beachballs.** A watchdog notes any time the main thread is unresponsive for 2 seconds or more and saves a 3-second stack sample (`hang-<time>.txt`, at most one every 5 minutes, newest 10 kept). Help → **Show Logs and Hang Samples in Finder** gets you there.
 

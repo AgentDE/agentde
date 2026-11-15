@@ -82,7 +82,6 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         if let group = store.groups.first(where: { $0.tabs.contains { $0.id == tabID } }) {
             view.caretColor = store.groupColor(group)
         }
-        try? view.setUseMetal(store.settings.metalRenderer)
     }
 
     static func isDark(_ settings: AgentDESettings) -> Bool {

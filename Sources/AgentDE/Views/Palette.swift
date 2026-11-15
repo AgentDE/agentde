@@ -48,7 +48,6 @@ struct CommandPalette: View {
             ("Search all sessions", "text.magnifyingglass", { store.searchOpen = true }),
             ("Find in this tab", "magnifyingglass", { if let id = store.activeTab?.id { store.terminals.find(id, .showFindInterface) } }),
             ("Fork Claude session into new tab", "arrow.triangle.branch", { store.forkTab() }),
-            ("Open Agent View (claude agents)", "person.3", { store.openAgentView() }),
             ("Rewind to an earlier message", "arrow.uturn.backward", { store.runTool("rewind") }),
             ("Compact the conversation", "rectangle.compress.vertical", { store.runTool("compact") }),
             ("Rename tab", "pencil", { if let id = store.activeTab?.id { store.renamingTabID = id } }),

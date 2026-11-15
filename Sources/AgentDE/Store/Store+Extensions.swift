@@ -28,7 +28,6 @@ extension Store: AgentDEHost {
 
     var activeTabID: UUID? { activeTab?.id }
     var liveSessions: Set<String> { liveSessionIds }
-    var rateLimitsUsed: (fiveHour: Double?, sevenDay: Double?) { (rateLimits.fiveHour, rateLimits.sevenDay) }
     var animations: Bool { settings.animations && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
 

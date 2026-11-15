@@ -16,7 +16,6 @@ final class Store {
     var saveError: String?
     var settings = AgentDESettings() { didSet { if settings != oldValue { settingsChanged(from: oldValue) } } }
     var runtime: [UUID: TabRuntime] = [:]
-    var rateLimits = RateLimits()
     /// Claude sessions active in the last `recentSessionDays`, newest first (filled by AgentMonitor).
     var recentSessions: [RecentSession] = []
     /// Sessions older than that, scanned when a group's Older list opens; nil until the first scan is in.
@@ -240,8 +239,7 @@ final class Store {
 
     private func settingsChanged(from old: AgentDESettings) {
         if old.fontName != settings.fontName || old.fontSize != settings.fontSize
-            || old.theme != settings.theme || old.appearance != settings.appearance
-            || old.metalRenderer != settings.metalRenderer {
+            || old.theme != settings.theme || old.appearance != settings.appearance {
             terminals.applyAppearance()
         }
         if old.appIcon != settings.appIcon { AppIcons.apply(settings.appIcon) }

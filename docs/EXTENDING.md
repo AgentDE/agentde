@@ -41,6 +41,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `wantsAttention(_:)` | Whether a tab gets a soft attention ring without its agent being stopped |
 | `sidePanelTabs(for:)` | Tabs in the side panel beside a terminal tab (`SidePanelTab`: id, title, SF Symbol, view). They come before the core's Files and Changes, in extension order |
 | `sidebarFooter()` | The area at the bottom of the sidebar; the first extension that returns one owns it |
+| `statusBarItem()` | Something small at the trailing end of the status bar (Workstreams shows Claude's 5-hour and 7-day limits used); every extension's, in order |
 | `windowOverlay()` | A view drawn over the whole window that passes clicks through |
 | `viewerAccessory(for:item:)` | Controls in the viewer's header for the file path or link it shows |
 | `title(forLink:in:)` | A better title for a link shown in the viewer |
@@ -62,7 +63,6 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 |---|---|
 | `allTabs`, `allGroups`, `tabInfo(_:)`, `activeTabID` | Tabs and groups, in sidebar order |
 | `liveSessions` | Agent sessions running anywhere on the Mac |
-| `rateLimitsUsed` | Claude's 5-hour and 7-day limits used, 0–100, when known |
 | `animations` | Whether the user wants motion (Settings → Fun, and Reduce Motion) |
 | `extensions` | The loaded extensions, for working with each other: `host.extensions.compactMap { $0 as? SomeProtocol }` |
 | `selectTab(_:focus:)` | Selects a tab |

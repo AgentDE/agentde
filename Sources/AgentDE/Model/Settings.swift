@@ -2,7 +2,6 @@ import Foundation
 
 enum Appearance: String, Codable, CaseIterable { case system, light, dark }
 enum Density: String, Codable, CaseIterable { case compact, comfortable }
-enum TabsPosition: String, Codable, CaseIterable { case top, bottom }
 
 struct AgentDESettings: Codable, Equatable {
     var appearance: Appearance = .system
@@ -13,15 +12,10 @@ struct AgentDESettings: Codable, Equatable {
     var fontName: String = "SF Mono"
     var fontSize: Double = 13
     var density: Density = .comfortable
-    var tabsPosition: TabsPosition = .top
     var animations: Bool = true
     var sparkles: Bool = true
     /// Termi, the mascot, hangs out in the tab strip's free space (`TermiStrip`).
     var termi: Bool = false
-    var translucentSidebar: Bool = true
-    /// SwiftTerm's Metal renderer. Off by default: it rebuilds the whole screen on every change, so a busy
-    /// Claude spinner keeps the main thread busy. The CoreGraphics renderer redraws only changed rows.
-    var metalRenderer: Bool = false
     var sidebarWidth: Double = 224
     var defaultTabKind: TabKind = .claude
     /// Show recently active Claude sessions under each group, one click to resume.

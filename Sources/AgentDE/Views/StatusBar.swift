@@ -64,14 +64,7 @@ struct StatusBar: View {
                 }
                 .buttonStyle(.plain)
             }
-            if let five = store.rateLimits.fiveHour {
-                Text("5h \(Int(five.rounded()))%")
-                    .foregroundStyle(five > 85 ? Theme.needsYou : theme.muted)
-            }
-            if let seven = store.rateLimits.sevenDay {
-                Text("7d \(Int(seven.rounded()))%")
-                    .foregroundStyle(seven > 85 ? Theme.needsYou : theme.muted)
-            }
+            ForEach(Array(store.extensions.compactMap { $0.statusBarItem() }.enumerated()), id: \.offset) { $0.element }
         }
         .font(.system(size: 11))
         .foregroundStyle(theme.muted)

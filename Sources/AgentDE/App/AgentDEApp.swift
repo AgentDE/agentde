@@ -9,7 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         AppIcons.apply(store.settings.appIcon)
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
-        DebugLog.log("launch \(version), pid \(getpid()), \(store.groups.count) groups, \(store.groups.reduce(0) { $0 + $1.tabs.count }) tabs, renderer=\(store.settings.metalRenderer ? "metal" : "coregraphics")")
+        DebugLog.log("launch \(version), pid \(getpid()), \(store.groups.count) groups, \(store.groups.reduce(0) { $0 + $1.tabs.count }) tabs")
         DebugLog.startWatchdog()
         ShellIntegration.install()
         OpenInViewer.install()
@@ -136,8 +136,7 @@ struct AgentDECommands: Commands {
                 .disabled(outdated == 0)
         }
         CommandGroup(replacing: .help) {
-            Button("Open Debug Log") { DebugLog.openLog() }
-            Button("Show Logs and Hang Samples in Finder") { DebugLog.revealFolder() }
+            Button("Show Debug Logs") { DebugLog.revealFolder() }
         }
         CommandMenu("Layout") {
             Button("Toggle Sidebar") { store.sidebarVisible.toggle() }.keyboardShortcut("0")

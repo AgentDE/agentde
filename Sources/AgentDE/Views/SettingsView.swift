@@ -26,14 +26,9 @@ struct SettingsView: View {
                         .tag(palette.id)
                     }
                 }
-                Toggle("Translucent sidebar", isOn: $store.settings.translucentSidebar)
                 Picker("Density", selection: $store.settings.density) {
                     Text("Comfortable").tag(Density.comfortable)
                     Text("Compact").tag(Density.compact)
-                }
-                Picker("Tabs", selection: $store.settings.tabsPosition) {
-                    Text("Top").tag(TabsPosition.top)
-                    Text("Bottom").tag(TabsPosition.bottom)
                 }
                 Slider(value: $store.settings.sidebarWidth, in: 180...320, step: 4) { Text("Sidebar width") }
             }
@@ -44,8 +39,6 @@ struct SettingsView: View {
                     ForEach(Theme.fontChoices, id: \.self) { Text($0).tag($0) }
                 }
                 Stepper("Size \(Int(store.settings.fontSize)) pt", value: $store.settings.fontSize, in: 9...24, step: 1)
-                Toggle("GPU rendering (Metal, experimental)", isOn: $store.settings.metalRenderer)
-                    .help("Uses much more CPU while agents are working, because it redraws the whole screen on every change.")
                 Stepper("Scrollback \(store.settings.scrollbackLines.formatted()) lines",
                         value: $store.settings.scrollbackLines, in: 1_000...100_000, step: 5_000)
                     .help("History each terminal keeps. Applies to tabs opened after the change. More lines use more memory.")

@@ -98,6 +98,7 @@ The core is a library so that the app's `main` can live in a package that also s
 | `backgroundSessionOpened(_:session:forkParent:)` | `Store.adoptBackgroundSession`, with the parent from `Store.forkParent(job:)` |
 | `sidePanelTabs(for:)` | `Store.sidePanelTabs`: every extension's tabs, then Files and Changes; `TabModel.panelTab` remembers the one showing. `Store.panelVisible`: `TabModel.panelHidden` when the user chose (Layout → Side Panel), else shown when an extension adds a tab |
 | `sidebarFooter()` | `Sidebar`: the first non-nil footer |
+| `statusBarItem()` | `StatusBar`: each extension's, at the trailing end |
 | `windowOverlay()` | `RootView`: every non-nil overlay, over the window |
 | `viewerAccessory(for:item:)`, `title(forLink:in:)` | `ViewerArea`'s header |
 | `newMenuItems(for:)` | A group's right-click New menu |
@@ -273,7 +274,6 @@ A workspace with its own app target skips step 1 by setting `APP_PACKAGE` (its f
 - Restored attach tabs re-run `claude attach <jobId>`. If that background session was removed in the meantime, the tab shows Claude's error and leaves you in the shell.
 - Renaming a tab doesn't rename the Claude session. AgentDE owns the PTY, so it could type `/rename` into an idle Claude.
 - One window. Groups are the unit of organization; multiple windows aren't supported.
-- The status bar's usage numbers depend on the user's statusline script writing `~/.claude/state/rate_limits.json`.
 - Extensions are compiled in; there's no loading of extensions at runtime.
 
 ## Ideas not yet built
