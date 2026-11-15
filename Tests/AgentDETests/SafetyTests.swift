@@ -24,24 +24,24 @@ struct AgentCommandTests {
     let session = "6e6ebd7e-d01c-4352-acfd-67b044cfc314"
 
     @Test func claudeTabResumesItsSession() {
-        var tab = TabModel(kind: .claude, cwd: "/tmp")
+        var tab = TabModel.agent("claude", cwd: "/tmp")
         #expect(TerminalSession.agentCommand(for: tab) == "claude")
-        tab.claudeSessionId = session
+        tab.agentSession = session
         #expect(TerminalSession.agentCommand(for: tab) == "claude --resume \(session)")
         tab.forkOnStart = true
         #expect(TerminalSession.agentCommand(for: tab) == "claude --resume \(session) --fork-session")
     }
 
     @Test func attachingWinsOverResuming() {
-        var tab = TabModel(kind: .claude, cwd: "/tmp")
-        tab.claudeSessionId = session
+        var tab = TabModel.agent("claude", cwd: "/tmp")
+        tab.agentSession = session
         tab.attachJobId = "6e6ebd7e"
         #expect(TerminalSession.agentCommand(for: tab) == "claude attach 6e6ebd7e")
     }
 
     @Test func invalidIdsNeverReachTheShell() {
         var tab = TabModel(kind: .shell, cwd: "/tmp")
-        tab.claudeSessionId = "$(touch /tmp/pwned)"
+        tab.agentSession = "$(touch /tmp/pwned)"
         tab.attachJobId = "zz; ls"
         #expect(TerminalSession.agentCommand(for: tab) == nil)
     }
@@ -73,7 +73,7 @@ struct BackgroundSessionTests {
     }
 
     @Test func opensBesideTheLastTabUsedInItsFolder() throws {
-        let old = TabModel(kind: .claude, cwd: "/w/b"), recent = TabModel(kind: .claude, cwd: "/w/b")
+        let old = TabModel.agent("claude", cwd: "/w/b"), recent = TabModel.agent("claude", cwd: "/w/b")
         let other = TabModel(kind: .shell, cwd: "/w/b/sub")
         let groups = [try group("a", dir: "/w/a", tabs: [TabModel(kind: .shell, cwd: "/w/a")]),
                       try group("b", dir: "/w/b", tabs: [old, other, recent])]

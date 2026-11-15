@@ -2,32 +2,47 @@ import AppKit
 
 /// Opening, closing, renaming and moving tabs; the browser pane; editor and diff actions.
 extension Store {
+    /// A new shell, File Explorer or command tab, after the selected one.
     @discardableResult
     func newTab(kind: TabKind, in groupID: UUID? = nil, command: String? = nil, transient: Bool = false,
-                sessionId: String? = nil, cwd: String? = nil, attachJobId: String? = nil) -> UUID? {
+                cwd: String? = nil) -> UUID? {
         guard let g = groups.firstIndex(where: { $0.id == (groupID ?? selectedGroupID) }) else { return nil }
         let cwd = cwd ?? (groupID == nil ? activeTab?.cwd : nil) ?? groups[g].dir
-        var tab = TabModel(kind: kind, cwd: cwd, command: command, transient: transient ? true : nil)
-        tab.claudeSessionId = sessionId
+        return insertTab(TabModel(kind: kind, cwd: cwd, command: command, transient: transient ? true : nil), in: g)
+    }
+
+    /// A new tab running agent `agentID`: resuming `session` when given, or attached to background job `attachJobId`.
+    @discardableResult
+    func newAgentTab(_ agentID: String, in groupID: UUID? = nil, session: String? = nil, cwd: String? = nil,
+                     attachJobId: String? = nil) -> UUID? {
+        guard let g = groups.firstIndex(where: { $0.id == (groupID ?? selectedGroupID) }) else { return nil }
+        var tab = TabModel.agent(agentID, cwd: cwd ?? (groupID == nil ? activeTab?.cwd : nil) ?? groups[g].dir, session: session)
         tab.attachJobId = attachJobId
-        DebugLog.log("new tab \(tab.id.uuidString.prefix(8)) kind=\(kind.rawValue) group=\(groups[g].name)"
-                     + (sessionId.map { " session=\($0.prefix(8))" } ?? "") + (attachJobId.map { " attach=\($0)" } ?? ""), "tab")
+        return insertTab(tab, in: g)
+    }
+
+    private func insertTab(_ tab: TabModel, in g: Int) -> UUID {
+        DebugLog.log("new tab \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)" + (tab.agentID.map { " agent=\($0)" } ?? "")
+                     + " group=\(groups[g].name)" + (tab.agentSession.map { " session=\($0.prefix(8))" } ?? "")
+                     + (tab.attachJobId.map { " attach=\($0)" } ?? ""), "tab")
         let insertAt = (groups[g].tabs.firstIndex { $0.id == groups[g].selectedTabID }).map { $0 + 1 } ?? groups[g].tabs.count
         groups[g].tabs.insert(tab, at: insertAt)
         selectTab(tab.id)
         return tab.id
     }
 
-    /// A new tab from a menu, key or button: Claude and Codex tabs ask for a name first when Settings → Terminal
-    /// says so (Return starts it; an empty name starts it unnamed; Cancel opens nothing).
+    /// A new agent tab from a menu, key or button: it asks for a name first when Settings → Terminal says so
+    /// (Return starts it; an empty name starts it unnamed; Cancel opens nothing). The name titles the tab, and an
+    /// agent that names its sessions (Claude's `--name`) gets it too.
     @discardableResult
-    func startTab(kind: TabKind, in groupID: UUID? = nil) -> UUID? {
+    func startTab(agent agentID: String, in groupID: UUID? = nil) -> UUID? {
+        guard let agent = Agents.byID(agentID) else { return nil }
         var name: String?
-        if settings.askSessionName, kind == .claude || kind == .codex {
+        if settings.askSessionName {
             let alert = NSAlert()
-            alert.messageText = "Name this \(kind.label) session"
-            alert.informativeText = kind == .claude
-                ? "It shows on the tab, in Recent and in Claude's resume list. Leave it empty to skip."
+            alert.messageText = "Name this \(agent.name) session"
+            alert.informativeText = agent.namesSessions
+                ? "It shows on the tab, in Recent and in \(agent.name)'s resume list. Leave it empty to skip."
                 : "It shows on the tab. Leave it empty to skip."
             let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
             field.placeholderString = "fix login"
@@ -38,22 +53,20 @@ extension Store {
             guard alert.runModal() == .alertFirstButtonReturn else { return nil }
             name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " ")
         }
-        guard let id = newTab(kind: kind, in: groupID) else { return nil }
+        guard let id = newAgentTab(agentID, in: groupID) else { return nil }
         if let name, !name.isEmpty, let (g, t) = locate(id) {
             groups[g].tabs[t].customTitle = name
-            if kind == .claude { groups[g].tabs[t].sessionName = name }
+            if agent.namesSessions { groups[g].tabs[t].sessionName = name }
             scheduleSave()
         }
         return id
     }
 
-    /// A new tab running an added agent (`AgentDefinition`).
+    /// What New tab starts by default (Settings → Terminal): an agent, or a shell.
     @discardableResult
-    func newAgentTab(_ agent: AgentDefinition, in groupID: UUID? = nil) -> UUID? {
-        guard let id = newTab(kind: .agent, in: groupID), let (g, t) = locate(id) else { return nil }
-        groups[g].tabs[t].agentID = agent.id
-        DebugLog.log("tab \(id.uuidString.prefix(8)) runs agent \(agent.id)", "tab")
-        return id
+    func startDefaultTab(in groupID: UUID? = nil) -> UUID? {
+        Agents.byID(settings.defaultAgent) != nil ? startTab(agent: settings.defaultAgent, in: groupID)
+            : newTab(kind: .shell, in: groupID)
     }
 
     /// Closes a tab, stopping its agent (a background session's too); the conversation is kept. To leave an
@@ -129,9 +142,9 @@ extension Store {
                 tab.attachJobId = original
                 DebugLog.log("reopen: background job \(original) is still running; attaching to it", "tab")
             } else {
-                tab.attachJobId = tab.claudeSessionId.flatMap { liveBackgroundJobs[$0] }.flatMap { stoppingJobs.contains($0) ? nil : $0 }
+                tab.attachJobId = tab.agentSession.flatMap { liveBackgroundJobs[$0] }.flatMap { stoppingJobs.contains($0) ? nil : $0 }
             }
-            if tab.kind == .shell, tab.claudeSessionId == nil { tab.lastAgentName = nil }
+            if tab.kind == .shell, tab.agentSession == nil { tab.lastAgentName = nil }
             groups[g].tabs.insert(tab, at: min(closed.index, groups[g].tabs.count))
             DebugLog.log("reopened closed tab as \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)", "tab")
             selectTab(tab.id)
@@ -154,9 +167,9 @@ extension Store {
         DebugLog.log("closed tab \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)", "tab")
     }
 
-    /// A tab that hasn't launched its process yet in this run but will resume a Claude session when opened.
+    /// A tab that hasn't launched its process yet in this run but will resume its agent's session when opened.
     func isSleeping(_ tab: TabModel) -> Bool {
-        runtime[tab.id]?.started != true && (tab.claudeSessionId != nil || tab.attachJobId != nil || tab.codexSessionId != nil)
+        runtime[tab.id]?.started != true && (tab.agentSession != nil || tab.attachJobId != nil)
     }
 
     func closeActiveTab() {

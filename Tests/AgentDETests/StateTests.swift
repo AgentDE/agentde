@@ -78,7 +78,7 @@ struct SavedStateTests {
         store.reopenClosedTab()
         let back = store.groups[0].tabs[0]
         #expect(store.groups[0].tabs.count == 2 && back.id != a)
-        #expect(back.claudeSessionId == session && back.customTitle == "fix login")
+        #expect(back.agentSession == session && back.customTitle == "fix login")
         #expect(store.closedTabs.isEmpty)
     }
 
@@ -108,7 +108,7 @@ struct SavedStateTests {
         rt.state = .working
         store.runtime[id] = rt
         let tab = try #require(store.tab(id))
-        let tools = try #require(AgentCatalog.claude.tools)
+        let tools = ClaudeAgent.shared.actions
         let compact = try #require(tools.first { $0.id == "compact" }), rewind = try #require(tools.first { $0.id == "rewind" })
         #expect(store.toolEnabled(compact, in: tab) && store.toolEnabled(rewind, in: tab))
         store.runtime[id]?.agentPresent = false
@@ -214,7 +214,7 @@ struct LegacyDrawerTests {
 
     @Test func aDrawerStillRunningBecomesAShellTabBesideItsOwner() {
         let drawer = UUID()
-        var owner = TabModel(kind: .claude, cwd: "/w/b")
+        var owner = TabModel.agent("claude", cwd: "/w/b")
         owner.companionID = drawer
         owner.showShell = true
         let other = TabModel(kind: .shell, cwd: "/w/b")
@@ -227,7 +227,7 @@ struct LegacyDrawerTests {
     }
 
     @Test func aDrawerWithNothingRunningIsDropped() {
-        var owner = TabModel(kind: .claude, cwd: "/tmp")
+        var owner = TabModel.agent("claude", cwd: "/tmp")
         owner.companionID = UUID()
         owner.showShell = false
         var groups = [group([owner])]
@@ -257,7 +257,7 @@ struct GroupOrderTests {
 struct ExtensionDataTests {
     @Test func olderTabsKeepTheirWorkstreamAndSections() throws {
         let saved = #"{"id": "6F9619FF-8B86-D011-B42D-00C04FC964FF", "kind": "claude", "cwd": "/tmp", "workstreamID": "WS-1", "panelSections": {"memory": false}}"#
-        var tab = try JSONDecoder().decode(TabModel.self, from: Data(saved.utf8))
+        var tab = try JSONDecoder().decode(TabModel.self, from: Data(saved.utf8).migratedTab())
         tab.adoptLegacyWorkstream()
         #expect(tab.extensionData?["workstreams.id"] == "WS-1")
         #expect(tab.extensionData?["workstreams.sections"] == #"{"memory":false}"#)

@@ -2,77 +2,70 @@ import SwiftTerm
 import SwiftUI
 
 extension Store {
-    /// The agent a tab runs: Claude and Codex are built in, the rest come from extensions and plugins.
-    func agent(of tab: TabModel) -> AgentDefinition? {
-        switch tab.kind {
-        case .claude: AgentCatalog.claude
-        case .codex: AgentCatalog.codex
-        case .agent: AgentCatalog.definition(tab.agentID)
-        default: nil
-        }
-    }
+    /// The agent a tab runs (`Agents.of`).
+    func agent(of tab: TabModel) -> (any Agent)? { Agents.of(tab) }
 
-    /// The active tab's tool with this id (`rewind`, `compact`), for the menu and palette; beeps when it has none.
-    func runTool(_ toolID: String) {
-        guard let tab = activeTab, let tool = agent(of: tab)?.tools?.first(where: { $0.id == toolID }) else {
+    /// The active tab's action with this id (`rewind`, `compact`, `fork`), for the menu bar and palette; beeps when
+    /// its agent has none.
+    func runTool(_ actionID: String) {
+        guard let tab = activeTab, let action = agent(of: tab)?.actions.first(where: { $0.id == actionID }) else {
             NSSound.beep()
             return
         }
-        runTool(tool, in: tab.id)
+        runTool(action, in: tab.id)
     }
 
-    /// Keys and commands need the agent there. A built-in tool with neither is the app's own
-    /// action: Fork and Restart, for Claude.
-    func toolEnabled(_ tool: AgentTool, in tab: TabModel) -> Bool {
-        guard tool.keys == nil, tool.command == nil else {
-            // A tool does what typing it would, so it works whenever the agent is there, mid-turn too (Rewind's
-            // Esc Esc then stops the turn first, as it would from the keyboard).
-            return tab.kind == .agent || runtime[tab.id]?.agentPresent == true
-        }
-        switch tool.id {
-        case "fork": return tab.claudeSessionId != nil
-        case "restart": return claudeRestartCheck(tab.id) == .eligible
-        default: return false
+    /// Keys and commands need the agent there (they do what typing them would, mid-turn too: Rewind's Esc Esc then
+    /// stops the turn first, as it would from the keyboard). Code decides for itself.
+    func toolEnabled(_ action: AgentAction, in tab: TabModel) -> Bool {
+        switch action.run {
+        // An agent that can't report itself (a plugin's without hooks) is taken to be there.
+        case .keys, .command: runtime[tab.id]?.agentPresent == true || agent(of: tab) is PluginAgent
+        case .code(let enabled, _): enabled(self, tab)
         }
     }
 
-    func runTool(_ tool: AgentTool, in id: UUID) {
-        guard let tab = tab(id), toolEnabled(tool, in: tab) else {
+    func runTool(_ action: AgentAction, in id: UUID) {
+        guard let tab = tab(id), toolEnabled(action, in: tab) else {
             NSSound.beep()
             return
         }
-        if tool.keys == nil, tool.command == nil {
-            if tool.id == "fork" { forkTab(id) } else if tool.id == "restart" { restartClaude(id) }
-            return
-        }
-        // With a draft in the agent's input, keys would erase it and a command would be appended to it. An agent
-        // that can stash it (Claude's Ctrl+S) sets it aside for a command and brings it back after.
-        if hasDraft(tab) {
-            guard tool.command != nil, let stash = agent(of: tab)?.stash, !stash.isEmpty else {
+        switch action.run {
+        case .code(_, let run):
+            run(self, id)
+        case .command(let command):
+            // A draft in the input would have the command appended to it. An agent that can stash it (Claude's
+            // Ctrl+S) sets it aside and brings it back after; otherwise the command waits.
+            if hasDraft(tab) {
+                guard let stash = agent(of: tab)?.definition.stash, !stash.isEmpty else {
+                    noteDraft(tab)
+                    return
+                }
+                terminals.sendKey(id, Array(stash.utf8))
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    _ = self?.terminals.typeIntoTerminal(id, command + "\r")
+                }
+                return
+            }
+            _ = terminals.typeIntoTerminal(id, command + "\r")
+        case .keys(let keys):
+            // Keys would erase a draft.
+            guard !hasDraft(tab) else {
                 noteDraft(tab)
                 return
             }
-            terminals.sendKey(id, Array(stash.utf8))
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                _ = self?.terminals.typeIntoTerminal(id, (tool.command ?? "") + "\r")
-            }
-            return
-        }
-        if let command = tool.command {
-            _ = terminals.typeIntoTerminal(id, command + "\r")
-            return
-        }
-        // A moment apart, so Esc Esc reads as two presses rather than one Alt+Esc.
-        for (index, key) in (tool.keys ?? "").enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12 * Double(index)) { [weak self] in
-                self?.terminals.sendKey(id, Array(String(key).utf8))
+            // A moment apart, so Esc Esc reads as two presses rather than one Alt+Esc.
+            for (index, key) in keys.enumerated() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12 * Double(index)) { [weak self] in
+                    self?.terminals.sendKey(id, Array(String(key).utf8))
+                }
             }
         }
     }
 
     /// Whether the agent's input line (found by its `prompt`) holds text you typed.
     private func hasDraft(_ tab: TabModel) -> Bool {
-        guard let prompt = agent(of: tab)?.prompt?.first else { return false }
+        guard let prompt = agent(of: tab)?.definition.prompt?.first else { return false }
         return terminals.session(tab.id)?.inputHasDraft(prompt: prompt) == true
     }
 
@@ -91,14 +84,14 @@ extension Store {
 /// with the pointer over them, a small capsule with labels.
 struct ChatTools: View {
     let tab: TabModel
-    let tools: [AgentTool]
+    let actions: [AgentAction]
     @Environment(Store.self) private var store
     @State private var hovering = false
 
     var body: some View {
-        ChatToolsRow(tools: tools.map { tool in
-            .init(symbol: tool.symbol ?? "command", label: tool.label, help: tool.help ?? tool.command ?? tool.label,
-                  enabled: store.toolEnabled(tool, in: tab)) { store.runTool(tool, in: tab.id) }
+        ChatToolsRow(tools: actions.map { action in
+            .init(symbol: action.symbol, label: action.label, help: action.help,
+                  enabled: store.toolEnabled(action, in: tab)) { store.runTool(action, in: tab.id) }
         }, expanded: hovering)
         .onHover { hovering = $0 }
         .onContinuousHover { phase in

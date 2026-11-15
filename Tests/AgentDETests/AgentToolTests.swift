@@ -31,11 +31,22 @@ struct AgentToolTests {
 
     /// Built-ins use the same definitions: rewind and compact for both, the app's own actions only for Claude.
     @Test func builtInTools() {
-        #expect(AgentCatalog.claude.tools?.map(\.id) == ["rewind", "compact", "fork", "restart"])
-        #expect(AgentCatalog.codex.tools?.map(\.id) == ["rewind", "compact"])
-        #expect(AgentCatalog.codex.tools?.allSatisfy { $0.keys != nil || $0.command != nil } == true)
+        #expect(ClaudeAgent.shared.actions.map(\.id) == ["rewind", "compact", "fork", "restart"])
+        #expect(CodexAgent.shared.actions.map(\.id) == ["rewind", "compact"])
+        // A plugin's tool without keys or a command does nothing, so it isn't a button.
+        let plugin = PluginAgent(definition: AgentDefinition(id: "p", name: "P", command: "p", tools: [
+            AgentTool(id: "fork", label: "Fork"), AgentTool(id: "go", label: "Go", command: "/go")]))
+        #expect(plugin.actions.map(\.id) == ["go"])
         // Claude stashes a draft for a command (Ctrl+S, checked against Claude Code 2.1.325); Codex waits for an empty input.
-        #expect(AgentCatalog.claude.stash == "\u{13}" && AgentCatalog.codex.stash == nil)
+        #expect(ClaudeAgent.shared.definition.stash == "\u{13}" && CodexAgent.shared.definition.stash == nil)
+        // What each agent brings beyond buttons: Claude and Codex read their own transcripts and Recent lists,
+        // only Claude names sessions; a plugin agent has none of these.
+        #expect(ClaudeAgent.shared.transcript == .claude && CodexAgent.shared.transcript == .codex && plugin.transcript == nil)
+        #expect(ClaudeAgent.shared.sessionScanner() != nil && CodexAgent.shared.sessionScanner() != nil && plugin.sessionScanner() == nil)
+        #expect(ClaudeAgent.shared.namesSessions && !CodexAgent.shared.namesSessions && !plugin.namesSessions)
+        #expect(Agents.byID("claude")?.id == "claude" && Agents.byID("codex")?.id == "codex" && Agents.byID("nope") == nil)
+        #expect(Agents.of(TabModel.agent("codex", cwd: "/tmp"))?.id == "codex")
+        #expect(Agents.of(TabModel(kind: .shell, cwd: "/tmp")) == nil)
     }
 
     /// Claude says "busy" while it only waits on workflows: a quiet screen without a spinner means idle; a recent

@@ -18,11 +18,11 @@ struct StatusBar: View {
                 case .doneUnseen: Text("done").foregroundStyle(Theme.doneUnseen)
                 case .none: EmptyView()
                 }
-                if let id = tab.claudeSessionId {
+                if let id = tab.agentSession {
                     Text(String(id.prefix(8)))
                         .font(.system(size: 11, design: .monospaced))
                         .textSelection(.enabled)
-                        .help("Claude session \(id)")
+                        .help("\(store.agent(of: tab)?.name ?? "Agent") session \(id)")
                 }
             }
             Spacer()

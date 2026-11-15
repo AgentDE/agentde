@@ -89,9 +89,9 @@ struct AgentDECommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("New Claude Tab") { store.startTab(kind: .claude) }.keyboardShortcut("t")
+            Button("New Claude Tab") { store.startTab(agent: ClaudeAgent.id) }.keyboardShortcut("t")
             Button("New Shell Tab") { store.newTab(kind: .shell) }.keyboardShortcut("t", modifiers: [.command, .shift])
-            Button("New Codex Tab") { store.startTab(kind: .codex) }.keyboardShortcut("t", modifiers: [.command, .option])
+            Button("New Codex Tab") { store.startTab(agent: CodexAgent.id) }.keyboardShortcut("t", modifiers: [.command, .option])
             Button("New File Explorer Tab") { store.newTab(kind: .files) }.keyboardShortcut("e", modifiers: [.command, .shift])
             Button("New Group…") { store.newGroup() }.keyboardShortcut("n", modifiers: [.command, .shift])
             Divider()
@@ -99,7 +99,7 @@ struct AgentDECommands: Commands {
             Button("Reopen Closed Tab") { store.reopenClosedTab() }.keyboardShortcut("t", modifiers: [.command, .option, .shift])
                 .disabled(store.closedTabs.isEmpty)
             Button("Rename Tab") { if let id = store.activeTab?.id { store.renamingTabID = id } }.keyboardShortcut("r")
-            Button("Fork Claude Session into New Tab") { store.forkTab() }.keyboardShortcut("f", modifiers: [.command, .option])
+            Button("Fork Session into New Tab") { store.runTool("fork") }.keyboardShortcut("f", modifiers: [.command, .option])
             Button("Rewind to an Earlier Message") { store.runTool("rewind") }.keyboardShortcut("z", modifiers: [.command, .option])
             Button("Compact Conversation") { store.runTool("compact") }
         }

@@ -1,14 +1,13 @@
 import Foundation
 
 public enum TabKind: String, Codable, CaseIterable {
-    case claude, codex, shell, command, files
-    /// Another terminal agent, from an extension or JSON plugin (`AgentDefinition`, named by `TabModel.agentID`).
+    case shell, command, files
+    /// A terminal agent, named by the tab's agent id: Claude and Codex (built in), or one an extension or JSON
+    /// plugin adds (`AgentDefinition`).
     case agent
 
     public var label: String {
         switch self {
-        case .claude: "Claude"
-        case .codex: "Codex"
         case .shell: "Shell"
         case .command: "Command"
         case .files: "Files"
@@ -18,8 +17,6 @@ public enum TabKind: String, Codable, CaseIterable {
 
     public var symbol: String {
         switch self {
-        case .claude: "sparkle"
-        case .codex: "chevron.left.forwardslash.chevron.right"
         case .shell: "terminal"
         case .command: "doc.text.magnifyingglass"
         case .files: "folder"
@@ -46,14 +43,17 @@ public struct AgentDefinition: Codable, Equatable {
     /// (Claude Code's Ctrl+S). With it, a command tool runs even when you've typed something; without it, the
     /// tool waits for an empty input.
     public var stash: String?
+    /// An SF Symbol for its tabs and menus (default `cpu`).
+    public var symbol: String?
     public init(id: String, name: String, command: String, tools: [AgentTool]? = nil, prompt: String? = nil,
-                stash: String? = nil) {
+                stash: String? = nil, symbol: String? = nil) {
         self.id = id
         self.name = name
         self.command = command
         self.tools = tools
         self.prompt = prompt
         self.stash = stash
+        self.symbol = symbol
     }
 }
 

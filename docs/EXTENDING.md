@@ -53,7 +53,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `ticketProviders` | Trackers whose tickets this extension can look up |
 | `agents` | Terminal agents (`AgentDefinition`: id, name, command, and optionally `tools` and `prompt`) added to the New menus beside Claude and Codex. Their tabs run the command; their status dot comes from their own hooks (see [Agent status](GUIDE.md#agent-status)); their `tools` (`AgentTool`) are buttons in the chat's corner, like Claude's Rewind and Compact |
 
-`TabInfo` is a tab as extensions see it: `id`, `groupID`, `kind` (`claude`, `codex`, `shell`, `command`, `files`), `folder`, `groupFolder`, `title`, `agentSession` (Claude's session id or Codex's thread id), `agentPresent`, `state` (`none`, `working`, `needsYou`, `doneUnseen`), `viewerItem`, and `isAgent`.
+`TabInfo` is a tab as extensions see it: `id`, `groupID`, `kind` (`agent`, `shell`, `command`, `files`), `agentID` (agent tabs: `claude`, `codex`, or an added agent's id), `folder`, `groupFolder`, `title`, `agentSession` (the agent's session: Claude's session id, Codex's thread id), `agentPresent`, `state` (`none`, `working`, `needsYou`, `doneUnseen`), `viewerItem`, and `isAgent`.
 
 ### The host
 
@@ -68,7 +68,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `selectTab(_:focus:)` | Selects a tab |
 | `type(_:into:)` | Types text into a tab's terminal, as if pasted; `"\r"` presses Return |
 | `openInViewer(_:tab:select:)` | Shows a file path or link in a tab's viewer |
-| `openTab(kind:in:folder:title:)` | Opens a new tab and returns its id |
+| `openTab(agent:in:folder:title:)` | Opens a new tab running that agent (`"claude"`, `"codex"`, an added agent's id; nil for a shell) and returns its id |
 | `value`, `setValue` | Per-tab values (below) |
 | `settingsData`, `setSettingsData`, `settings(_:for:fallback:)`, `saveSettings(_:for:)` | The extension's settings (below) |
 | `showProblem(_:_:)` | A modal alert with one OK button |
@@ -109,7 +109,7 @@ public final class HelloExtension: AgentDEExtension {
     // Group → New → Say hello: opens a shell tab and greets.
     public func newMenuItems(for group: GroupInfo) -> [ExtensionAction] {
         [ExtensionAction("Say hello", symbol: "hand.wave") { [weak self] in
-            guard let self, let host, let tab = host.openTab(kind: .shell, in: group.id, folder: nil, title: "hello") else { return }
+            guard let self, let host, let tab = host.openTab(agent: nil, in: group.id, folder: nil, title: "hello") else { return }
             let greeting = host.settings(HelloSettings.self, for: self, fallback: HelloSettings()).greeting
             host.type("echo \(greeting)\r", into: tab)
         }]

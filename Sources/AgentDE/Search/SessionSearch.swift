@@ -77,8 +77,8 @@ final class SessionSearch {
         for group in store.groups {
             let color = SwiftUI.Color(nsColor: store.groupColor(group))
             for tab in group.tabs where tab.kind != .command {
-                let codex = tab.kind == .codex
-                let session = codex ? tab.codexSessionId : tab.claudeSessionId
+                let codex = store.agent(of: tab)?.transcript == .codex
+                let session = tab.agentSession
                 sources.append(Source(id: tab.id.uuidString, source: .tab(tab.id), title: store.title(for: tab),
                                       subtitle: group.name, color: color, sessionId: session, cwd: tab.cwd,
                                       scrollback: session == nil ? store.terminals.scrollback(tab.id) : nil, codex: codex))
@@ -90,7 +90,7 @@ final class SessionSearch {
             for recent in store.recentSessions where !open.contains(recent.sessionId) {
                 sources.append(Source(id: recent.sessionId, source: .recent(recent), title: recent.name,
                                       subtitle: "recent · " + (recent.cwd as NSString).lastPathComponent, color: nil,
-                                      sessionId: recent.sessionId, cwd: recent.cwd, scrollback: nil, codex: recent.agent == .codex))
+                                      sessionId: recent.sessionId, cwd: recent.cwd, scrollback: nil, codex: Agents.byID(recent.agent)?.transcript == .codex))
             }
         }
         progress = (0, sources.count)

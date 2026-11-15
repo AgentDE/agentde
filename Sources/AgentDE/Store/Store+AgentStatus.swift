@@ -76,22 +76,22 @@ extension Store {
                     rt.busySince = nil
                 }
                 if entry.fromHook == true, let sessionId = entry.sessionId, let (g, t) = locate(tabID) {
-                    // Another agent's own report: a Codex tab keeps its thread to resume; nothing else changes.
-                    if groups[g].tabs[t].kind == .codex, groups[g].tabs[t].codexSessionId != sessionId {
-                        groups[g].tabs[t].codexSessionId = sessionId
+                    // An agent's own status hook (Codex, a plugin's): its tab keeps the session to resume; nothing else changes.
+                    if groups[g].tabs[t].kind == .agent, groups[g].tabs[t].agentSession != sessionId {
+                        groups[g].tabs[t].agentSession = sessionId
                         dirty = true
                     }
                 } else if let sessionId = entry.sessionId, let (g, t) = locate(tabID) {
                     var tab = groups[g].tabs[t]
                     if let name = entry.name, !name.isEmpty, tab.lastAgentName != name { tab.lastAgentName = name; dirty = true }
-                    if tab.claudeSessionId != sessionId {
-                        tab.claudeSessionId = sessionId
+                    if tab.agentSession != sessionId {
+                        tab.agentSession = sessionId
                         tab.forkOnStart = nil
                         dirty = true
                     }
                     // Claude started in a shell tab (`claude --resume …`, say): it becomes a Claude tab, named and
                     // resumed like one from now on.
-                    if tab.kind == .shell { tab.kind = .claude; dirty = true }
+                    if tab.kind == .shell { tab.kind = .agent; tab.agentID = ClaudeAgent.id; dirty = true }
                     if let cwd = entry.cwd, tab.cwd != cwd, FileManager.default.fileExists(atPath: cwd) {
                         tab.cwd = cwd; dirty = true
                     }

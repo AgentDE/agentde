@@ -148,7 +148,7 @@ struct TabPane: View {
             .padding(.top, 6)
             .background(Color(nsColor: Theme.resolve(store.settings.theme, dark: TerminalSession.isDark(store.settings)).terminalBackground))
             .overlay(alignment: .topTrailing) {
-                if store.settings.chatTools, let tools = store.agent(of: tab)?.tools, !tools.isEmpty { ChatTools(tab: tab, tools: tools) }
+                if store.settings.chatTools, let actions = store.agent(of: tab)?.actions, !actions.isEmpty { ChatTools(tab: tab, actions: actions) }
             }
             .overlay {
                 if store.restartingClaude.contains(tab.id) || store.claudeComingBack[tab.id] != nil {
@@ -229,9 +229,9 @@ private struct EmptyGroupView: View {
             } else {
                 Text("Start a tab in this group").font(.system(size: 15, weight: .medium)).foregroundStyle(theme.text)
                 HStack(spacing: 10) {
-                    Button("Claude  ⌘T") { store.startTab(kind: .claude) }
+                    Button("Claude  ⌘T") { store.startTab(agent: ClaudeAgent.id) }
                     Button("Shell  ⌘⇧T") { store.newTab(kind: .shell) }
-                    Button("Codex") { store.startTab(kind: .codex) }
+                    Button("Codex  ⌥⌘T") { store.startTab(agent: CodexAgent.id) }
                     Button("Files  ⌘⇧E") { store.newTab(kind: .files) }
                 }
                 .controlSize(.large)

@@ -17,7 +17,8 @@ struct AgentDESettings: Codable, Equatable {
     /// Termi, the mascot, hangs out in the tab strip's free space (`TermiStrip`).
     var termi: Bool = false
     var sidebarWidth: Double = 224
-    var defaultTabKind: TabKind = .claude
+    /// What New tab starts: an agent's id, or "shell".
+    var defaultAgent: String = ClaudeAgent.id
     /// Show recently active Claude sessions under each group, one click to resume.
     var showRecentSessions: Bool = true
     /// New Claude and Codex tabs ask for a name first (Claude's session gets it with `--name`).

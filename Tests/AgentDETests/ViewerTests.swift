@@ -111,8 +111,8 @@ struct ViewerHistoryTests {
 @Suite("Tabs and workstreams")
 struct TabWorkstreamTests {
     @Test func newTabsGetAWorkstreamAndOldOnesLoadWithout() throws {
-        #expect(TabModel(kind: .claude, cwd: "/tmp").extensionData == nil)   // the extension gives it one
-        let old = try JSONDecoder().decode(TabModel.self, from: Data(#"{"id": "\#(UUID().uuidString)", "kind": "claude", "cwd": "/tmp"}"#.utf8))
+        #expect(TabModel.agent("claude", cwd: "/tmp").extensionData == nil)   // the extension gives it one
+        let old = try JSONDecoder().decode(TabModel.self, from: Data(#"{"id": "\#(UUID().uuidString)", "kind": "claude", "cwd": "/tmp"}"#.utf8).migratedTab())
         #expect(old.workstreamID == nil)
         #expect(old.viewerItem == nil && old.panelWidth == nil)
     }

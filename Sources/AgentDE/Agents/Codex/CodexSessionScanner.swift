@@ -57,7 +57,7 @@ final class CodexSessionScanner {
                   let name = text(statement, 1), let cwd = text(statement, 2) else { continue }
             let updated = Date(timeIntervalSince1970: TimeInterval(sqlite3_column_int64(statement, 3)))
             results.append(RecentSession(sessionId: id, name: name.trimmingCharacters(in: .whitespaces), cwd: cwd,
-                                         lastActive: updated, agent: .codex))
+                                         lastActive: updated, agent: CodexAgent.id))
         }
         return results
     }
@@ -78,3 +78,5 @@ final class CodexSessionScanner {
         sqlite3_column_text(statement, column).map { String(cString: $0) }
     }
 }
+
+extension CodexSessionScanner: SessionScanner {}

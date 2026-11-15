@@ -69,8 +69,8 @@ final class AgentMonitor {
     /// appear while AgentDE runs can become tabs. Undecided ones are retried for up to 90 seconds.
     private var resolvedJobs: Set<String>?
     private var firstSeen: [String: Date] = [:]
-    private let recentScanner = RecentSessionScanner()
-    private let codexScanner = CodexSessionScanner()
+    /// Each agent's session scanner, for Recent (Claude's and Codex's built in).
+    private let sessionScanners = Agents.all.compactMap { agent in agent.sessionScanner().map { (agent: agent.id, scanner: $0) } }
     /// The slow scans (recent transcripts, Codex's threads, the installed Claude Code) run here, so a status
     /// tick never waits on them: at launch they can take many seconds, and the dots would wait too.
     private let scanQueue = DispatchQueue(label: "agentde.agent-monitor.scans", qos: .utility)
@@ -171,11 +171,11 @@ final class AgentMonitor {
         if (wantInstalled || wantRecent), !scanning {
             scanning = true
             let days = inputs.recentDays, codex = inputs.showCodex
-            let recentScanner = self.recentScanner, codexScanner = self.codexScanner
+            let scanners = sessionScanners.filter { codex || $0.agent != CodexAgent.id }.map(\.scanner)
             scanQueue.async { [weak self] in
                 let installed = wantInstalled ? ClaudeVersion.installed() : nil
                 let recent = wantRecent
-                    ? (recentScanner.scan(days: days) + (codex ? codexScanner.scan(days: days) : [])).sorted { $0.lastActive > $1.lastActive }
+                    ? scanners.flatMap { $0.scan(days: days) }.sorted { $0.lastActive > $1.lastActive }
                     : nil
                 self?.queue.async { self?.scanning = false }
                 DispatchQueue.main.async {

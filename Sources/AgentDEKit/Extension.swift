@@ -118,9 +118,10 @@ public protocol AgentDEHost: AnyObject {
     func type(_ text: String, into tab: UUID) -> Bool
     /// Shows a file path or link in a tab's viewer.
     func openInViewer(_ item: String, tab: UUID, select: Bool)
-    /// Opens a new tab and returns its id.
+    /// Opens a new tab running agent `agent` ("claude", "codex", an added agent's id; nil for a shell) and
+    /// returns its id.
     @discardableResult
-    func openTab(kind: TabKind, in group: UUID, folder: String?, title: String?) -> UUID?
+    func openTab(agent: String?, in group: UUID, folder: String?, title: String?) -> UUID?
 
     /// Small per-tab values an extension keeps with the tab (saved with it). Keys are namespaced by the
     /// extension's id.
@@ -152,6 +153,8 @@ public struct TabInfo: Identifiable, Equatable {
     public var id: UUID
     public var groupID: UUID
     public var kind: TabKind
+    /// Agent tabs: which agent ("claude", "codex", or an added agent's id).
+    public var agentID: String?
     /// The tab's working folder.
     public var folder: String
     /// Its group's folder.
@@ -165,11 +168,12 @@ public struct TabInfo: Identifiable, Equatable {
     /// What its viewer shows: a file path or a link.
     public var viewerItem: String?
 
-    public init(id: UUID, groupID: UUID, kind: TabKind, folder: String, groupFolder: String, title: String,
-                agentSession: String?, agentPresent: Bool, state: AgentState, viewerItem: String? = nil) {
+    public init(id: UUID, groupID: UUID, kind: TabKind, agentID: String? = nil, folder: String, groupFolder: String,
+                title: String, agentSession: String?, agentPresent: Bool, state: AgentState, viewerItem: String? = nil) {
         self.id = id
         self.groupID = groupID
         self.kind = kind
+        self.agentID = agentID
         self.folder = folder
         self.groupFolder = groupFolder
         self.title = title
@@ -180,7 +184,7 @@ public struct TabInfo: Identifiable, Equatable {
     }
 
     /// Agent tabs, and other tabs while an agent runs in them.
-    public var isAgent: Bool { kind == .claude || kind == .codex || kind == .agent || agentSession != nil || agentPresent }
+    public var isAgent: Bool { kind == .agent || agentSession != nil || agentPresent }
 }
 
 public struct GroupInfo: Identifiable, Equatable {

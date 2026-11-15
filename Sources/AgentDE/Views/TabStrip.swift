@@ -36,14 +36,7 @@ struct TabStrip: View {
             // Right after the last tab; when the tabs overflow, it stays at the strip's visible edge.
             // A click opens the choice of tab type; the keyboard shortcuts open each kind directly.
             Menu {
-                ForEach([TabKind.claude, .codex, .shell, .files], id: \.self) { kind in
-                    Button { store.startTab(kind: kind) } label: {
-                        Label(kind == .files ? "File Explorer" : kind.label, systemImage: kind.symbol)
-                    }
-                }
-                ForEach(AgentCatalog.all, id: \.id) { agent in
-                    Button { store.newAgentTab(agent) } label: { Label(agent.name, systemImage: TabKind.agent.symbol) }
-                }
+                NewTabItems()
                 Button { store.newWorktreeTab() } label: { Label("Tab in Worktree…", systemImage: "arrow.triangle.branch") }
             } label: {
                 Image(systemName: "plus").font(.system(size: 12, weight: .medium))
@@ -157,8 +150,24 @@ private struct TabChip: View {
             return true
         } isTargeted: { dropTarget = $0 }
         .contextMenu { TabMenu(tab: tab) }
-        .help((store.isSleeping(tab) ? "Resumes its \(tab.kind == .codex ? "Codex" : "Claude") session when you open it\n" : "")
+        .help((store.isSleeping(tab) ? "Resumes its \(store.agent(of: tab)?.name ?? "agent") session when you open it\n" : "")
               + (store.runtime[tab.id]?.waitingFor.map { "Needs you: " + Notifier.describeWaiting($0) + "\n" } ?? "")
               + tab.cwd.abbreviatingHome)
+    }
+}
+
+/// The New tab choices (the tab strip's +, a group's New menu): every agent, then Shell and File Explorer.
+struct NewTabItems: View {
+    var groupID: UUID? = nil
+    @Environment(Store.self) private var store
+
+    private struct Choice: Identifiable { let id: String; let name: String; let symbol: String }
+
+    var body: some View {
+        ForEach(Agents.all.map { Choice(id: $0.id, name: $0.name, symbol: $0.symbol) }) { agent in
+            Button { store.startTab(agent: agent.id, in: groupID) } label: { Label(agent.name, systemImage: agent.symbol) }
+        }
+        Button { store.newTab(kind: .shell, in: groupID) } label: { Label("Shell", systemImage: TabKind.shell.symbol) }
+        Button { store.newTab(kind: .files, in: groupID) } label: { Label("File Explorer", systemImage: TabKind.files.symbol) }
     }
 }

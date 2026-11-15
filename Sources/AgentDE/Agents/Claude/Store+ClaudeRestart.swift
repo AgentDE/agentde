@@ -11,13 +11,13 @@ extension Store {
     }
 
     func isClaudeOutdated(_ id: UUID) -> Bool {
-        tab(id)?.kind == .claude && ClaudeVersion.isOutdated(running: runtime[id]?.claudeVersion, installed: installedClaudeVersion)
+        tab(id)?.runs(ClaudeAgent.id) == true && ClaudeVersion.isOutdated(running: runtime[id]?.claudeVersion, installed: installedClaudeVersion)
     }
 
     func claudeRestartCheck(_ id: UUID) -> ClaudeRestart.Check {
         guard let tab = tab(id) else { return .notClaude }
         let rt = runtime[id]
-        return ClaudeRestart.check(kind: tab.kind, sessionId: tab.claudeSessionId, agentPresent: rt?.agentPresent ?? false,
+        return ClaudeRestart.check(isClaude: tab.runs(ClaudeAgent.id), sessionId: tab.agentSession, agentPresent: rt?.agentPresent ?? false,
                                    agentPid: rt?.agentPid, state: rt?.state ?? .none, restarting: restartingClaude.contains(id))
     }
 
@@ -74,7 +74,7 @@ extension Store {
                     return
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    guard let self, let tab = self.tab(id), let command = ClaudeRestart.resumeCommand(sessionId: tab.claudeSessionId) else {
+                    guard let self, let tab = self.tab(id), let command = ClaudeRestart.resumeCommand(sessionId: tab.agentSession) else {
                         finish(.failed)
                         return
                     }
@@ -109,7 +109,7 @@ extension Store {
                 self.save()
                 session.held = false
                 session.startIfNeeded(self.groups[g].tabs[t])
-                DebugLog.log("restarted Claude in tab \(id.uuidString.prefix(8)): resuming session \(self.groups[g].tabs[t].claudeSessionId?.prefix(8) ?? "?") in the tab", "agent")
+                DebugLog.log("restarted Claude in tab \(id.uuidString.prefix(8)): resuming session \(self.groups[g].tabs[t].agentSession?.prefix(8) ?? "?") in the tab", "agent")
                 finish(.restarted)
             }
         }

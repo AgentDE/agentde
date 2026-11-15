@@ -154,14 +154,7 @@ private struct GroupRow: View {
         .contextMenu {
             // The same choices as the tab strip's +.
             Menu("New") {
-                ForEach([TabKind.claude, .codex, .shell, .files], id: \.self) { kind in
-                    Button { store.startTab(kind: kind, in: group.id) } label: {
-                        Label(kind == .files ? "File Explorer" : kind.label, systemImage: kind.symbol)
-                    }
-                }
-                ForEach(AgentCatalog.all, id: \.id) { agent in
-                    Button { store.newAgentTab(agent, in: group.id) } label: { Label(agent.name, systemImage: TabKind.agent.symbol) }
-                }
+                NewTabItems(groupID: group.id)
                 Button { store.newWorktreeTab(in: group.id) } label: { Label("Tab in Worktree…", systemImage: "arrow.triangle.branch") }
                 let items = store.extensions.flatMap { $0.newMenuItems(for: GroupInfo(id: group.id, name: group.name, folder: group.dir)) }
                 if !items.isEmpty { Divider() }
@@ -314,9 +307,9 @@ struct TabMenu: View {
             }
         }
         Divider()
-        if let tools = store.agent(of: tab)?.tools {
-            ForEach(tools) { tool in
-                Button(tool.label) { store.runTool(tool, in: tab.id) }.disabled(!store.toolEnabled(tool, in: tab))
+        if let actions = store.agent(of: tab)?.actions {
+            ForEach(actions) { action in
+                Button(action.label) { store.runTool(action, in: tab.id) }.disabled(!store.toolEnabled(action, in: tab))
             }
         }
         Divider()
@@ -326,7 +319,7 @@ struct TabMenu: View {
             Button("Send to Background") { store.sendToBackground(tab.id) }
         }
         // Named by what happens to the agent: closing an agent tab stops it (the conversation is kept).
-        Button([.claude, .codex, .agent].contains(tab.kind) ? "Close & Stop Agent" : "Close Tab") { store.closeTab(tab.id) }
+        Button(tab.kind == .agent ? "Close & Stop Agent" : "Close Tab") { store.closeTab(tab.id) }
     }
 }
 
@@ -440,7 +433,7 @@ private struct RecentSessionPill: View {
             HStack(spacing: 5) {
                 Image(systemName: live ? "dot.radiowaves.left.and.right"
                       : pinned ? "pin.fill"
-                      : session.agent == .codex ? TabKind.codex.symbol : "arrow.counterclockwise")
+                      : session.agent == ClaudeAgent.id ? "arrow.counterclockwise" : Agents.byID(session.agent)?.symbol ?? "arrow.counterclockwise")
                     .font(.system(size: 8.5, weight: .semibold))
                 Text(session.name)
                     .font(.system(size: 11.5))
@@ -471,7 +464,7 @@ private struct RecentSessionPill: View {
                 Button("Stop Agent") { store.stopLiveBackgroundSession(session, job: job) }
             }
         }
-        .help("Resume \(session.agent == .codex ? "Codex" : "Claude") session \(session.name) in a new tab"
+        .help("Resume \(Agents.byID(session.agent)?.name ?? "the") session \(session.name) in a new tab"
               + (live ? " (it's running somewhere else right now)" : ""))
     }
 }

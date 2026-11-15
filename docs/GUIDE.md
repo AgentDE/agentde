@@ -225,7 +225,7 @@ The tab keeps its place, name, workstream and viewer. An interactive tab gets Ct
 
 ## Pull requests
 
-**Worktree tabs.** Right-click a group → New → **Tab in Worktree…** (also in the tab strip's + and the palette): name a branch and pick Claude or Codex. AgentDE makes the branch from the remote's default branch, checks it out in `<repo>-worktrees/<name>` beside the repository, and starts the agent there in a tab named after the branch. A tab on another branch than its group's folder shows its PR's checks in the sidebar (✓, a clock, ✗; hover for the PR). Worktrees are never removed for you: your agent cleans up after itself.
+**Worktree tabs.** Right-click a group → New → **Tab in Worktree…** (also in the tab strip's + and the palette): name a branch and pick an agent (Claude, Codex, or one a plugin adds). AgentDE makes the branch from the remote's default branch, checks it out in `<repo>-worktrees/<name>` beside the repository, and starts the agent there in a tab named after the branch. A tab on another branch than its group's folder shows its PR's checks in the sidebar (✓, a clock, ✗; hover for the PR). Worktrees are never removed for you: your agent cleans up after itself.
 
 The header shows the group's name and folder (then the tab's folder, when the tab is in a subfolder or worktree: `app › ql-crash`), the branch, and the branch's open PR: its number and a summary of checks (✓ passing, a clock while running, ✗ failing). Click it to open the PR on GitHub, or Graphite (Settings → Agents). When checks fail and Claude is idle, **Fix with Claude** types a prompt naming the failing checks and the `gh run view … --log-failed` commands for their logs, and asks Claude to explain before pushing.
 
@@ -290,7 +290,7 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 | Tab | Options |
 |---|---|
 | Look | Light, dark or match system; theme (Claude warm, Graphite cool, Midnight, High contrast, plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); density; sidebar width |
-| Terminal | Font, size, scrollback (default 10,000 lines), startup command, ask for a name when starting a Claude or Codex tab (on by default; Claude's session takes it with `--name`, a Codex tab as its title), recent sessions (on/off, Codex too, how many days), what kind of tab new tabs start as, `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
+| Terminal | Font, size, scrollback (default 10,000 lines), startup command, ask for a name when starting a Claude or Codex tab (on by default; Claude's session takes it with `--name`, a Codex tab as its title), recent sessions (on/off, Codex too, how many days), what new tabs start (any agent, or a shell), `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
 | Fun | Animated status dots, the finish sparkle and how long a turn must run to earn one, Termi in the tab strip |
 | Agents | Notifications (needs you, done, sound), PR status (on/off, open in GitHub or Graphite) |
 | Extensions | Each loaded extension's own settings |

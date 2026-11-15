@@ -8,7 +8,7 @@ struct RecentClaudeTests {
     let projects = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-recent-\(UUID().uuidString)")
 
     var jobs: URL { projects.appendingPathComponent("jobs") }
-    var scanner: RecentSessionScanner { RecentSessionScanner(projectsDir: projects.appendingPathComponent("projects"), jobsDir: jobs) }
+    var scanner: ClaudeSessionScanner { ClaudeSessionScanner(projectsDir: projects.appendingPathComponent("projects"), jobsDir: jobs) }
 
     @discardableResult
     func transcript(entrypoint: String, titles: [String]) throws -> String {
@@ -94,15 +94,15 @@ struct RecentCodexTests {
         ])
         let sessions = CodexSessionScanner(codexDir: codex).scan(days: 14)
         #expect(Set(sessions.map(\.name)) == ["cold_play_budget", "Diagnose MacBook sluggishness"])
-        #expect(sessions.allSatisfy { $0.agent == .codex })
+        #expect(sessions.allSatisfy { $0.agent == "codex" })
     }
 
     @Test func codexTabsResumeTheirThread() {
-        var tab = TabModel(kind: .codex, cwd: "/tmp")
+        var tab = TabModel.agent("codex", cwd: "/tmp")
         #expect(TerminalSession.agentCommand(for: tab) == "codex")
-        tab.codexSessionId = "01a13b8a-b9ad-7640-b3a2-21b7f2b944a9"
+        tab.agentSession = "01a13b8a-b9ad-7640-b3a2-21b7f2b944a9"
         #expect(TerminalSession.agentCommand(for: tab) == "codex resume 01a13b8a-b9ad-7640-b3a2-21b7f2b944a9")
-        tab.codexSessionId = "x; rm -rf ~"
+        tab.agentSession = "x; rm -rf ~"
         #expect(TerminalSession.agentCommand(for: tab) == "codex")
     }
 }

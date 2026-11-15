@@ -48,10 +48,10 @@ struct AuditFixTests {
 
     /// A new Claude tab with a name starts `claude --name '<name>'`, safely quoted; a resume ignores it.
     @Test func namedSessionsStartWithTheirName() {
-        var tab = TabModel(kind: .claude, cwd: "/tmp")
+        var tab = TabModel.agent("claude", cwd: "/tmp")
         tab.sessionName = "fix Andy's login; rm -rf /"
         #expect(TerminalSession.agentCommand(for: tab) == #"claude --name 'fix Andy'\''s login; rm -rf /'"#)
-        tab.claudeSessionId = "3d4e5f6a-7b8c-4d9e-8f0a-1b2c3d4e5f6a"
+        tab.agentSession = "3d4e5f6a-7b8c-4d9e-8f0a-1b2c3d4e5f6a"
         #expect(TerminalSession.agentCommand(for: tab) == "claude --resume 3d4e5f6a-7b8c-4d9e-8f0a-1b2c3d4e5f6a")
     }
 
@@ -76,8 +76,8 @@ struct AuditFixTests {
 
     /// A fork starts with its own name; a plain resume doesn't rename the session.
     @Test func forksStartWithTheirName() {
-        var tab = TabModel(kind: .claude, cwd: "/tmp")
-        tab.claudeSessionId = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b"
+        var tab = TabModel.agent("claude", cwd: "/tmp")
+        tab.agentSession = "4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b"
         tab.forkOnStart = true
         tab.sessionName = "try the other seed"
         #expect(TerminalSession.agentCommand(for: tab) == "claude --resume 4e5f6a7b-8c9d-4e0f-9a1b-2c3d4e5f6a7b --fork-session --name 'try the other seed'")

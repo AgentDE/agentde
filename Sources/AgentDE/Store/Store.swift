@@ -133,9 +133,9 @@ final class Store {
         if let name = rt?.agentName, !name.isEmpty { return name }
         // A sleeping tab that will resume a session: the name it had last time, else the name Claude gave the
         // session (from the recent-sessions scan).
-        if rt?.agentPresent != true, tab.claudeSessionId != nil || tab.attachJobId != nil || tab.codexSessionId != nil {
+        if rt?.agentPresent != true, tab.agentSession != nil || tab.attachJobId != nil {
             if let last = tab.lastAgentName, !last.isEmpty { return last }
-            if let session = tab.claudeSessionId,
+            if let session = tab.agentSession,
                let named = recentSessions.first(where: { $0.sessionId == session })?.name { return named }
         }
         if tab.kind == .command { return "diff" }
@@ -144,7 +144,7 @@ final class Store {
             return title
         }
         if tab.kind == .shell { return (tab.cwd as NSString).lastPathComponent }
-        if tab.kind == .agent { return (AgentCatalog.definition(tab.agentID)?.name ?? "agent").lowercased() }
+        if tab.kind == .agent { return (agent(of: tab)?.name ?? "agent").lowercased() }
         return tab.kind.label.lowercased()
     }
 
@@ -205,13 +205,15 @@ final class Store {
             return
         }
         let decoder = JSONDecoder()
-        var dropped = 0
+        var dropped = 0, migrated = false
         for case var rawGroup as [String: Any] in object["groups"] as? [Any] ?? [] {
             let rawTabs = rawGroup["tabs"] as? [Any] ?? []
             rawGroup["tabs"] = []
             guard let groupData = try? JSONSerialization.data(withJSONObject: rawGroup),
                   var group = try? decoder.decode(GroupModel.self, from: groupData) else { dropped += 1; continue }
             group.tabs = rawTabs.compactMap { raw in
+                guard var raw = raw as? [String: Any] else { dropped += 1; return nil }
+                if SavedStateMigration.tab(&raw) { migrated = true }
                 guard let tabData = try? JSONSerialization.data(withJSONObject: raw),
                       var tab = try? decoder.decode(TabModel.self, from: tabData) else { dropped += 1; return nil }
                 tab.adoptLegacyWorkstream()
@@ -225,10 +227,21 @@ final class Store {
         } else {
             selectedGroupID = groups.first?.id
         }
-        if let raw = object["settings"], let settingsData = try? JSONSerialization.data(withJSONObject: raw) {
-            settings = AgentDESettings.decodeLenient(from: settingsData)
+        if var raw = object["settings"] as? [String: Any] {
+            if SavedStateMigration.settings(&raw) { migrated = true }
+            if let settingsData = try? JSONSerialization.data(withJSONObject: raw) {
+                settings = AgentDESettings.decodeLenient(from: settingsData)
+            }
         }
         if dropped > 0 { backUpUnreadableState("\(dropped) group(s) or tab(s) couldn't be read") }
+        // State from before agents were one kind of tab: the original is kept once, before it's ever overwritten.
+        if migrated {
+            let backup = stateURL.appendingPathExtension("pre-agents")
+            if !FileManager.default.fileExists(atPath: backup.path) {
+                try? FileManager.default.copyItem(at: stateURL, to: backup)
+                DebugLog.log("saved state migrated to agent tabs; the original is kept as \(backup.lastPathComponent)", "state")
+            }
+        }
     }
 
     private func backUpUnreadableState(_ reason: String) {

@@ -32,7 +32,7 @@ extension Store {
         let clicked = Date()
         let owner = tab(id)
         let defaultApp = NSEvent.modifierFlags.contains(.option)
-        let hasViewer = owner.map { [.claude, .codex, .agent, .shell].contains($0.kind) } ?? false
+        let hasViewer = owner.map { $0.kind == .agent || $0.kind == .shell } ?? false
         switch LinkTarget.classify(link) {
         case .web(let url):
             DebugLog.log("click → web in 0 ms", "link")
@@ -78,8 +78,11 @@ extension Store {
     /// The tab's agent transcript: Claude's session file, or Codex's session log.
     static func transcript(of tab: TabModel) -> URL? {
         let index = TranscriptIndex()
-        if tab.kind == .codex { return SafeID.session(tab.codexSessionId).flatMap { index.codexLogURL(sessionId: $0) } }
-        return SafeID.session(tab.claudeSessionId).flatMap { index.transcriptURL(sessionId: $0, cwd: tab.cwd) }
+        guard let session = SafeID.session(tab.agentSession), let kind = Agents.of(tab)?.transcript else { return nil }
+        switch kind {
+        case .claude: return index.transcriptURL(sessionId: session, cwd: tab.cwd)
+        case .codex: return index.codexLogURL(sessionId: session)
+        }
     }
 
     /// The newest existing absolute path in the transcript's last 8 MB that ends with `link` (a partial path or a

@@ -18,8 +18,9 @@ extension Store {
         let field = NSTextField(frame: NSRect(x: 0, y: 32, width: 300, height: 24))
         field.placeholderString = "fix-login"
         let agent = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 140, height: 26))
-        agent.addItems(withTitles: [TabKind.claude.label, TabKind.codex.label])
-        if settings.defaultTabKind == .codex { agent.selectItem(at: 1) }
+        let agents = Agents.all
+        agent.addItems(withTitles: agents.map(\.name))
+        if let index = agents.firstIndex(where: { $0.id == settings.defaultAgent }) { agent.selectItem(at: index) }
         let accessory = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 58))
         accessory.addSubview(field)
         accessory.addSubview(agent)
@@ -33,7 +34,7 @@ extension Store {
                         "Use letters, digits, dots, dashes and underscores, starting with a letter or digit.")
             return
         }
-        let kind: TabKind = agent.indexOfSelectedItem == 1 ? .codex : .claude
+        let agentID = agents[max(0, agent.indexOfSelectedItem)].id
         let groupID = group.id
         // Fetching and checking out can take a while: say so, so the click doesn't look ignored.
         activityNote = "Making worktree \(name)…"
@@ -45,7 +46,7 @@ extension Store {
                 case .failure(let error): showProblem("Couldn't make the worktree for \(name)", error.message)
                 case .success(let base):
                     DebugLog.log("new worktree \(name) from \(base) for group \(group.name)", "tab")
-                    _ = openTab(kind: kind, in: groupID, folder: Worktrees.path(repoRoot: root, name: name), title: name)
+                    _ = openTab(agent: agentID, in: groupID, folder: Worktrees.path(repoRoot: root, name: name), title: name)
                     if base.hasSuffix("(last fetched)") {
                         // Offline, say: the branch starts from what was fetched before, which may be behind.
                         activityNote = "\(name) started from \(base): the fetch failed"

@@ -48,10 +48,10 @@ struct ClaudeVersionTests {
 struct ClaudeRestartTests {
     let session = "6E6EBD7E-D01C-4352-ACFD-67B044CFC314"
 
-    private func check(kind: TabKind = .claude, session: String? = "6e6ebd7e-d01c-4352-acfd-67b044cfc314",
+    private func check(isClaude: Bool = true, session: String? = "6e6ebd7e-d01c-4352-acfd-67b044cfc314",
                        present: Bool = true, pid: pid_t? = 42, state: AgentState = .none,
                        restarting: Bool = false) -> ClaudeRestart.Check {
-        ClaudeRestart.check(kind: kind, sessionId: session, agentPresent: present, agentPid: pid,
+        ClaudeRestart.check(isClaude: isClaude, sessionId: session, agentPresent: present, agentPid: pid,
                             state: state, restarting: restarting)
     }
 
@@ -64,8 +64,7 @@ struct ClaudeRestartTests {
     }
 
     @Test func needsAClaudeTabWithASessionAndARunningAgent() {
-        #expect(check(kind: .shell) == .notClaude)
-        #expect(check(kind: .codex) == .notClaude)
+        #expect(check(isClaude: false) == .notClaude)
         #expect(check(session: nil) == .noSession)
         #expect(check(session: "x; rm -rf ~") == .noSession)
         #expect(check(present: false) == .noAgent)

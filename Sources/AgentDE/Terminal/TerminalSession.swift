@@ -256,7 +256,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     private func launch(_ tab: TabModel) {
         guard let store else { return }
         DebugLog.log("start tab \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue) cwd=\(tab.cwd.abbreviatingHome)"
-                     + (tab.claudeSessionId.map { " resume=\($0.prefix(8))" } ?? "") + (tab.attachJobId.map { " attach=\($0)" } ?? ""), "tab")
+                     + (tab.agentID.map { " agent=\($0)" } ?? "") + (tab.agentSession.map { " resume=\($0.prefix(8))" } ?? "") + (tab.attachJobId.map { " attach=\($0)" } ?? ""), "tab")
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let folderExists = Self.canEnter(folder: tab.cwd)
         let cwd = folderExists ? tab.cwd : NSHomeDirectory()
@@ -338,28 +338,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
-    /// The agent a tab runs after its startup command, or nil for a plain shell.
-    static func agentCommand(for tab: TabModel) -> String? {
-        // Ids are validated before they reach the shell; an invalid one is treated as absent.
-        if let job = SafeID.job(tab.attachJobId) { return "claude attach \(job)" }
-        let session = SafeID.session(tab.claudeSessionId)
-        switch tab.kind {
-        case .claude:
-            // A new session takes its name (`--name`): a fresh one, or a fork; a plain resume keeps its own.
-            let name = tab.sessionName.flatMap { $0.isEmpty ? nil : " --name " + shellQuoted($0) } ?? ""
-            let flags = session.map { " --resume \($0)" + (tab.forkOnStart == true ? " --fork-session" + name : "") } ?? name
-            return "claude" + flags
-        case .codex:
-            return "codex" + (SafeID.session(tab.codexSessionId).map { " resume \($0)" } ?? "")
-        case .shell:
-            // A shell tab that was running Claude when AgentDE quit picks that session back up.
-            return session.map { "claude --resume \($0)" }
-        case .agent:
-            return AgentCatalog.definition(tab.agentID)?.command
-        case .command, .files:
-            return nil
-        }
-    }
+    /// What a tab runs after its startup command (its agent's command), or nil for a plain shell.
+    static func agentCommand(for tab: TabModel) -> String? { Agents.of(tab)?.command(for: tab) }
 
     private func environment(for tab: TabModel) -> [String: String] {
         var env = ProcessInfo.processInfo.environment

@@ -14,16 +14,16 @@ extension Store: AgentDEHost {
 
     func info(_ tab: TabModel, in group: GroupModel) -> TabInfo {
         let rt = runtime[tab.id]
-        return TabInfo(id: tab.id, groupID: group.id, kind: tab.kind, folder: tab.cwd, groupFolder: group.dir, title: title(for: tab),
+        return TabInfo(id: tab.id, groupID: group.id, kind: tab.kind, agentID: tab.agentID, folder: tab.cwd, groupFolder: group.dir, title: title(for: tab),
                        agentSession: agentSession(of: tab), agentPresent: rt?.agentPresent ?? false, state: rt?.state ?? .none,
                        viewerItem: tab.viewerItem)
     }
 
-    /// The agent session a tab runs (Claude, or Codex). None yet for a fork that hasn't started: it holds its
-    /// parent's id until Claude gives it its own.
+    /// The agent session a tab runs. None yet for a fork that hasn't started: it holds its parent's id until
+    /// Claude gives it its own.
     func agentSession(of tab: TabModel) -> String? {
         if tab.forkOnStart == true { return nil }
-        return (tab.kind == .codex ? tab.codexSessionId : tab.claudeSessionId).flatMap(SafeID.session)
+        return tab.agentSession.flatMap(SafeID.session)
     }
 
     var activeTabID: UUID? { activeTab?.id }
@@ -35,11 +35,12 @@ extension Store: AgentDEHost {
     func type(_ text: String, into tab: UUID) -> Bool { terminals.typeIntoTerminal(tab, text) }
 
     @discardableResult
-    func openTab(kind: TabKind, in group: UUID, folder: String?, title: String?) -> UUID? {
-        guard let id = newTab(kind: kind, in: group, cwd: folder) else { return nil }
+    func openTab(agent agentID: String?, in group: UUID, folder: String?, title: String?) -> UUID? {
+        guard let id = agentID.map({ newAgentTab($0, in: group, cwd: folder) }) ?? newTab(kind: .shell, in: group, cwd: folder)
+        else { return nil }
         if let title, let (g, t) = locate(id) {
             groups[g].tabs[t].customTitle = title
-            if kind == .claude { groups[g].tabs[t].sessionName = title }
+            if agentID.flatMap(Agents.byID)?.namesSessions == true { groups[g].tabs[t].sessionName = title }
             scheduleSave()
         }
         return id

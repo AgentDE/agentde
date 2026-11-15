@@ -75,9 +75,9 @@ enum ClaudeRestart {
     enum Mode: Equatable { case foreground, background }
 
     /// Only idle agents restart: not working, not waiting on you, and not mid-restart.
-    static func check(kind: TabKind, sessionId: String?, agentPresent: Bool, agentPid: pid_t?,
+    static func check(isClaude: Bool, sessionId: String?, agentPresent: Bool, agentPid: pid_t?,
                       state: AgentState, restarting: Bool) -> Check {
-        guard kind == .claude else { return .notClaude }
+        guard isClaude else { return .notClaude }
         guard SafeID.session(sessionId) != nil else { return .noSession }
         if restarting { return .restarting }
         guard agentPresent, (agentPid ?? 0) > 0 else { return .noAgent }
@@ -95,7 +95,7 @@ enum ClaudeRestart {
     /// What a foreground restart types at the shell prompt: the same `claude --resume <id>` a resuming tab runs.
     static func resumeCommand(sessionId: String?) -> String? {
         guard let id = SafeID.session(sessionId) else { return nil }
-        return TerminalSession.agentCommand(for: TabModel(kind: .claude, cwd: "", claudeSessionId: id))
+        return TerminalSession.agentCommand(for: TabModel.agent(ClaudeAgent.id, cwd: "", session: id))
     }
 
     /// The bulk action's summary: "Restarted 9, skipped 3 busy".

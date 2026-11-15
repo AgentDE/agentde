@@ -116,18 +116,19 @@ extension Store {
         if let url = URL(string: link) { NSWorkspace.shared.open(url) }
     }
 
-    /// Hands failing CI to the tab's Claude: types a prompt with the failing checks and their runs into the session.
+    /// Hands failing CI to the tab's agent: types a prompt with the failing checks and their runs into the session.
     func fixChecksWithClaude(_ pr: PullRequestStatus) {
         guard let tab = activeTab else { return }
+        let name = agent(of: tab)?.name ?? "an agent"
         guard runtime[tab.id]?.agentPresent == true else {
-            alert("No Claude session in this tab", "Start Claude in this tab, then try again.")
+            alert("No agent running in this tab", "Start Claude or Codex in this tab, then try again.")
             return
         }
         // Only type into an agent that's confirmed idle: working or waiting on a permission prompt both mean
         // the keystrokes would land somewhere other than a fresh prompt.
         guard state(tab.id) == .none || state(tab.id) == .doneUnseen else {
-            alert(state(tab.id) == .needsYou ? "Claude is waiting on you" : "Claude is busy",
-                  "Finish what Claude is doing in this tab, then try again.")
+            alert(state(tab.id) == .needsYou ? "\(name) is waiting on you" : "\(name) is busy",
+                  "Finish what \(name) is doing in this tab, then try again.")
             return
         }
         let names = pr.failingNames.prefix(6).joined(separator: ", ")
@@ -137,11 +138,11 @@ extension Store {
         let prompt = "CI checks are failing on PR #\(pr.number) (\(names)). \(logs), find the root cause, and fix it. "
             + "Tell me what was wrong before pushing anything."
         let target = tab.id
-        let session = tab.claudeSessionId
+        let session = tab.agentSession
         terminals.focus(target)
         // Recheck right before typing: the agent must still be the same idle session.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self, self.tab(target)?.claudeSessionId == session,
+            guard let self, self.tab(target)?.agentSession == session,
                   self.runtime[target]?.agentPresent == true, self.state(target) == .none || self.state(target) == .doneUnseen else { return }
             self.terminals.typeIntoTerminal(target, prompt + "\r")
         }

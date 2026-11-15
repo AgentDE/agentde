@@ -36,10 +36,8 @@ struct CommandPalette: View {
                 store.selectGroup(group.id)
             })
         }
-        let actions: [(String, String, () -> Void)] = [
-            ("New Claude tab", "sparkle", { store.startTab(kind: .claude) }),
+        var actions: [(String, String, () -> Void)] = [
             ("New shell tab", "terminal", { store.newTab(kind: .shell) }),
-            ("New Codex tab", "chevron.left.forwardslash.chevron.right", { store.startTab(kind: .codex) }),
             ("New File Explorer tab", "folder", { store.newTab(kind: .files) }),
             ("New tab in worktree…", "arrow.triangle.branch", { store.newWorktreeTab() }),
             ("New group…", "folder.badge.plus", { store.newGroup() }),
@@ -47,13 +45,22 @@ struct CommandPalette: View {
             ("Open folder in Finder", "folder", { store.openInFinder() }),
             ("Search all sessions", "text.magnifyingglass", { store.searchOpen = true }),
             ("Find in this tab", "magnifyingglass", { if let id = store.activeTab?.id { store.terminals.find(id, .showFindInterface) } }),
-            ("Fork Claude session into new tab", "arrow.triangle.branch", { store.forkTab() }),
-            ("Rewind to an earlier message", "arrow.uturn.backward", { store.runTool("rewind") }),
-            ("Compact the conversation", "rectangle.compress.vertical", { store.runTool("compact") }),
             ("Rename tab", "pencil", { if let id = store.activeTab?.id { store.renamingTabID = id } }),
             ("Jump to next waiting tab", "bell", { store.jumpToAttention() }),
             ("Reopen closed tab", "arrow.uturn.backward", { store.reopenClosedTab() }),
-        ] + AgentCatalog.all.map { agent in ("New \(agent.name) tab", TabKind.agent.symbol, { store.newAgentTab(agent) }) }
+        ]
+        let newAgentTabs: [(String, String, () -> Void)] = Agents.all.map { agent in
+            let id = agent.id
+            return ("New \(agent.name) tab", agent.symbol, { store.startTab(agent: id) })
+        }
+        // The active tab's agent's own actions (Claude: Rewind, Compact, Fork, Restart).
+        var agentActions: [(String, String, () -> Void)] = []
+        if let tab = store.activeTab, let agent = store.agent(of: tab) {
+            for action in agent.actions where store.toolEnabled(action, in: tab) {
+                agentActions.append(("\(agent.name): \(action.label)", action.symbol, { store.runTool(action, in: tab.id) }))
+            }
+        }
+        actions = newAgentTabs + actions + agentActions
         for (title, symbol, action) in actions {
             all.append(PaletteItem(id: "action:" + title, title: title, subtitle: "action", symbol: symbol,
                                    color: nil, state: .none, action: action))

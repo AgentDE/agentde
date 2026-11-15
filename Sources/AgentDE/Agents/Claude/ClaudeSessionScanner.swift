@@ -1,16 +1,5 @@
 import Foundation
 
-/// A session you started and named that was active recently, offered as a one-click resume under its group.
-struct RecentSession: Identifiable, Equatable, Codable {
-    enum Agent: String, Codable { case claude, codex }
-    var id: String { sessionId }
-    let sessionId: String
-    let name: String
-    let cwd: String
-    let lastActive: Date
-    var agent: Agent = .claude
-}
-
 /// Finds recent Claude sessions you started and named, from their transcripts in `~/.claude/projects`.
 ///
 /// "Yours" means started from the Claude CLI or desktop app (SDK and scripted runs are left out) and named:
@@ -19,7 +8,7 @@ struct RecentSession: Identifiable, Equatable, Codable {
 ///
 /// Only each file's first 64 KB (cwd, entrypoint) and last 256 KB (latest title) are read, and results are
 /// cached by modification time, so rescans only touch files that changed.
-final class RecentSessionScanner {
+final class ClaudeSessionScanner {
     private struct Parsed {
         let sessionId: String
         /// The title you gave it; nil when it has none (a background job's own name may stand in).
@@ -143,3 +132,5 @@ final class RecentSessionScanner {
         try? JSONSerialization.jsonObject(with: line) as? [String: Any]
     }
 }
+
+extension ClaudeSessionScanner: SessionScanner {}

@@ -1,26 +1,37 @@
 import Foundation
 
 struct TabModel: Identifiable, Codable, Equatable {
+    /// A tab running agent `id` ("claude", "codex", an added agent's).
+    static func agent(_ id: String, cwd: String, session: String? = nil) -> TabModel {
+        var tab = TabModel(kind: .agent, cwd: cwd)
+        tab.agentID = id
+        tab.agentSession = session
+        return tab
+    }
+
+    /// Whether it's a tab of agent `id`.
+    func runs(_ id: String) -> Bool { kind == .agent && agentID == id }
+
     var id = UUID()
     var kind: TabKind
     var cwd: String
     var customTitle: String?
-    var claudeSessionId: String?
-    /// Codex tabs: the Codex thread to resume (`codex resume <id>`).
-    var codexSessionId: String?
+    /// The agent's session to resume: Claude's session id, Codex's thread id (`Agent.command`). A shell tab can
+    /// hold Claude's too, when Claude was running in it.
+    var agentSession: String?
     var command: String?
     /// A name for the agent session this tab starts (Claude's `--name`), used only when it starts a new one.
     var sessionName: String?
     /// When its agent last worked or waited on you, or you last switched to it (the sidebar's active-today filter).
     var lastActiveAt: Date?
-    /// Agent tabs: which `AgentDefinition` they run.
+    /// Agent tabs: which agent they run ("claude", "codex", or an added agent's id; `Agents.of`).
     var agentID: String?
     /// Sent to the background: out of the tab strip and splits, still running in its holder. The sidebar lists
     /// it under the group's Background; choosing it brings it back.
     var background: Bool?
     /// Background Claude session (job id) this tab attaches to, e.g. one created by `/fork`.
     var attachJobId: String?
-    /// Start by forking `claudeSessionId` (`--fork-session`) instead of resuming it. Cleared once the fork has its own id.
+    /// Start by forking `agentSession` (Claude's `--fork-session`) instead of resuming it. Cleared once the fork has its own id.
     var forkOnStart: Bool?
     /// Transient tabs (diff views and similar) close when their process exits and are not saved.
     var transient: Bool?

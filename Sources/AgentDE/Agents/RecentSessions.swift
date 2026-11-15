@@ -1,5 +1,16 @@
 import AppKit
 
+/// A session you started and named that was active recently, offered as a one-click resume under its group.
+struct RecentSession: Identifiable, Equatable, Codable {
+    var id: String { sessionId }
+    let sessionId: String
+    let name: String
+    let cwd: String
+    let lastActive: Date
+    /// Its agent's id ("claude", "codex").
+    var agent: String = ClaudeAgent.id
+}
+
 extension Store {
     /// Recent sessions that ran in exactly this group's folder and aren't already open in a tab or pinned.
     func recentSessions(for group: GroupModel) -> [RecentSession] {
@@ -41,11 +52,11 @@ extension Store {
         scheduleSave()
     }
 
-    /// The Claude or Codex session a tab runs, as a session to pin; nil for tabs without one (shells).
+    /// The agent session a tab runs, as a session to pin; nil for tabs without one (shells).
     func pinnableSession(_ tab: TabModel) -> RecentSession? {
-        guard let id = tab.claudeSessionId ?? tab.codexSessionId else { return nil }
+        guard let id = tab.agentSession else { return nil }
         return RecentSession(sessionId: id, name: title(for: tab), cwd: tab.cwd, lastActive: Date(),
-                             agent: tab.claudeSessionId == nil ? .codex : .claude)
+                             agent: agent(of: tab)?.id ?? ClaudeAgent.id)
     }
 
     func isPinned(tab: TabModel, in groupID: UUID) -> Bool {
@@ -73,7 +84,7 @@ extension Store {
     }
 
     private var openSessionIds: Set<String> {
-        Set(groups.flatMap { $0.tabs.flatMap { [$0.claudeSessionId, $0.codexSessionId].compactMap { $0 } } })
+        Set(groups.flatMap { $0.tabs.compactMap(\.agentSession) })
     }
 
     private func sessions(_ all: [RecentSession], for group: GroupModel) -> [RecentSession] {
@@ -105,8 +116,8 @@ extension Store {
         let days = settings.recentSessionDays, codex = settings.showCodexSessions
         OlderSessionScan.queue.async { [weak self] in
             let cutoff = Date().addingTimeInterval(-days * 86_400)
-            let all = OlderSessionScan.claude.scan(days: OlderSessionScan.days)
-                + (codex ? OlderSessionScan.codex.scan(days: OlderSessionScan.days) : [])
+            let all = OlderSessionScan.scanners.filter { codex || $0.agent != CodexAgent.id }
+                .flatMap { $0.scanner.scan(days: OlderSessionScan.days) }
             let older = all.filter { $0.lastActive < cutoff }.sorted { $0.lastActive > $1.lastActive }
             DispatchQueue.main.async { self?.olderSessions = older }
         }
@@ -136,17 +147,9 @@ extension Store {
 
     func resumeRecentSession(_ session: RecentSession, in groupID: UUID) {
         guard let cwd = folderToResume(session) else { return }
-        if session.agent == .codex {
-            if let id = newTab(kind: .codex, in: groupID, cwd: cwd), let (g, t) = locate(id) {
-                groups[g].tabs[t].codexSessionId = session.sessionId
-                groups[g].tabs[t].lastAgentName = session.name
-                scheduleSave()
-            }
-            return
-        }
-        // Already running as a background session: attach to it rather than starting a second copy.
-        if let job = liveBackgroundJobs[session.sessionId] {
-            newTab(kind: .claude, in: groupID, sessionId: session.sessionId, cwd: cwd, attachJobId: job)
+        // Already running as a background session (Claude's): attach to it rather than starting a second copy.
+        if let job = Agents.byID(session.agent)?.liveBackgroundJob(session: session.sessionId, store: self) {
+            newAgentTab(session.agent, in: groupID, session: session.sessionId, cwd: cwd, attachJobId: job)
             return
         }
         if liveSessionIds.contains(session.sessionId) {
@@ -157,8 +160,9 @@ extension Store {
             alert.addButton(withTitle: "Cancel")
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
-        if let id = newTab(kind: .claude, in: groupID, sessionId: session.sessionId, cwd: cwd), let (g, t) = locate(id) {
+        if let id = newAgentTab(session.agent, in: groupID, session: session.sessionId, cwd: cwd), let (g, t) = locate(id) {
             groups[g].tabs[t].lastAgentName = session.name
+            scheduleSave()
         }
     }
 }
@@ -166,8 +170,7 @@ extension Store {
 /// The Older lists' own scanners, used only on their queue, so their caches outlive one scan.
 private enum OlderSessionScan {
     static let queue = DispatchQueue(label: "older-sessions", qos: .utility)
-    static let claude = RecentSessionScanner()
-    static let codex = CodexSessionScanner()
+    static let scanners = Agents.all.compactMap { agent in agent.sessionScanner().map { (agent: agent.id, scanner: $0) } }
     /// As far back as transcripts go: Claude Code deletes them after `cleanupPeriodDays` (30 unless set).
     static let days: Double = 3650
 }

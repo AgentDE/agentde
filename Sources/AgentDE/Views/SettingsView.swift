@@ -57,10 +57,9 @@ struct SettingsView: View {
                 Stepper("Recent means the last \(Int(store.settings.recentSessionDays)) days",
                         value: $store.settings.recentSessionDays, in: 1...60, step: 1)
                     .disabled(!store.settings.showRecentSessions)
-                Picker("New tabs start", selection: $store.settings.defaultTabKind) {
-                    Text("Claude").tag(TabKind.claude)
-                    Text("Codex").tag(TabKind.codex)
-                    Text("Shell").tag(TabKind.shell)
+                Picker("New tabs start", selection: $store.settings.defaultAgent) {
+                    ForEach(Agents.all.map { ($0.id, $0.name) }, id: \.0) { id, name in Text(name).tag(id) }
+                    Text("Shell").tag("shell")
                 }
             }
             .tabItem { Label("Terminal", systemImage: "terminal") }
