@@ -59,13 +59,13 @@ struct TabPane: View {
                 GeometryReader { geo in mainColumn(height: geo.size.height) }
             }
         } else if tab.kind == .files || tab.kind == .command {
-            WithTabStrip { terminalStack }
+            WithTabStrip { terminalStack.tabDropZones(tab.id) }
         } else {
             GeometryReader { geo in
                 let showPanel = store.panelVisible(tab)
                 let narrow = geo.size.width < 760
                 HStack(spacing: 0) {
-                    WithTabStrip { mainColumn(height: geo.size.height) }
+                    WithTabStrip { mainColumn(height: geo.size.height).tabDropZones(tab.id) }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     if showPanel {
                         if narrow {

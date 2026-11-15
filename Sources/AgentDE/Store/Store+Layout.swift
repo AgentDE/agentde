@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 /// Several of a group's tabs on screen at once (`GroupModel.layout`). The selected tab is the active pane: the
 /// tab strip, the side panel and the keys act on it. Choosing a tab that isn't showing puts it in the active pane.
@@ -29,6 +30,33 @@ extension Store {
         groups[g].layout = current.splitting(active, with: other, vertical: vertical)
         selectTab(other)
         scheduleSave()
+    }
+
+    /// A tab dropped on `target`'s pane, by the edge it was nearest: the pane splits there and shows it. A tab
+    /// already in the split moves; a tab from another group beeps.
+    func dropTab(_ id: UUID, onto target: UUID, edge: Edge) {
+        guard id != target, let (g, _) = locate(target), groups[g].tabs.contains(where: { $0.id == id }) else {
+            NSSound.beep()
+            return
+        }
+        let current = layout(of: groups[g]) ?? .tab(target)
+        let base = current.tabs.contains(id) ? (current.removing(id) ?? .tab(target)) : current
+        groups[g].layout = base.splitting(target, with: id, vertical: edge == .top || edge == .bottom,
+                                          before: edge == .leading || edge == .top)
+        selectTab(id)
+        scheduleSave()
+    }
+
+    /// A tab's menu → Show on the Right / Below: beside the active pane. For a tab already showing, its pane
+    /// splits with the tab used most recently.
+    func showBeside(_ id: UUID, vertical: Bool) {
+        let showing = selectedGroup.map { (layout(of: $0)?.tabs ?? [$0.selectedTabID].compactMap { $0 }).contains(id) } ?? false
+        if showing {
+            selectTab(id)
+            split(vertical: vertical)
+        } else if let active = activeTab?.id {
+            dropTab(id, onto: active, edge: vertical ? .bottom : .trailing)
+        }
     }
 
     /// Takes a tab's pane out of the split (the tab stays open). With one pane left, the split ends.

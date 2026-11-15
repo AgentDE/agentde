@@ -104,8 +104,92 @@ private struct PaneView: View {
             .contentShape(Rectangle())
             .onTapGesture { store.selectTab(tab.id) }
             .onHover { hovering = $0 }
-            TabPane(tab: tab, embedded: true).id(tab.id)
+            .draggable("tab:\(tab.id.uuidString)") {
+                Text(store.title(for: tab)).font(.system(size: 12.5)).padding(6)
+            }
+            TabPane(tab: tab, embedded: true).id(tab.id).tabDropZones(tab.id)
         }
         .opacity(active ? 1 : 0.94)
+    }
+}
+
+extension View {
+    /// Drop a tab here to see it beside this one: the edge nearest the pointer lights up, and the drop splits there.
+    func tabDropZones(_ target: UUID) -> some View { modifier(TabDropZones(target: target)) }
+}
+
+private struct TabDropZones: ViewModifier {
+    let target: UUID
+    @Environment(Store.self) private var store
+    @State private var edge: Edge?
+    @State private var size = CGSize.zero
+
+    func body(content: Content) -> some View {
+        content
+            .background(GeometryReader { geo in
+                Color.clear.onAppear { size = geo.size }.onChange(of: geo.size) { _, new in size = new }
+            })
+            .overlay { if let edge { DropHighlight(edge: edge) } }
+            .onDrop(of: [.plainText], delegate: TabDropDelegate(size: size, edge: $edge) { id, edge in
+                store.dropTab(id, onto: target, edge: edge)
+            })
+    }
+}
+
+private struct TabDropDelegate: DropDelegate {
+    let size: CGSize
+    @Binding var edge: Edge?
+    let drop: (UUID, Edge) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool { info.hasItemsConforming(to: [.plainText]) }
+    func dropEntered(info: DropInfo) { edge = nearest(info.location) }
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        edge = nearest(info.location)
+        return DropProposal(operation: .move)
+    }
+    func dropExited(info: DropInfo) { edge = nil }
+
+    func performDrop(info: DropInfo) -> Bool {
+        let where_ = nearest(info.location)
+        edge = nil
+        guard let provider = info.itemProviders(for: [.plainText]).first else { return false }
+        let drop = drop
+        _ = provider.loadObject(ofClass: NSString.self) { object, _ in
+            guard let text = object as? String, text.hasPrefix("tab:"), let id = UUID(uuidString: String(text.dropFirst(4))) else { return }
+            DispatchQueue.main.async { drop(id, where_) }
+        }
+        return true
+    }
+
+    private func nearest(_ point: CGPoint) -> Edge {
+        let w = max(size.width, 1), h = max(size.height, 1)
+        let distances: [(Edge, CGFloat)] = [(.leading, point.x / w), (.trailing, 1 - point.x / w),
+                                            (.top, point.y / h), (.bottom, 1 - point.y / h)]
+        return distances.min { $0.1 < $1.1 }!.0
+    }
+}
+
+/// The half a dropped tab would take.
+private struct DropHighlight: View {
+    let edge: Edge
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width, h = geo.size.height
+            let rect: CGRect = switch edge {
+            case .leading: CGRect(x: 0, y: 0, width: w / 2, height: h)
+            case .trailing: CGRect(x: w / 2, y: 0, width: w / 2, height: h)
+            case .top: CGRect(x: 0, y: 0, width: w, height: h / 2)
+            case .bottom: CGRect(x: 0, y: h / 2, width: w, height: h / 2)
+            }
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Theme.doneUnseen.opacity(0.16))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.doneUnseen.opacity(0.8), lineWidth: 1.5))
+                .padding(6)
+                .frame(width: rect.width, height: rect.height)
+                .position(x: rect.midX, y: rect.midY)
+        }
+        .allowsHitTesting(false)
+        .animation(.snappy(duration: 0.12), value: edge)
     }
 }

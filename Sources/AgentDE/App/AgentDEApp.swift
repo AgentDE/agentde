@@ -156,7 +156,7 @@ struct AgentDECommands: Commands {
                 Button("Side Panel Tab \(n)") { store.showPanelTab(n - 1) }.keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: [.command, .control])
             }
             Button("Browser Above Tab") { store.toggleBrowser() }.keyboardShortcut("b", modifiers: [.command, .shift])
-            Button("Show Diff") { store.showDiff() }.keyboardShortcut("d", modifiers: [.command, .shift])
+            Button("Show Changes") { store.showChanges() }.keyboardShortcut("d", modifiers: [.command, .shift])
             Button("Open Folder in Cursor") { store.openInEditor() }.keyboardShortcut("o", modifiers: [.command, .shift])
             Divider()
             Button("Bigger Text") { store.settings.fontSize = min(store.settings.fontSize + 1, 24) }.keyboardShortcut("=")

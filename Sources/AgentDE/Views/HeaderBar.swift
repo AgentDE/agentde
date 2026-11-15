@@ -38,7 +38,6 @@ struct HeaderBar: View {
             let activeTab = store.activeTab
             IconButton(symbol: "globe", help: "Browser above tab (⌘⇧B)",
                        active: activeTab?.showBrowser ?? false) { store.toggleBrowser() }
-            IconButton(symbol: "plus.forwardslash.minus", help: "Show diff (⌘⇧D)") { store.showDiff() }
             IconButton(symbol: "arrow.up.forward.app", help: "Open folder in Cursor (⌘⇧O)") { store.openInEditor() }
         }
         .padding(.leading, 16)

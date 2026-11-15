@@ -16,6 +16,12 @@ struct PaneLayoutTests {
         }
     }
 
+    /// Dropped on the left or top edge: the new tab comes first.
+    @Test func splittingBefore() {
+        let left = PaneLayout.tab(a).splitting(a, with: b, vertical: false, before: true)
+        #expect(left.tabs == [b, a])
+    }
+
     @Test func removingLetsTheSiblingTakeTheSpace() {
         let three = PaneLayout.tab(a).splitting(a, with: b, vertical: false).splitting(b, with: c, vertical: true)
         #expect(three.removing(b)?.tabs == [a, c])

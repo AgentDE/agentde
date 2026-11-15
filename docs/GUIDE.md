@@ -60,7 +60,6 @@ Open AgentDE like any app, or run `agentde` from any terminal (the command is in
 | Claude | `claude` (drops to your shell when Claude exits) | ⌘T |
 | Shell | your login shell | ⌘⇧T |
 | Codex | `codex` (drops to your shell when Codex exits) | ⌘⌥T |
-| Diff | `git diff` piped through `less`; closes when you quit `less` | ⌘⇧D |
 | Files | The File Explorer: a folder tree with previews | ⌘⇧E |
 
 The **+** after the last tab opens a new tab of any kind. Closing a tab's process (`exit`, or quitting Claude and then the shell) closes the tab. A Claude tab is named after its Claude session; rename it with ⌘R or a double-click. Starting Claude in a shell tab turns it into a Claude tab.
@@ -91,7 +90,7 @@ The **viewer** shows Markdown as a document, local HTML, PDFs, images, video and
 
 **Side panel.** Beside a tab's chat, with a tab for each thing it shows: **Workstream** (from the Workstreams extension), **Files** (the tab folder's tree; click a file to see it in the viewer) and **Changes** (the repository's uncommitted changes with lines added and removed, then the last 30 commits; click one to see its diff in the viewer). Changes is read-only: committing and pushing are your agent's job. It refreshes when the agent's status changes, or with ↻. Layout → Side Panel (⌥⌘I) hides or shows it for the tab; it shows by default when an extension adds a tab to it.
 
-**Side by side.** Layout → Split Right (⌘D) or Split Down (⌥⌘D) puts another tab of the group beside or below the active one: the one you used most recently that isn't showing, or pick one with a tab's right-click menu → Show in Split. Split again to make more panes, tmux style, and drag a divider to resize. The active pane has the group's color on top; the tab strip and side panel act on it. Click a pane or press ⌥⌘← / ⌥⌘→ to move between panes. Choosing a tab that isn't showing puts it in the active pane. A pane's ✕ (⌥⌘W) takes it out of the split; the tab stays open. Layout → Unsplit goes back to one tab. Each group keeps its own layout.
+**Side by side.** Drag a tab (from the tab strip, the sidebar or a pane's header) onto the chat: the edge nearest the pointer lights up, and dropping shows the tab there, left, right, above or below. Or right-click a tab → Show on the Right / Show Below, or Layout → Split Right (⌘D) / Split Down (⌥⌘D), which bring in the tab you used most recently that isn't showing. Dragging a pane's header onto another pane moves it. Split again to make more panes, tmux style, and drag a divider to resize. The active pane has the group's color on top; the tab strip and side panel act on it. Click a pane or press ⌥⌘← / ⌥⌘→ to move between panes. Choosing a tab that isn't showing puts it in the active pane. A pane's ✕ (⌥⌘W) takes it out of the split; the tab stays open. Layout → Unsplit goes back to one tab. Each group keeps its own layout.
 
 ## Extensions
 
@@ -279,7 +278,7 @@ Background sessions inherit your startup command's environment, but Claude's bac
 | ⌃⌘1–3 | Show the side panel on its first, second or third tab (Workstream, Files, Changes) |
 | ⌘⇧B | Browser above the tab |
 | ⌘[, ⌘] | Viewer: back and forward through what it showed (⌘[ reopens a closed viewer) |
-| ⌘⇧D | Diff of the tab's folder |
+| ⌘⇧D | Side panel on Changes |
 | ⌘⇧O | Open the tab's folder in Cursor |
 | ⌘⇧N | New group |
 | ⌘0 | Show or hide the sidebar |

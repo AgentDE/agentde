@@ -305,13 +305,8 @@ struct TabMenu: View {
                 withAnimation(.snappy(duration: 0.2)) { store.togglePinnedTab(tab.id) }
             }
         }
-        Menu("Show in Split") {
-            Button("Split Right") { store.selectTab(tab.id); store.split(vertical: false) }
-            Button("Split Down") { store.selectTab(tab.id); store.split(vertical: true) }
-            Divider()
-            Button("Beside the Active Tab") { store.split(vertical: false, with: tab.id) }
-                .disabled(tab.id == store.activeTab?.id)
-        }
+        Button("Show on the Right") { store.showBeside(tab.id, vertical: false) }
+        Button("Show Below") { store.showBeside(tab.id, vertical: true) }
         Menu("Move to Group") {
             ForEach(store.groups) { group in
                 Button(group.name) { store.moveTab(tab.id, toGroup: group.id) }

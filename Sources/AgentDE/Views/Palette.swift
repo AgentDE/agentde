@@ -44,7 +44,7 @@ struct CommandPalette: View {
             ("New tab in worktree…", "arrow.triangle.branch", { store.newWorktreeTab() }),
             ("New group…", "folder.badge.plus", { store.newGroup() }),
             ("Toggle browser above tab", "globe", { store.toggleBrowser() }),
-            ("Show diff", "plus.forwardslash.minus", { store.showDiff() }),
+            ("Show changes", "plusminus", { store.showChanges() }),
             ("Open folder in Cursor", "arrow.up.forward.app", { store.openInEditor() }),
             ("Search all sessions", "text.magnifyingglass", { store.searchOpen = true }),
             ("Find in this tab", "magnifyingglass", { if let id = store.activeTab?.id { store.terminals.find(id, .showFindInterface) } }),

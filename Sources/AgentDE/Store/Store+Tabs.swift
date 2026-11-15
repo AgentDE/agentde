@@ -207,14 +207,15 @@ extension Store {
         scheduleSave()
     }
 
-    func showDiff() {
-        guard let tab = activeTab else { return }
-        let dir = tab.cwd.replacingOccurrences(of: "'", with: "'\\''")
-        let command = """
-        cd '\(dir)' && { git -c color.ui=always status -sb; echo; git -c color.ui=always diff HEAD --stat; echo; \
-        git -c color.ui=always diff HEAD; } 2>&1 | less -R
-        """
-        newTab(kind: .command, command: command, transient: true)
+    /// The side panel on Changes, for the active tab (⇧⌘D).
+    func showChanges() {
+        guard let tab = activeTab, tab.kind != .files, tab.kind != .command, let (g, t) = locate(tab.id) else {
+            NSSound.beep()
+            return
+        }
+        groups[g].tabs[t].panelHidden = false
+        groups[g].tabs[t].panelTab = "changes"
+        scheduleSave()
     }
 
     func openInEditor() {

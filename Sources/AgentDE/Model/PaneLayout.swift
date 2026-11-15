@@ -14,14 +14,15 @@ indirect enum PaneLayout: Codable, Equatable {
         }
     }
 
-    /// `target`'s pane split in two, `new` taking the right (or bottom) half.
-    func splitting(_ target: UUID, with new: UUID, vertical: Bool) -> PaneLayout {
+    /// `target`'s pane split in two, `new` taking the right (or bottom) half, or the left (top) one with `before`.
+    func splitting(_ target: UUID, with new: UUID, vertical: Bool, before: Bool = false) -> PaneLayout {
         switch self {
         case .tab(let id):
-            id == target ? .split(vertical: vertical, ratio: 0.5, first: self, second: .tab(new)) : self
+            guard id == target else { return self }
+            return .split(vertical: vertical, ratio: 0.5, first: before ? .tab(new) : self, second: before ? self : .tab(new))
         case .split(let v, let ratio, let first, let second):
-            .split(vertical: v, ratio: ratio, first: first.splitting(target, with: new, vertical: vertical),
-                   second: second.splitting(target, with: new, vertical: vertical))
+            return .split(vertical: v, ratio: ratio, first: first.splitting(target, with: new, vertical: vertical, before: before),
+                          second: second.splitting(target, with: new, vertical: vertical, before: before))
         }
     }
 
