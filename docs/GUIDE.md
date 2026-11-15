@@ -238,7 +238,7 @@ PR info comes from `gh pr view` (the GitHub CLI, logged in), at most once a minu
 | Case | What happens |
 |---|---|
 | Updating | `make install`, then **Update installed · Restart** in the status bar, or **AgentDE → Restart AgentDE** at any time |
-| Scrollback after a restart | The last 2 MB or so of each tab's output is replayed |
+| Scrollback after a restart | The last 2 MB or so of each tab's output is replayed, under a "Reconnecting" cover until the replay and the agent's redraw are done |
 | After a reboot | Holders are gone; Claude tabs resume their session with `claude --resume <id>` |
 | Tabs with nothing running | Start lazily, the first time you view them; until then they show a moon icon and the session's last name |
 

@@ -152,10 +152,15 @@ struct TabPane: View {
             }
             .overlay {
                 if store.restartingClaude.contains(tab.id) || store.claudeComingBack[tab.id] != nil {
-                    RestartCover().transition(.opacity)
+                    LoadingCover(symbol: "arrow.clockwise", title: "Restarting Claude", detail: "Same session, newest version")
+                        .transition(.opacity)
+                } else if store.reconnectingTabs.contains(tab.id) {
+                    LoadingCover(symbol: "arrow.triangle.2.circlepath", title: "Reconnecting", detail: "Picking up where it left off")
+                        .transition(.opacity)
                 }
             }
-            .animation(.easeOut(duration: 0.2), value: store.restartingClaude.contains(tab.id) || store.claudeComingBack[tab.id] != nil)
+            .animation(.easeOut(duration: 0.2), value: store.restartingClaude.contains(tab.id) || store.claudeComingBack[tab.id] != nil
+                       || store.reconnectingTabs.contains(tab.id))
     }
 }
 

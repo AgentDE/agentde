@@ -41,6 +41,9 @@ final class Store {
     var activityNote: String?
     /// Tabs whose Claude is restarting now.
     var restartingClaude: Set<UUID> = []
+    /// Tabs reconnecting to their holder (after a relaunch): covered while the holder replays their history
+    /// and the agent redraws, until shortly after the replay ends (`TerminalSession.handle(.replayEnd)`).
+    var reconnectingTabs: Set<UUID> = []
     /// Tabs whose restart has relaunched Claude, waiting for it to come back (its old pid): the tab stays covered
     /// until a new Claude registers, or 25 seconds pass.
     var claudeComingBack: [UUID: pid_t] = [:]

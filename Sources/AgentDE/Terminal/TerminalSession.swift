@@ -109,6 +109,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
                 guard let self else { if let fd { close(fd) }; return }
                 if let fd {
                     DebugLog.log("reattached tab \(id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)", "tab")
+                    self.beginReconnecting()
                     self.attach(fd)
                 } else {
                     self.launch(tab)
@@ -130,6 +131,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
                 if let fd {
                     DebugLog.log("reattached tab \(id.uuidString.prefix(8)) at launch", "tab")
                     self.markStarted()
+                    self.beginReconnecting()
                     self.attach(fd)
                 } else {
                     // A holder that died (a reboot, say) leaves its socket behind.
@@ -182,6 +184,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
                 sendWindowSize()
                 connection?.redraw()
             }
+            // The agent's repaint after the resize takes a moment; then the cover comes off.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.endReconnecting() }
         case .exited(let status):
             exited = true
             let code: Int32? = (status & 0x7f) == 0 ? (status >> 8) & 0xff : nil
@@ -193,6 +197,23 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             reconnect()
         }
     }
+
+    /// Covers the tab while its holder replays history and the agent redraws (`Store.reconnectingTabs`); a
+    /// holder that never says the replay ended uncovers it after 6 s.
+    private func beginReconnecting() {
+        let id = tabID
+        reconnectingSince = Date()
+        store?.reconnectingTabs.insert(id)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in self?.endReconnecting() }
+    }
+
+    private func endReconnecting() {
+        guard store?.reconnectingTabs.contains(tabID) == true else { return }
+        store?.reconnectingTabs.remove(tabID)
+        let seconds = reconnectingSince.map { Date().timeIntervalSince($0) } ?? 0
+        DebugLog.log("tab \(tabID.uuidString.prefix(8)) uncovered after reconnecting (\(String(format: "%.1f", seconds)) s)", "tab")
+    }
+    private var reconnectingSince: Date?
 
     /// The connection dropped without the shell exiting: try once more, then treat the tab as ended.
     private func reconnect() {
@@ -215,6 +236,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
                 DebugLog.log("tab \(id.uuidString.prefix(8)) reconnected to its holder", "tab")
                 self.reconnecting = false
                 self.view.feed(text: "\u{1b}c")   // the holder replays the screen again
+                self.beginReconnecting()
                 self.attach(fd)
             }
         }
