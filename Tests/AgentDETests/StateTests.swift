@@ -84,6 +84,21 @@ struct SavedStateTests {
 
     /// A tab sent to the background leaves the tab strip and its split but stays in the group (its holder keeps
     /// running); the next shown tab is selected, and choosing it again brings it back.
+    /// A File Explorer tab goes up to the parent with the folder it came from selected, stops at `/`, and
+    /// opens a subfolder in place.
+    @Test func explorerMovesUpAndIntoFolders() throws {
+        let id = UUID()
+        let store = try load(#"{"groups": [{"id": "\#(UUID().uuidString)", "name": "g", "colorIndex": 0, "dir": "/tmp", "tabs": [{"id": "\#(id.uuidString)", "kind": "files", "cwd": "/Users/x/ads/final/drafts"}]}]}"#)
+        store.explorerUp(id)
+        #expect(store.tab(id)?.cwd == "/Users/x/ads/final")
+        #expect(store.tab(id)?.explorerSelection == "/Users/x/ads/final/drafts")
+        store.explorerOpen(id, folder: "/")
+        store.explorerUp(id)
+        #expect(store.tab(id)?.cwd == "/")
+        store.explorerOpen(id, folder: "/Users")
+        #expect(store.tab(id)?.cwd == "/Users" && store.tab(id)?.explorerSelection == nil)
+    }
+
     @Test func sendingToTheBackgroundAndBack() throws {
         let a = UUID(), b = UUID(), c = UUID()
         func tab(_ id: UUID) -> String { #"{"id": "\#(id.uuidString)", "kind": "shell", "cwd": "/tmp"}"# }

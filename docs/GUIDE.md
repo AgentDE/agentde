@@ -129,6 +129,7 @@ A **JSON plugin** is a folder in `~/.config/agentde/plugins/` with a `plugin.jso
 
 **⌘⇧E** opens a File Explorer tab on the group's folder (or the active tab's folder); so does right-click on a group → **New → File Explorer**. It's for looking, not editing.
 
+- **Moving around:** the up arrow left of the search box goes up to the parent folder (with the one you came from selected); right-click a folder → **Open Here** to show just that folder.
 - **Tree:** folders load as you open them. Dotfiles show. Generated folders like `.git`, `node_modules`, `__pycache__` and `.venv` are hidden; the eye button shows them. ↑↓ move, → and ← open and close folders, Return opens a file in its default app.
 - **Find a file:** type in the box at the top to search the whole folder by path. In a git repo it uses `git ls-files`, so it respects `.gitignore`. Every word must appear; matches in the file name rank first.
 - **Preview:** the right side shows the selected file with Quick Look. Buttons open it in the default app or reveal it in Finder.

@@ -220,6 +220,24 @@ extension Store {
         NSWorkspace.shared.open(URL(fileURLWithPath: dir, isDirectory: true))
     }
 
+    /// A File Explorer tab moves up to its folder's parent, with the folder it came from selected.
+    func explorerUp(_ id: UUID) {
+        guard let folder = tab(id)?.cwd else { return }
+        let url = URL(fileURLWithPath: folder)
+        let parent = url.deletingLastPathComponent()
+        guard parent.path != url.path else { NSSound.beep(); return }
+        explorerOpen(id, folder: parent.path, selecting: url.path)
+    }
+
+    /// A File Explorer tab shows `folder` instead (right-click a folder → Open Here). A new folder gets a new
+    /// tree: `TerminalRegistry.explorer(for:)`.
+    func explorerOpen(_ id: UUID, folder: String, selecting: String? = nil) {
+        guard let (g, t) = locate(id), groups[g].tabs[t].kind == .files else { return }
+        groups[g].tabs[t].cwd = folder
+        groups[g].tabs[t].explorerSelection = selecting
+        scheduleSave()
+    }
+
     func setExplorerSelection(_ id: UUID, _ path: String) {
         guard let (g, t) = locate(id), groups[g].tabs[t].explorerSelection != path else { return }
         groups[g].tabs[t].explorerSelection = path

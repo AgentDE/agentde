@@ -31,6 +31,12 @@ struct FileExplorerView: View {
         ExplorerSplit(vertical: narrow) {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
+                    let parent = model.root.deletingLastPathComponent()
+                    Button { store.explorerUp(tab.id) } label: { Image(systemName: "chevron.up").font(.system(size: 11, weight: .semibold)) }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(theme.muted)
+                        .disabled(parent.path == model.root.path)
+                        .hint("Up to \(parent.path == "/" ? "/" : parent.lastPathComponent)")
                     Image(systemName: "magnifyingglass").font(.system(size: 11)).foregroundStyle(theme.muted)
                     TextField("Find a file in \(model.root.lastPathComponent)", text: $bindable.filter)
                         .textFieldStyle(.plain)
@@ -194,6 +200,9 @@ struct FileMenu: View {
     @Environment(Store.self) private var store
 
     var body: some View {
+        if url.hasDirectoryPath || (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+            Button("Open Here") { store.explorerOpen(tab.id, folder: url.path) }
+        }
         Button("Open") { NSWorkspace.shared.open(url) }
         Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
         if url.pathExtension.lowercased() == "html" || url.pathExtension.lowercased() == "htm" {
