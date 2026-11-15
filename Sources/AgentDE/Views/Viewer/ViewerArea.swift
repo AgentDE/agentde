@@ -155,14 +155,14 @@ struct ViewerHistoryMenu<Label: View>: View {
         let history = ViewerHistory.distinct(tab.viewerHistory ?? [])
         Menu {
             ForEach(history, id: \.self) { item in
-                Button((item == tab.viewerItem ? "✓ " : "    ") + ViewerHistory.label(item)) {
-                    store.openInViewer(item, tab: tab.id, select: false)
+                Button { store.openInViewer(item, tab: tab.id, select: false) } label: {
+                    SwiftUI.Label((item == tab.viewerItem ? "✓ " : "    ") + ViewerHistory.label(item), systemImage: ViewerHistory.symbol(item))
                 }
             }
             if !history.isEmpty {
                 Divider()
                 Menu("Forget") {
-                    ForEach(history, id: \.self) { item in Button(ViewerHistory.label(item)) { store.forgetViewerItem(item, tab: tab.id) } }
+                    ForEach(history, id: \.self) { item in Button { store.forgetViewerItem(item, tab: tab.id) } label: { SwiftUI.Label(ViewerHistory.label(item), systemImage: ViewerHistory.symbol(item)) } }
                 }
             }
         } label: { label() }

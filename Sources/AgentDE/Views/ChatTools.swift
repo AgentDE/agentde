@@ -71,7 +71,7 @@ extension Store {
     }
 }
 
-/// The tab's agent tools in the chat's top-right corner (Settings → Terminal turns them off). Faint icons at rest;
+/// The tab's agent tools in the chat's top-right corner (Settings → Terminal turns them off). Quiet icons on a small backing at rest;
 /// with the pointer over them, a small capsule with labels.
 struct ChatTools: View {
     let tab: TabModel
@@ -122,17 +122,18 @@ struct ChatToolsRow: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(ChatToolButtonStyle(expanded: expanded))
-                .foregroundStyle(tool.enabled ? theme.text.opacity(expanded ? 0.9 : 1) : theme.muted.opacity(0.55))
+                // At rest: readable but quiet (muted); usable tools stay clearly brighter than ones that aren't.
+                .foregroundStyle(tool.enabled ? (expanded ? theme.text.opacity(0.9) : theme.muted) : theme.muted.opacity(0.4))
                 .disabled(!tool.enabled)
                 .hint(tool.help)
             }
         }
         .padding(.horizontal, expanded ? 4 : 6)
         .padding(.vertical, 3)
-        .background(Capsule().fill(theme.sidebar.opacity(expanded ? 0.96 : 0)))
-        .overlay(Capsule().stroke(theme.border.opacity(expanded ? 1 : 0), lineWidth: 0.5))
+        // A solid backing even at rest, so terminal text behind the row doesn't run through the icons.
+        .background(Capsule().fill(expanded ? theme.sidebar.opacity(0.96) : Color(nsColor: theme.terminalBackground).opacity(0.92)))
+        .overlay(Capsule().stroke(theme.border.opacity(expanded ? 1 : 0.6), lineWidth: 0.5))
         .shadow(color: .black.opacity(expanded ? 0.25 : 0), radius: 8, y: 2)
-        .opacity(expanded ? 1 : 0.3)
     }
 }
 

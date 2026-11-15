@@ -1,3 +1,4 @@
+import AgentDEKit
 import Foundation
 
 /// What a tab's viewer has shown, newest first: its title menu lists it, and ⌘[ and ⌘] step through it.
@@ -16,6 +17,13 @@ enum ViewerHistory {
             return ViewerLinks.isViewerLink(item) ? "\(ViewerLinks.title(for: item)) — \(host)" : host + (URL(string: item)?.path ?? "")
         }
         return (item as NSString).lastPathComponent + " — " + ((item as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath
+    }
+
+    /// The menu's icon: a globe for a web page, the file's kind for a file (a local page is a file here).
+    static func symbol(_ item: String) -> String {
+        if item.hasPrefix("http") { return "globe" }
+        let symbol = FileIcons.symbol(for: URL(fileURLWithPath: item), isDirectory: false)
+        return symbol == "globe" ? "doc" : symbol
     }
 
     /// The newest of each label: two links the menu would show alike (one page reached two ways) count as one.

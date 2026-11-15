@@ -72,6 +72,13 @@ struct ViewerHistoryTests {
         #expect(ViewerHistory.distinct(alike) == ["https://example.com/p"])
     }
 
+    /// Web pages and files look different in the menu, local pages included.
+    @Test func iconsTellPagesFromFiles() {
+        #expect(ViewerHistory.symbol("https://example.com/report.html") == "globe")
+        #expect(ViewerHistory.symbol("/Users/x/report.html") == "doc")
+        #expect(ViewerHistory.symbol("/Users/x/notes.md") == "doc.text")
+    }
+
     @Test func reopeningMovesAnItemToTheFrontAndTheListStaysShort() {
         var history: [String]? = nil
         for item in ["/a.md", "/b.md", "/c.html", "/a.md"] { history = ViewerHistory.recording(item, in: history) }
