@@ -4,9 +4,24 @@ import Foundation
 enum ViewerHistory {
     static let limit = 10
 
-    /// `history` with `item` moved (or added) to the front, at most `limit` long.
+    /// `history` with `item` moved (or added) to the front, at most `limit` long, one entry per label.
     static func recording(_ item: String, in history: [String]?) -> [String] {
-        Array(([item] + (history ?? []).filter { $0 != item }).prefix(limit))
+        Array(distinct([item] + (history ?? []).filter { $0 != item }).prefix(limit))
+    }
+
+    /// How the title menu names an item: a page's title and host, or a file's name and folder.
+    static func label(_ item: String) -> String {
+        if item.hasPrefix("http") {
+            let host = URL(string: item)?.host ?? item
+            return ViewerLinks.isViewerLink(item) ? "\(ViewerLinks.title(for: item)) — \(host)" : host + (URL(string: item)?.path ?? "")
+        }
+        return (item as NSString).lastPathComponent + " — " + ((item as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath
+    }
+
+    /// The newest of each label: two links the menu would show alike (one page reached two ways) count as one.
+    static func distinct(_ history: [String]) -> [String] {
+        var seen = Set<String>()
+        return history.filter { seen.insert(label($0)).inserted }
     }
 
     /// `history` after following a link from `current` to `item`: what's newer than `current` is dropped first.

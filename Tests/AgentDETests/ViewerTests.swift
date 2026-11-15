@@ -58,6 +58,20 @@ struct ViewerRoutingTests {
 
 @Suite("Viewer history")
 struct ViewerHistoryTests {
+    /// Two links to one page that the menu would show alike keep only the newest; a different file with the
+    /// same name in another folder stays.
+    @Test func sameLabelCountsOnce() {
+        let older = "https://example.com/view?key=artifacts/by/me/deck.html"
+        let newer = "/Users/x/a/deck.md"
+        var history = ViewerHistory.recording(older, in: nil)
+        history = ViewerHistory.recording(newer, in: history)
+        history = ViewerHistory.recording("/Users/x/b/deck.md", in: history)
+        #expect(history == ["/Users/x/b/deck.md", newer, older])
+        #expect(ViewerHistory.distinct(["/a/x.md", "/a/x.md", "/b/x.md"]) == ["/a/x.md", "/b/x.md"])
+        let alike = ["https://example.com/p", "https://example.com/p?ref=1"]   // both read "example.com/p"
+        #expect(ViewerHistory.distinct(alike) == ["https://example.com/p"])
+    }
+
     @Test func reopeningMovesAnItemToTheFrontAndTheListStaysShort() {
         var history: [String]? = nil
         for item in ["/a.md", "/b.md", "/c.html", "/a.md"] { history = ViewerHistory.recording(item, in: history) }

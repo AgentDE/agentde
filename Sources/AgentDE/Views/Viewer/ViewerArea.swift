@@ -152,17 +152,17 @@ struct ViewerHistoryMenu<Label: View>: View {
     @Environment(Store.self) private var store
 
     var body: some View {
-        let history = tab.viewerHistory ?? []
+        let history = ViewerHistory.distinct(tab.viewerHistory ?? [])
         Menu {
             ForEach(history, id: \.self) { item in
-                Button((item == tab.viewerItem ? "✓ " : "    ") + Self.name(item)) {
+                Button((item == tab.viewerItem ? "✓ " : "    ") + ViewerHistory.label(item)) {
                     store.openInViewer(item, tab: tab.id, select: false)
                 }
             }
             if !history.isEmpty {
                 Divider()
                 Menu("Forget") {
-                    ForEach(history, id: \.self) { item in Button(Self.name(item)) { store.forgetViewerItem(item, tab: tab.id) } }
+                    ForEach(history, id: \.self) { item in Button(ViewerHistory.label(item)) { store.forgetViewerItem(item, tab: tab.id) } }
                 }
             }
         } label: { label() }
@@ -174,11 +174,4 @@ struct ViewerHistoryMenu<Label: View>: View {
     }
 
     /// "REPORT.md — ~/proj/docs", or a page's title and host.
-    static func name(_ item: String) -> String {
-        if item.hasPrefix("http") {
-            let host = URL(string: item)?.host ?? item
-            return ViewerLinks.isViewerLink(item) ? "\(ViewerLinks.title(for: item)) — \(host)" : host + (URL(string: item)?.path ?? "")
-        }
-        return (item as NSString).lastPathComponent + " — " + ((item as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath
-    }
 }
