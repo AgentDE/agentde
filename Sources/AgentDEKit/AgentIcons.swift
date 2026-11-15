@@ -6,10 +6,16 @@ import SwiftUI
 public enum AgentIcons {
     /// Claude's: a small pixel critter.
     public static let claude = "agentde.claude"
+    /// Codex's: a knot of six rounded loops.
+    public static let codex = "agentde.codex"
+
+    /// Whether `name` is one drawn here rather than an SF Symbol.
+    static func isDrawn(_ name: String) -> Bool { name == claude || name == codex }
 
     /// The icon as a template image `size` points across, for layers and menus.
     public static func image(_ name: String, size: CGFloat) -> NSImage? {
         if name == claude { return pixels(critter, size: size) }
+        if name == codex { return knot(size: size) }
         let config = NSImage.SymbolConfiguration(pointSize: size * 0.8, weight: .medium)
         let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(config)
         symbol?.isTemplate = true
@@ -25,6 +31,28 @@ public enum AgentIcons {
         ".XXXXXXXX.",
         ".X.X..X.X.",
     ]
+
+    /// Six rounded loops turned 60° apart around the center, outlined, so they cross into a knot.
+    static func knot(size: CGFloat) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
+            let center = CGPoint(x: size / 2, y: size / 2)
+            let line = max(0.9, size * 0.07)
+            let loop = NSRect(x: -size * 0.11, y: -size * 0.1, width: size * 0.22, height: size * 0.5)
+            NSColor.black.setStroke()
+            for k in 0..<6 {
+                var transform = AffineTransform(translationByX: center.x, byY: center.y)
+                transform.rotate(byDegrees: CGFloat(k) * 60)
+                transform.translate(x: size * 0.12, y: 0)
+                let path = NSBezierPath(roundedRect: loop, xRadius: size * 0.11, yRadius: size * 0.11)
+                path.transform(using: transform)
+                path.lineWidth = line
+                path.stroke()
+            }
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
 
     static func pixels(_ rows: [String], size: CGFloat) -> NSImage {
         let columns = rows.map(\.count).max() ?? 1
@@ -53,7 +81,7 @@ public enum AgentIcons {
 public extension Image {
     /// An agent or tab icon by name: an SF Symbol, or one `AgentIcons` draws.
     static func icon(_ name: String, size: CGFloat = 14) -> Image {
-        if name == AgentIcons.claude, let image = AgentIcons.image(name, size: size) {
+        if AgentIcons.isDrawn(name), let image = AgentIcons.image(name, size: size) {
             return Image(nsImage: image).renderingMode(.template)
         }
         return Image(systemName: name)

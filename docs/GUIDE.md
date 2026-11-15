@@ -187,7 +187,7 @@ A fork is an independent tab: renaming or closing either one doesn't affect the 
 
 AgentDE reads Claude Code's registry of running sessions (`~/.claude/sessions/`) once a second and matches each session to its tab. Nothing needs configuring.
 
-A tab's icon (Claude's is a small pixel critter) takes the color of its agent's state:
+A tab's icon (Claude's is a small pixel critter, Codex's a knot) takes the color of its agent's state:
 
 | Icon | Means |
 |---|---|

@@ -9,7 +9,7 @@ struct CodexAgent: Agent {
     let definition = AgentDefinition(id: CodexAgent.id, name: "Codex", command: "codex", tools: [
         .init(id: "rewind", label: "Rewind", symbol: "arrow.uturn.backward", keys: "\u{1B}\u{1B}", help: "Edit an earlier message (⌥⌘Z)"),
         .init(id: "compact", label: "Compact", symbol: "rectangle.compress.vertical", command: "/compact", help: "Compact the conversation (/compact)"),
-    ], prompt: "›", symbol: "chevron.left.forwardslash.chevron.right")
+    ], prompt: "›", symbol: AgentIcons.codex)
 
     func command(for tab: TabModel) -> String? {
         "codex" + (SafeID.session(tab.agentSession).map { " resume \($0)" } ?? "")
