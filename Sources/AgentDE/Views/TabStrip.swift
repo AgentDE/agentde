@@ -55,6 +55,7 @@ struct TabStrip: View {
                     Image(systemName: "clock.arrow.circlepath").font(.system(size: 12, weight: .medium))
                         .foregroundStyle(theme.secondary).padding(.horizontal, 4).frame(height: 24).contentShape(Rectangle())
                 }
+                .fixedSize()
                 .hint("Reopen in the viewer (⌘[)")
             }
             if store.settings.termi {

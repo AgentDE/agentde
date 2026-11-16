@@ -6,75 +6,10 @@ struct ViewerArea: View {
     let item: String
     @Environment(Store.self) private var store
     @Environment(\.theme) private var theme
-    @State private var copied = false
 
     var body: some View {
-        let expanded = tab.viewerExpanded ?? false
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                let back = ViewerHistory.step(from: item, in: tab.viewerHistory, by: 1)
-                let forward = ViewerHistory.step(from: item, in: tab.viewerHistory, by: -1)
-                if back != nil || forward != nil {
-                    HStack(spacing: 0) {
-                        IconButton(symbol: "chevron.left", help: "Back (⌘[)") { store.stepViewer(1) }
-                            .disabled(back == nil).opacity(back == nil ? 0.35 : 1)
-                        IconButton(symbol: "chevron.right", help: "Forward (⌘])") { store.stepViewer(-1) }
-                            .disabled(forward == nil).opacity(forward == nil ? 0.35 : 1)
-                    }
-                    .padding(.leading, -8)
-                }
-                ViewerHistoryMenu(tab: tab) {
-                    HStack(spacing: 3) {
-                        Text(title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(theme.text).lineLimit(1)
-                        if (tab.viewerHistory?.count ?? 0) > 1 {
-                            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(theme.muted)
-                        }
-                    }
-                }
-                .hint("Recent in this tab (⌘[ back, ⌘] forward)")
-                Text(item.hasPrefix("http") ? item : item.abbreviatingHome)
-                    .font(.system(size: 11, design: .monospaced)).foregroundStyle(theme.muted)
-                    .lineLimit(1).truncationMode(.middle)
-                    .textSelection(.enabled)
-                Spacer(minLength: 6)
-                if ViewerKind.of(item) == .markdown {
-                    let raw = tab.viewerRaw == true
-                    Button { store.toggleViewerRaw(tab.id) } label: {
-                        Text("Raw").font(.system(size: 11.5, weight: raw ? .semibold : .medium))
-                            .foregroundStyle(raw ? theme.text : theme.secondary)
-                            .padding(.horizontal, 6).frame(height: 22)
-                            .background(RoundedRectangle(cornerRadius: 5).fill(raw ? theme.selected : .clear))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .hint(raw ? "Show it rendered" : "Show the Markdown text")
-                }
-                // Files also reload by themselves when they change on disk; pages don't.
-                IconButton(symbol: "arrow.clockwise", help: "Reload") { store.terminals.viewers.host(for: tab.id).reload() }
-                IconButton(symbol: copied ? "checkmark" : "doc.on.doc", help: item.hasPrefix("http") ? "Copy link" : "Copy path") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(item, forType: .string)
-                    copied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false }
-                }
-                if item.hasPrefix("http"), let url = URL(string: ViewerLinks.openURL(item)) {
-                    IconButton(symbol: "safari", help: "Open in browser") { NSWorkspace.shared.open(url) }
-                } else {
-                    IconButton(symbol: "folder", help: "Show in Finder") {
-                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: item)])
-                    }
-                }
-                if let info = store.tabInfo(tab.id) {
-                    ForEach(Array(store.extensions.compactMap { $0.viewerAccessory(for: info, item: item) }.enumerated()), id: \.offset) { $0.element }
-                }
-                IconButton(symbol: expanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
-                           help: expanded ? "Show the chat" : "Fill the tab") { store.toggleViewerExpanded(tab.id) }
-                IconButton(symbol: "xmark", help: "Close (Esc)") { store.closeViewer(tab.id) }
-            }
-            .padding(.leading, 12)
-            .padding(.trailing, 4)
-            .frame(height: 30)
-            .overlay(alignment: .bottom) { Rectangle().fill(theme.border).frame(height: 0.5) }
+            ViewerHeader(tab: tab, item: item)
             if store.viewerFindTab == tab.id, ViewerKind.of(item).findable {
                 ViewerFindBar(tabID: tab.id)
             }
@@ -85,6 +20,87 @@ struct ViewerArea: View {
             }
         }
         .background(theme.sidebar.opacity(0.35))
+    }
+}
+
+/// The viewer's slim header: back and forward, the name (its menu lists what the viewer showed), the path, then
+/// the buttons. The name and path give way to the buttons in a narrow pane: nothing here may be wider than the pane,
+/// or the whole column (viewer, chat and status bar) runs off the window's edge.
+struct ViewerHeader: View {
+    let tab: TabModel
+    let item: String
+    @Environment(Store.self) private var store
+    @Environment(\.theme) private var theme
+    @State private var copied = false
+
+    var body: some View {
+        let expanded = tab.viewerExpanded ?? false
+        HStack(spacing: 8) {
+            let back = ViewerHistory.step(from: item, in: tab.viewerHistory, by: 1)
+            let forward = ViewerHistory.step(from: item, in: tab.viewerHistory, by: -1)
+            if back != nil || forward != nil {
+                HStack(spacing: 0) {
+                    IconButton(symbol: "chevron.left", help: "Back (⌘[)") { store.stepViewer(1) }
+                        .disabled(back == nil).opacity(back == nil ? 0.35 : 1)
+                    IconButton(symbol: "chevron.right", help: "Forward (⌘])") { store.stepViewer(-1) }
+                        .disabled(forward == nil).opacity(forward == nil ? 0.35 : 1)
+                }
+                .padding(.leading, -8)
+            }
+            ViewerHistoryMenu(tab: tab) {
+                HStack(spacing: 3) {
+                    Text(title).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(theme.text)
+                        .lineLimit(1).truncationMode(.middle)
+                    if (tab.viewerHistory?.count ?? 0) > 1 {
+                        Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(theme.muted)
+                    }
+                }
+            }
+            .hint("Recent in this tab (⌘[ back, ⌘] forward)")
+            .layoutPriority(1)   // the path gives way first
+            Text(item.hasPrefix("http") ? item : item.abbreviatingHome)
+                .font(.system(size: 11, design: .monospaced)).foregroundStyle(theme.muted)
+                .lineLimit(1).truncationMode(.middle)
+                .textSelection(.enabled)
+            Spacer(minLength: 6)
+            if ViewerKind.of(item) == .markdown {
+                let raw = tab.viewerRaw == true
+                Button { store.toggleViewerRaw(tab.id) } label: {
+                    Text("Raw").font(.system(size: 11.5, weight: raw ? .semibold : .medium))
+                        .foregroundStyle(raw ? theme.text : theme.secondary)
+                        .padding(.horizontal, 6).frame(height: 22)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(raw ? theme.selected : .clear))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .hint(raw ? "Show it rendered" : "Show the Markdown text")
+            }
+            // Files also reload by themselves when they change on disk; pages don't.
+            IconButton(symbol: "arrow.clockwise", help: "Reload") { store.terminals.viewers.host(for: tab.id).reload() }
+            IconButton(symbol: copied ? "checkmark" : "doc.on.doc", help: item.hasPrefix("http") ? "Copy link" : "Copy path") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(item, forType: .string)
+                copied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { copied = false }
+            }
+            if item.hasPrefix("http"), let url = URL(string: ViewerLinks.openURL(item)) {
+                IconButton(symbol: "safari", help: "Open in browser") { NSWorkspace.shared.open(url) }
+            } else {
+                IconButton(symbol: "folder", help: "Show in Finder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: item)])
+                }
+            }
+            if let info = store.tabInfo(tab.id) {
+                ForEach(Array(store.extensions.compactMap { $0.viewerAccessory(for: info, item: item) }.enumerated()), id: \.offset) { $0.element }
+            }
+            IconButton(symbol: expanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
+                       help: expanded ? "Show the chat" : "Fill the tab") { store.toggleViewerExpanded(tab.id) }
+            IconButton(symbol: "xmark", help: "Close (Esc)") { store.closeViewer(tab.id) }
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
+        .frame(height: 30)
+        .overlay(alignment: .bottom) { Rectangle().fill(theme.border).frame(height: 0.5) }
     }
 
     private var title: String {
@@ -173,7 +189,6 @@ struct ViewerHistoryMenu<Label: View>: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .fixedSize()
         .disabled(history.isEmpty)
     }
 
