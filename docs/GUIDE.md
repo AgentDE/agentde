@@ -212,7 +212,7 @@ A tab's icon (Claude's is a small pixel critter, Codex's a knot) takes the color
   ```
 - **Bell:** a terminal bell in a tab you're not looking at marks it amber.
 
-Codex tabs don't show status.
+Without these hooks, a Codex tab's icon stays gray.
 
 ### Claude Code updates
 
