@@ -57,7 +57,7 @@ The core is a library so that the app's `main` can live in a package that also s
 | `Store/` | `Store.swift` | The `@Observable` store: state, lookup, persistence (lenient load, debounced save), the extension list |
 | | `Store+Extensions.swift` | `Store` as `AgentDEHost`, and the helpers that call extensions' hooks |
 | | `Store+ClaudeRestart.swift` | Restart Claude on a tab, and Restart Idle Claude Tabs |
-| | `Store+Selection.swift`, `+Tabs`, `+Links`, `+Groups`, `+Agents`, `+AgentStatus`, `+Worktrees` | All changes to that state, by area. `+Worktrees` makes worktree tabs (`AgentDEKit/Worktrees`) and keeps their PR status current for the sidebar; `+AgentStatus` turns registry entries into tab states and notifications; `+Links` routes ⌘-clicks and drives the viewer and side panel |
+| | `Store+Selection.swift`, `+Tabs`, `+Links`, `+Groups`, `+Agents`, `+AgentStatus`, `+Worktrees` | All changes to that state, by area. `+Worktrees` makes worktree tabs (`AgentDEKit/Worktrees`); `+AgentStatus` turns registry entries into tab states and notifications; `+Links` routes ⌘-clicks and drives the viewer and side panel |
 | `Terminal/` | `TerminalSession.swift` | One tab's terminal: reattach or launch (startup command, agent), environment, holder events, delegate callbacks, ending the process tree |
 | | `PtyHost.swift` | Finding, starting and connecting to `agentde-pty` holders; `PtyConnection`, the framed socket connection |
 | | `TerminalRegistry.swift`, `TerminalPane.swift` | Ownership of terminals, web views and explorers by tab id, and the SwiftUI bridge that reparents a long-lived view |

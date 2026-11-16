@@ -236,11 +236,19 @@ private struct SidebarTabRow: View {
                 .foregroundStyle(active ? theme.text : theme.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
-            if store.settings.showPullRequests, store.onOwnBranch(tab, in: group), let pr = store.pullRequest(forDir: tab.cwd) {
-                PullRequestBadge(pr: pr)
-            }
             if store.isPinned(tab: tab, in: group.id) {
                 Image(systemName: "pin.fill").font(.system(size: 8.5)).foregroundStyle(theme.muted)
+            }
+            if hovering {
+                // The same close as the tab strip's ✕ and ⌘W: an agent tab's agent stops, its conversation is kept.
+                Button { store.closeTab(tab.id) } label: {
+                    Image(systemName: "xmark").font(.system(size: 8, weight: .bold))
+                        .frame(width: 15, height: 15)
+                        .background(Circle().fill(theme.hover))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(theme.secondary)
+                .hint(tab.kind == .agent ? "Close & stop agent (⌘W)" : "Close tab (⌘W)")
             }
         }
         .padding(.leading, 30)

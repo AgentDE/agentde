@@ -58,19 +58,4 @@ extension Store {
             }
         }
     }
-
-    /// Keeps the PR status of tabs in their own folder (worktrees, say) current, for the sidebar. The
-    /// monitor asks `gh` at most once a minute per folder and branch.
-    func refreshTabPullRequests() {
-        guard settings.showPullRequests else { return }
-        for group in groups {
-            for tab in group.tabs where onOwnBranch(tab, in: group) { pullRequestMonitor.refresh(dir: tab.cwd) }
-        }
-    }
-
-    /// A terminal tab on another branch than its group's folder (a worktree tab): its sidebar row shows its PR.
-    func onOwnBranch(_ tab: TabModel, in group: GroupModel) -> Bool {
-        guard tab.kind != .files, tab.kind != .command, tab.cwd != group.dir, let branch = GitInfo.branch(at: tab.cwd) else { return false }
-        return branch != GitInfo.branch(at: group.dir)
-    }
 }

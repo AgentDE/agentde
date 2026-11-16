@@ -64,7 +64,7 @@ Open AgentDE like any app, or run `agentde` from any terminal (the command is in
 
 The **+** after the last tab opens a new tab of any kind. Closing a tab's process (`exit`, or quitting Claude and then the shell) closes the tab. A Claude tab is named after its Claude session; rename it with ⌘R or a double-click. Starting Claude in a shell tab turns it into a Claude tab.
 
-**The sidebar** lists every group with its tabs. Click the chevron to collapse or expand a group; ⌥-click to do all of them. Collapsing is saved, and collapsed groups show status dots next to the name.
+**The sidebar** lists every group with its tabs. Click the chevron to collapse or expand a group; ⌥-click to do all of them. Collapsing is saved, and collapsed groups show status dots next to the name. Hover over a tab's row for its ✕, which closes it as ⌘W does.
 
 **Icons** show a short label when you hover over them.
 
@@ -227,7 +227,7 @@ The tab keeps its place, name, workstream and viewer. An interactive tab gets Ct
 
 ## Pull requests
 
-**Worktree tabs.** Right-click a group → New → **Tab in Worktree…** (also in the tab strip's + and the palette): name a branch and pick an agent (Claude, Codex, or one a plugin adds). AgentDE makes the branch from the remote's default branch, checks it out in `<repo>-worktrees/<name>` beside the repository, and starts the agent there in a tab named after the branch. A tab on another branch than its group's folder shows its PR's checks in the sidebar (✓, a clock, ✗; hover for the PR). Worktrees are never removed for you: your agent cleans up after itself.
+**Worktree tabs.** Right-click a group → New → **Tab in Worktree…** (also in the tab strip's + and the palette): name a branch and pick an agent (Claude, Codex, or one a plugin adds). AgentDE makes the branch from the remote's default branch, checks it out in `<repo>-worktrees/<name>` beside the repository, and starts the agent there in a tab named after the branch. Worktrees are never removed for you: your agent cleans up after itself.
 
 The header shows the group's name and folder (then the tab's folder, when the tab is in a subfolder or worktree: `app › ql-crash`), the branch, and the branch's open PR: its number and a summary of checks (✓ passing, a clock while running, ✗ failing). Click it to open the PR on GitHub, or Graphite (Settings → Agents). When checks fail and Claude is idle, **Fix with Claude** types a prompt naming the failing checks and the `gh run view … --log-failed` commands for their logs, and asks Claude to explain before pushing.
 
