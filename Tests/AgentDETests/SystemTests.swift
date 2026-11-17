@@ -97,4 +97,19 @@ struct SessionRegistryTests {
         try FileManager.default.removeItem(at: b)
         #expect(reader.read().map(\.sessionId) == ["a"])
     }
+
+    /// A name Claude made from the folder ("my-repo-25") isn't a name: tabs keep the session's own title.
+    @Test func aDerivedNameIsNotAName() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-registry-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try #"{"pid": 1, "sessionId": "a", "name": "my-repo-25", "nameSource": "derived"}"#
+            .write(to: dir.appendingPathComponent("1.json"), atomically: true, encoding: .utf8)
+        try #"{"pid": 2, "sessionId": "b", "name": "fix_login", "nameSource": "user"}"#
+            .write(to: dir.appendingPathComponent("2.json"), atomically: true, encoding: .utf8)
+        let entries = SessionRegistryReader(dir: dir).read()
+        let a = entries.first { $0.sessionId == "a" }, b = entries.first { $0.sessionId == "b" }
+        #expect(a?.name == nil && a?.derivedName == "my-repo-25")
+        #expect(b?.name == "fix_login" && b?.derivedName == nil)
+    }
 }

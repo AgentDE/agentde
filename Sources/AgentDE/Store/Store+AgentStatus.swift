@@ -84,7 +84,11 @@ extension Store {
                 } else if let sessionId = entry.sessionId, let (g, t) = locate(tabID) {
                     var tab = groups[g].tabs[t]
                     if let name = entry.name, !name.isEmpty, tab.lastAgentName != name { tab.lastAgentName = name; dirty = true }
+                    // A folder-made name saved by an earlier build: drop it, so the session's own title shows.
+                    if let derived = entry.derivedName, tab.lastAgentName == derived { tab.lastAgentName = nil; dirty = true }
                     if tab.agentSession != sessionId {
+                        // Another conversation (a fork, /clear): the old one's name doesn't carry over.
+                        if tab.agentSession != nil, entry.name == nil { tab.lastAgentName = nil }
                         tab.agentSession = sessionId
                         tab.forkOnStart = nil
                         dirty = true

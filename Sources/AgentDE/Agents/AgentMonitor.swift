@@ -6,6 +6,10 @@ struct ClaudeSessionEntry: Decodable {
     var pid: Int32
     var sessionId: String?
     var name: String?
+    /// "user" (named with /rename), "auto" (Claude named it from the conversation) or "derived" (made from the
+    /// folder, like "my-repo-25"). The reader moves a derived name to `derivedName`: it isn't a name.
+    var nameSource: String?
+    var derivedName: String?
     var status: String?
     var cwd: String?
     /// "interactive" or "bg" (background session, e.g. from `/fork` or `claude --bg`).
@@ -48,7 +52,8 @@ final class SessionRegistryReader {
                 continue
             }
             decodes += 1
-            let entry = (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode(ClaudeSessionEntry.self, from: $0) }
+            var entry = (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode(ClaudeSessionEntry.self, from: $0) }
+            if entry?.nameSource == "derived", let name = entry?.name { entry?.derivedName = name; entry?.name = nil }
             cache[file.path] = (modified, size, entry)
             if let entry { entries.append(entry) }
         }

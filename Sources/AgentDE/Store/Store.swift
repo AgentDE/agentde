@@ -134,9 +134,9 @@ final class Store {
         if let custom = tab.customTitle, !custom.isEmpty { return custom }
         let rt = runtime[tab.id]
         if let name = rt?.agentName, !name.isEmpty { return name }
-        // A sleeping tab that will resume a session: the name it had last time, else the name Claude gave the
-        // session (from the recent-sessions scan).
-        if rt?.agentPresent != true, tab.agentSession != nil || tab.attachJobId != nil {
+        // A sleeping tab that will resume a session, or a running one Claude hasn't named: the name it had last
+        // time, else the session's title (from the recent-sessions scan).
+        if tab.agentSession != nil || tab.attachJobId != nil {
             if let last = tab.lastAgentName, !last.isEmpty { return last }
             if let session = tab.agentSession,
                let named = recentSessions.first(where: { $0.sessionId == session })?.name { return named }
