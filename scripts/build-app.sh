@@ -59,6 +59,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSCalendarsFullAccessUsageDescription</key><string>The sidebar's Calendar widget shows your next events.</string>
+  <key>NSMicrophoneUsageDescription</key><string>Programs in your tabs, such as an agent's voice mode, want to use the microphone.</string>
   <key>NSSupportsAutomaticTermination</key><false/>
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/><key>NSAllowsArbitraryLoads</key><true/></dict>
 </dict>

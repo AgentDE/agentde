@@ -37,6 +37,7 @@ Open AgentDE like any app, or run `agentde` from any terminal (the command is in
 | Keychain password | `make signing` | Adding the signing identity to your login keychain |
 | Notifications | First launch | Alerts when an agent needs you or is done |
 | Calendar | The Calendar widget's first showing | Reading today's and tomorrow's events |
+| Microphone | A program in a tab first records, such as Claude Code's `/voice` | Tabs use AgentDE's permission, as in any terminal app |
 | Documents, Desktop, Downloads… | A tab first touches one of those folders | macOS asks for the app; with `make signing` it asks once |
 
 ### Uninstall
