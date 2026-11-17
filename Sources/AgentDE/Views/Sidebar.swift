@@ -129,6 +129,20 @@ private struct GroupRow: View {
             if collapsed {
                 GroupSummary(states: states, count: group.tabs.count, asking: group.tabs.contains { store.wantsAttention($0) })
             }
+            if hovering, store.renamingGroupID != group.id {
+                // A shortcut for the group's New tab (what ⌘T starts, Settings → Terminal); right-click has every kind.
+                Button {
+                    if collapsed { withAnimation(.snappy(duration: 0.2)) { store.toggleCollapsed(group.id) } }
+                    store.startDefaultTab(in: group.id)
+                } label: {
+                    Image(systemName: "plus").font(.system(size: 9, weight: .bold))
+                        .frame(width: 15, height: 15)
+                        .background(Circle().fill(theme.hover))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(theme.secondary)
+                .hint("New \(Agents.byID(store.settings.defaultAgent)?.name ?? "shell") tab in \(group.name)")
+            }
         }
         .padding(.leading, 2).padding(.trailing, 8)
         .frame(height: 30)

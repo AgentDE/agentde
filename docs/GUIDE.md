@@ -52,7 +52,7 @@ Open AgentDE like any app, or run `agentde` from any terminal (the command is in
 
 ## The basics
 
-**Groups.** A group has a name, a color and a folder. New tabs in the group open in that folder. Create one with ⌘⇧N or **+ New group** in the sidebar. Double-click a group to rename it. Right-click it to open a new tab of any kind (plus anything extensions add to **New**), change its color, set its startup command, collapse it, reveal its folder or delete it.
+**Groups.** A group has a name, a color and a folder. New tabs in the group open in that folder. Create one with ⌘⇧N or **+ New group** in the sidebar. Double-click a group to rename it. Hover it and click **+** to start a new tab in it (the kind ⌘T starts, set in Settings → Terminal). Right-click it to open a new tab of any kind (plus anything extensions add to **New**), change its color, set its startup command, collapse it, reveal its folder or delete it.
 
 **Tabs.** A tab is a terminal running one of these:
 
