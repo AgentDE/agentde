@@ -54,9 +54,10 @@ final class ViewerRegistry {
     func host(for id: UUID) -> ViewerHost {
         if escapeMonitor == nil {
             escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                guard event.keyCode == 53, let self, let responder = event.window?.firstResponder as? NSView,
+                let save = event.keyCode == 1 && event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
+                guard event.keyCode == 53 || save, let self, let responder = event.window?.firstResponder as? NSView,
                       let host = self.hosts.values.first(where: { responder.isDescendant(of: $0) }) else { return event }
-                self.onEscape?(host.tabID)
+                if save { host.saveEdits() } else { self.onEscape?(host.tabID) }
                 return nil
             }
         }
@@ -70,14 +71,16 @@ final class ViewerRegistry {
     func existing(_ id: UUID) -> ViewerHost? { hosts[id] }
 
     func remove(_ id: UUID) {
+        hosts[id]?.saveEdits()
         hosts[id]?.removeFromSuperview()
         hosts[id] = nil
     }
 }
 
 /// Shows one item: Markdown, local HTML or a localhost page (WebKit), PDF (PDFKit), images, diffs and text,
-/// or anything else through Quick Look. Files reload when they change on disk.
-final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
+/// or anything else through Quick Look. Files reload when they change on disk. Text files (and Markdown shown as
+/// text) are editable: see Editing.
+final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDelegate {
     let tabID: UUID
     private var shown: (item: String, theme: String, raw: Bool)?
     private var content: NSView?
@@ -100,6 +103,7 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
     func show(_ item: String, theme: Theme, raw: Bool = false) {
         let themeKey = "\(theme.text)\(theme.terminalBackground)"
         guard shown?.item != item || shown?.theme != themeKey || shown?.raw != raw else { return }
+        saveEdits()
         let sameItem = shown?.item == item
         shown = (item, themeKey, raw)
         self.theme = theme
@@ -197,19 +201,50 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
             view.show(image, keepZoom: existing != nil && keepScroll)
             install(view)
         case .diff, .text:
+            let reused = content is NSScrollView
             let scroll = (content as? NSScrollView) ?? NSTextView.scrollableTextView()
             guard let text = scroll.documentView as? NSTextView else { return }
             let offset = scroll.contentView.bounds.origin
-            text.isEditable = false
-            text.isSelectable = true
+            let file = Self.readTextFile(url)
+            let editable = kind == .text && file.whole
             text.drawsBackground = true
             text.backgroundColor = theme.terminalBackground
+            text.insertionPointColor = theme.terminalForeground
             text.textContainerInset = NSSize(width: 14, height: 12)
-            let contents = Self.readText(url)
-            text.textStorage?.setAttributedString(ViewerHost.styled(contents, diff: ViewerKind.of(item) == .diff, theme: theme))
             scroll.drawsBackground = true
             scroll.backgroundColor = theme.terminalBackground
             install(scroll)
+            if keepScroll, reused, let editing, editing.path == item {
+                switch TextEdits.onDiskChange(disk: file.text, saved: editing.saved, shown: text.string) {
+                case .keep:
+                    // Our own save coming back, or a theme change: the text stays as you have it, restyled.
+                    text.textStorage?.addAttributes(Self.textAttributes(theme), range: NSRange(location: 0, length: (text.string as NSString).length))
+                    text.typingAttributes = Self.textAttributes(theme)
+                    if file.text == text.string { self.editing?.saved = file.text }
+                    return
+                case .conflict:
+                    askAboutConflict(item, disk: file.text)
+                    return
+                case .reload:
+                    break
+                }
+            }
+            text.isEditable = editable
+            text.isSelectable = true
+            text.isRichText = false
+            text.allowsUndo = editable
+            text.isAutomaticQuoteSubstitutionEnabled = false
+            text.isAutomaticDashSubstitutionEnabled = false
+            text.isAutomaticTextReplacementEnabled = false
+            text.isAutomaticSpellingCorrectionEnabled = false
+            text.isContinuousSpellCheckingEnabled = false
+            text.isAutomaticLinkDetectionEnabled = false
+            text.delegate = editable ? self : nil
+            let selection = text.selectedRange()
+            text.textStorage?.setAttributedString(ViewerHost.styled(file.text, diff: ViewerKind.of(item) == .diff, theme: theme))
+            text.typingAttributes = Self.textAttributes(theme)
+            if keepScroll { text.setSelectedRange(NSRange(location: min(selection.location, (file.text as NSString).length), length: 0)) }
+            editing = editable ? (item, file.text) : nil
             if keepScroll { scroll.contentView.scroll(to: offset) }
         case .media:
             // The same file again (it changed on disk): a fresh item at the same spot, still paused or playing.
@@ -291,16 +326,25 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
     }
 
     /// At most 2 MB of a text file, so a huge log can't stall the window.
-    static func readText(_ url: URL) -> String {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return "" }
+    static func readText(_ url: URL) -> String { readTextFile(url).text }
+
+    /// At most 2 MB of a text file, and whether that's all of it as valid UTF-8, which is what can be edited.
+    static func readTextFile(_ url: URL) -> (text: String, whole: Bool) {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return ("", false) }
         defer { try? handle.close() }
-        let data = (try? handle.read(upToCount: 2_000_000)) ?? Data()
-        return String(decoding: data, as: UTF8.self)
+        let limit = 2_000_000
+        let data = (try? handle.read(upToCount: limit + 1)) ?? Data()
+        if data.count <= limit, let text = String(data: data, encoding: .utf8) { return (text, true) }
+        return (String(decoding: data.prefix(limit), as: UTF8.self), false)
+    }
+
+    static func textAttributes(_ theme: Theme) -> [NSAttributedString.Key: Any] {
+        [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular), .foregroundColor: theme.terminalForeground]
     }
 
     static func styled(_ text: String, diff: Bool, theme: Theme) -> NSAttributedString {
         let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        let base: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: theme.terminalForeground]
+        let base = textAttributes(theme)
         guard diff else { return NSAttributedString(string: text, attributes: base) }
         let result = NSMutableAttributedString()
         for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
@@ -385,6 +429,72 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate {
         source.setCancelHandler { close(fd) }
         source.resume()
         fileWatch = source
+    }
+
+    // MARK: Editing
+
+    /// The text file being edited and its text as loaded or last saved, which tells your edits from a change on disk.
+    private var editing: (path: String, saved: String)?
+    private var pendingSave: DispatchWorkItem?
+    private var askingAboutConflict = false
+
+    private var textView: NSTextView? { (content as? NSScrollView)?.documentView as? NSTextView }
+
+    /// Edits save a second after you stop typing, when you leave the text, switch items or press ⌘S.
+    func textDidChange(_ notification: Notification) {
+        pendingSave?.cancel()
+        let save = DispatchWorkItem { [weak self] in self?.saveEdits() }
+        pendingSave = save
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: save)
+    }
+
+    func textDidEndEditing(_ notification: Notification) { saveEdits() }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil { saveEdits() }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    /// Writes your edits, in place (so the file keeps its permissions), unless the file changed on disk since it
+    /// was loaded: then it asks which to keep rather than overwrite someone else's change.
+    func saveEdits() {
+        pendingSave?.cancel()
+        pendingSave = nil
+        guard let editing, let text = textView, text.string != editing.saved else { return }
+        let disk = Self.readTextFile(URL(fileURLWithPath: editing.path))
+        guard disk.text == editing.saved else { return askAboutConflict(editing.path, disk: disk.text) }
+        let mine = text.string
+        do {
+            try mine.write(toFile: editing.path, atomically: false, encoding: .utf8)
+            self.editing?.saved = mine
+        } catch {
+            DebugLog.log("couldn't save \((editing.path as NSString).lastPathComponent): \(error.localizedDescription)", "viewer")
+            NSSound.beep()
+        }
+    }
+
+    /// The file changed on disk while you had unsaved edits: keep yours (written over it) or take the file's.
+    private func askAboutConflict(_ item: String, disk: String) {
+        guard let window, !askingAboutConflict else { return }
+        askingAboutConflict = true
+        let alert = NSAlert()
+        alert.messageText = "“\((item as NSString).lastPathComponent)” changed on disk"
+        alert.informativeText = "It changed while you had unsaved edits here."
+        alert.addButton(withTitle: "Keep Mine")
+        alert.addButton(withTitle: "Use the File's")
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            self.askingAboutConflict = false
+            guard self.editing?.path == item else { return }
+            let now = Self.readTextFile(URL(fileURLWithPath: item)).text
+            self.editing?.saved = now
+            if response == .alertFirstButtonReturn {
+                self.saveEdits()
+            } else {
+                self.editing = nil
+                self.render(item, keepScroll: true)
+            }
+        }
     }
 
     // MARK: WKNavigationDelegate
@@ -526,5 +636,18 @@ struct ViewerPane: NSViewRepresentable {
             container.addSubview(host)
         }
         host.show(item, theme: theme, raw: store.tab(tabID)?.viewerRaw == true)
+    }
+}
+
+/// What a text file you're editing does when it changes on disk.
+enum TextEdits {
+    enum Action: Equatable { case keep, reload, conflict }
+
+    /// `disk` is the file now, `saved` what it held when loaded or last saved, `shown` the text in the viewer.
+    /// Nothing new on disk (your own save coming back): keep what you have. New on disk and nothing unsaved:
+    /// reload. New on disk with unsaved edits: ask.
+    static func onDiskChange(disk: String, saved: String, shown: String) -> Action {
+        if disk == saved || disk == shown { return .keep }
+        return shown == saved ? .reload : .conflict
     }
 }
