@@ -37,3 +37,17 @@ struct SharedFolderTests {
         #expect(Store.searchable(all, for: repo, in: [pinning, docs, twin], open: []).map(\.sessionId) == ["top"])
     }
 }
+
+@Suite("Resume cover")
+struct ResumeCoverTests {
+    /// Off once the input line shows and output settles; never before output, never past the limit.
+    @Test func comesOffWhenTheConversationIsDrawn() {
+        #expect(!ResumeCover.done(elapsed: 1, quietFor: nil, promptOnScreen: false))              // nothing drawn yet
+        #expect(!ResumeCover.done(elapsed: 3, quietFor: 2, promptOnScreen: false))                // the shell, waiting on the agent
+        #expect(!ResumeCover.done(elapsed: 3, quietFor: 0.1, promptOnScreen: true))               // still drawing
+        #expect(ResumeCover.done(elapsed: 3, quietFor: 0.5, promptOnScreen: true))
+        #expect(!ResumeCover.done(elapsed: 1, quietFor: 1, promptOnScreen: nil))                  // no known input line: wait a bit
+        #expect(ResumeCover.done(elapsed: 2.5, quietFor: 1, promptOnScreen: nil))
+        #expect(ResumeCover.done(elapsed: ResumeCover.limit, quietFor: nil, promptOnScreen: false)) // a failed resume
+    }
+}

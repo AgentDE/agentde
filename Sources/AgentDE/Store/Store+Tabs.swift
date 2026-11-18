@@ -149,6 +149,7 @@ extension Store {
             DebugLog.log("reopened closed tab as \(tab.id.uuidString.prefix(8)) kind=\(tab.kind.rawValue)", "tab")
             selectTab(tab.id)
             scheduleSave()
+            if tab.agentSession != nil, agent(of: tab) != nil { coverWhileResuming(tab.id, name: title(for: tab)) }
             return
         }
         NSSound.beep()

@@ -51,6 +51,9 @@ final class Store {
     /// Tabs whose restart has relaunched Claude, waiting for it to come back (its old pid): the tab stays covered
     /// until a new Claude registers, or 25 seconds pass.
     var claudeComingBack: [UUID: pid_t] = [:]
+    /// Tabs resuming a session, by the session's name: covered until the agent has drawn the conversation
+    /// (`ResumeCover`).
+    var resumingTabs: [UUID: String] = [:]
     var sidebarVisible = true
     var renamingTabID: UUID?
     var renamingGroupID: UUID?

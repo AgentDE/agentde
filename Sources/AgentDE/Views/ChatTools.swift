@@ -165,6 +165,8 @@ struct LoadingCover: View {
     let symbol: String
     let title: String
     let detail: String
+    /// A click takes the cover off, when that's safe (a resume: the agent may be waiting on a question).
+    var dismiss: (() -> Void)?
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -178,6 +180,7 @@ struct LoadingCover: View {
             }
         }
         .contentShape(Rectangle())   // keys and clicks wait until it's back
+        .onTapGesture { dismiss?() }
     }
 }
 

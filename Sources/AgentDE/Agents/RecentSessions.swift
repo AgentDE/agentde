@@ -172,7 +172,9 @@ extension Store {
         guard let cwd = folderToResume(session) else { return }
         // Already running as a background session (Claude's): attach to it rather than starting a second copy.
         if let job = Agents.byID(session.agent)?.liveBackgroundJob(session: session.sessionId, store: self) {
-            newAgentTab(session.agent, in: groupID, session: session.sessionId, cwd: cwd, attachJobId: job)
+            if let id = newAgentTab(session.agent, in: groupID, session: session.sessionId, cwd: cwd, attachJobId: job) {
+                coverWhileResuming(id, name: session.name)
+            }
             return
         }
         if liveSessionIds.contains(session.sessionId) {
@@ -186,7 +188,44 @@ extension Store {
         if let id = newAgentTab(session.agent, in: groupID, session: session.sessionId, cwd: cwd), let (g, t) = locate(id) {
             groups[g].tabs[t].lastAgentName = session.name
             scheduleSave()
+            coverWhileResuming(id, name: session.name)
         }
+    }
+
+    /// Covers a tab that's resuming a session (`LoadingCover`) until `ResumeCover` says the agent is ready.
+    func coverWhileResuming(_ id: UUID, name: String) {
+        resumingTabs[id] = name
+        let started = Date()
+        func check() {
+            guard resumingTabs[id] != nil else { return }
+            let session = terminals.session(id)
+            let prompt = tab(id).flatMap { agent(of: $0)?.definition.prompt?.first }
+            let elapsed = Date().timeIntervalSince(started)
+            if tab(id) == nil || ResumeCover.done(elapsed: elapsed, quietFor: session?.lastOutputAt.map { Date().timeIntervalSince($0) },
+                                                  promptOnScreen: prompt.map { session?.inputHasDraft(prompt: $0) != nil }) {
+                DebugLog.log("tab \(id.uuidString.prefix(8)) resumed in \(Int(elapsed * 1000)) ms", "agent")
+                resumingTabs[id] = nil
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { check() }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { check() }
+    }
+}
+
+/// When a resuming tab's cover comes off: once the agent's input line is on screen and its output has settled
+/// (the conversation drawn), or, for an agent with no known input line, once output has been quiet a while.
+/// Never later than `limit`, so a resume that fails (back at the shell) doesn't stay covered.
+enum ResumeCover {
+    static let limit: TimeInterval = 20
+
+    /// `quietFor`: how long since the terminal's last output, nil before any. `promptOnScreen`: whether the
+    /// agent's input line is showing, nil when the agent has none we know.
+    static func done(elapsed: TimeInterval, quietFor: TimeInterval?, promptOnScreen: Bool?) -> Bool {
+        if elapsed >= limit { return true }
+        guard let quietFor else { return false }
+        if let promptOnScreen { return promptOnScreen && quietFor >= 0.4 }
+        return elapsed >= 2 && quietFor >= 1
     }
 }
 
