@@ -278,6 +278,7 @@ extension Store {
     func openInViewer(_ item: String, tab id: UUID, select: Bool, record: Bool) {
         guard let (g, t) = locate(id) else { return }
         groups[g].tabs[t].viewerItem = item
+        viewerOpenedAt = ViewerOpens.stamping(item, at: Date(), in: viewerOpenedAt)
         if record {
             groups[g].tabs[t].viewerHistory = ViewerHistory.recording(item, in: groups[g].tabs[t].viewerHistory)
             viewerOpenCounts = ViewerOpens.counting(item, in: viewerOpenCounts)

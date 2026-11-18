@@ -83,6 +83,17 @@ struct ViewerHistoryTests {
         #expect(full.count == ViewerOpens.limit && full["/new"] == nil)   // one open doesn't beat the others' two
     }
 
+    /// Each open stamps the time; past the cap, the longest unopened go.
+    @Test func viewerOpenTimesKeepTheLatest() {
+        let early = Date(timeIntervalSinceReferenceDate: 100), late = Date(timeIntervalSinceReferenceDate: 200)
+        var times = ViewerOpens.stamping("/a.md", at: early, in: [:])
+        times = ViewerOpens.stamping("/a.md", at: late, in: times)
+        #expect(times == ["/a.md": late])
+        var full = Dictionary(uniqueKeysWithValues: (0..<ViewerOpens.limit).map { ("/f\($0)", early) })
+        full = ViewerOpens.stamping("/new", at: late, in: full)
+        #expect(full.count == ViewerOpens.limit && full["/new"] == late)
+    }
+
     /// Web pages and files look different in the menu, local pages included.
     @Test func iconsTellPagesFromFiles() {
         #expect(ViewerHistory.symbol("https://example.com/report.html") == "globe")

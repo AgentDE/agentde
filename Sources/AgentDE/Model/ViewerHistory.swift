@@ -61,4 +61,13 @@ enum ViewerOpens {
         let keep = counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(limit)
         return Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0.value) })
     }
+
+    /// `times` with `item` opened at `now`; over `limit`, the longest unopened go.
+    static func stamping(_ item: String, at now: Date, in times: [String: Date]) -> [String: Date] {
+        var times = times
+        times[item] = now
+        guard times.count > limit else { return times }
+        let keep = times.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(limit)
+        return Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0.value) })
+    }
 }

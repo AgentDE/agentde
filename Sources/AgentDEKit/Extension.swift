@@ -108,6 +108,8 @@ public protocol AgentDEHost: AnyObject {
     var liveSessions: Set<String> { get }
     /// How many times you've opened `item` (a file path or a link) in a viewer.
     func viewerOpens(_ item: String) -> Int
+    /// When you last opened `item` in a viewer, by any route (a link, the history, ‹ and ›); nil if never.
+    func viewerLastOpened(_ item: String) -> Date?
     /// Whether the user wants motion (Settings → Fun, and Reduce Motion).
     var animations: Bool { get }
     /// The extensions loaded, for working with each other (`extensions.compactMap { $0 as? SomeProtocol }`).
@@ -140,6 +142,8 @@ public protocol AgentDEHost: AnyObject {
 }
 
 public extension AgentDEHost {
+    func viewerLastOpened(_ item: String) -> Date? { nil }
+
     /// An extension's saved settings, decoded, or `fallback`.
     func settings<T: Decodable>(_ type: T.Type, for ext: AgentDEExtension, fallback: T) -> T {
         settingsData(for: ext).flatMap { try? JSONDecoder().decode(T.self, from: $0) } ?? fallback

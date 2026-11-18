@@ -62,6 +62,8 @@ struct SavedState: Codable {
     var settings: AgentDESettings
     /// How often you've opened each file or page in a viewer (`Store.viewerOpenCounts`).
     var viewerOpens: [String: Int]?
+    /// When you last opened each file or page in a viewer (`Store.viewerOpenedAt`).
+    var viewerOpenedAt: [String: Date]?
 }
 
 extension AgentDESettings {

@@ -64,6 +64,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `allTabs`, `allGroups`, `tabInfo(_:)`, `activeTabID` | Tabs and groups, in sidebar order |
 | `liveSessions` | Agent sessions running anywhere on the Mac |
 | `viewerOpens(_:)` | How many times you've opened a file path or link in a viewer (saved; the 1,000 most opened) |
+| `viewerLastOpened(_:)` | When you last opened a file path or link in a viewer, or nil (saved; the 1,000 most recent) |
 | `animations` | Whether the user wants motion (Settings → Fun, and Reduce Motion) |
 | `extensions` | The loaded extensions, for working with each other: `host.extensions.compactMap { $0 as? SomeProtocol }` |
 | `selectTab(_:focus:)` | Selects a tab |
