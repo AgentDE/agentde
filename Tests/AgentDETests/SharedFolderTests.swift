@@ -17,4 +17,23 @@ struct SharedFolderTests {
         #expect(Store.sessions(all, for: other, in: groups, open: []).map(\.sessionId) == ["b"])
         #expect(Store.sessions(all, for: first, in: groups, open: ["a"]).isEmpty)
     }
+
+    /// Jump to finds a session that ran in a worktree or subfolder, under the deepest group that holds it.
+    @Test func jumpToFindsSessionsInsideAGroupsFolder() {
+        let repo = GroupModel(name: "repo", colorIndex: 0, dir: "/r")
+        let docs = GroupModel(name: "docs", colorIndex: 1, dir: "/r/docs")
+        let twin = GroupModel(name: "repo 2", colorIndex: 2, dir: "/r/")
+        let groups = [repo, docs, twin]
+        let all = [RecentSession(sessionId: "wt", name: "in shorts", cwd: "/r/.claude/worktrees/x", lastActive: Date()),
+                   RecentSession(sessionId: "d", name: "guide", cwd: "/r/docs/api", lastActive: Date()),
+                   RecentSession(sessionId: "near", name: "lookalike", cwd: "/rx", lastActive: Date()),
+                   RecentSession(sessionId: "top", name: "root", cwd: "/r", lastActive: Date())]
+        #expect(Store.searchable(all, for: repo, in: groups, open: []).map(\.sessionId) == ["wt", "top"])
+        #expect(Store.searchable(all, for: docs, in: groups, open: []).map(\.sessionId) == ["d"])
+        #expect(Store.searchable(all, for: twin, in: groups, open: []).isEmpty)   // the first group with the folder has them
+        #expect(Store.searchable(all, for: repo, in: groups, open: ["wt"]).map(\.sessionId) == ["top"])
+        var pinning = repo
+        pinning.pinnedSessions = [all[0]]
+        #expect(Store.searchable(all, for: repo, in: [pinning, docs, twin], open: []).map(\.sessionId) == ["top"])
+    }
 }

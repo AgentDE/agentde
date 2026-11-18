@@ -543,7 +543,7 @@ private struct SidebarSearchResults: View {
         return store.groups.compactMap { group in
             let groupHit = Store.matches(q, [group.name])
             let tabs = group.tabs.filter { groupHit || Store.matches(q, [store.title(for: $0), ($0.cwd as NSString).lastPathComponent]) }
-            let pool = store.pinnedSessions(for: group) + store.recentSessions(for: group) + (store.olderSessions(for: group) ?? [])
+            let pool = store.pinnedSessions(for: group) + store.searchableSessions(for: group)
             let sessions = pool.filter { Store.matches(q, [$0.name]) }
             return tabs.isEmpty && sessions.isEmpty ? nil : Match(group: group, tabs: tabs, sessions: Array(sessions.prefix(8)))
         }

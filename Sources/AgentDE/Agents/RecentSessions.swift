@@ -102,6 +102,29 @@ extension Store {
         return all.filter { !hidden.contains($0.sessionId) && normalized($0.cwd) == dir }
     }
 
+    /// Every session Jump to finds under a group: Recent's and Older's, plus those that ran in a folder inside the
+    /// group's (a worktree, say), which belong to the group with the deepest folder that holds them (the first
+    /// in the sidebar on a tie). Open and pinned sessions aren't listed; a group's pins are searched on their own.
+    static func searchable(_ all: [RecentSession], for group: GroupModel, in groups: [GroupModel], open: Set<String>) -> [RecentSession] {
+        let pinned = groups.flatMap { ($0.pinnedSessions ?? []).map(\.sessionId) }
+        let hidden = open.union(pinned)
+        let dirs = groups.map { normalized($0.dir) }
+        return all.filter { session in
+            guard !hidden.contains(session.sessionId) else { return false }
+            let cwd = normalized(session.cwd)
+            var owner: Int?
+            for (i, dir) in dirs.enumerated() where cwd == dir || cwd.hasPrefix(dir == "/" ? dir : dir + "/") {
+                if owner == nil || dir.count > dirs[owner!].count { owner = i }
+            }
+            return owner.map { groups[$0].id } == group.id
+        }
+    }
+
+    /// `searchable` for one group, from what the scans found so far.
+    func searchableSessions(for group: GroupModel) -> [RecentSession] {
+        Self.searchable(recentSessions + (olderSessions ?? []), for: group, in: groups, open: openSessionIds)
+    }
+
     /// Opens or closes a group's Older list; opening it rescans (the scanners cache what hasn't changed).
     func toggleOlderShown(_ id: UUID) {
         if olderShown.remove(id) == nil {
