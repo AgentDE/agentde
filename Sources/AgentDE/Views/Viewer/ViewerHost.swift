@@ -519,10 +519,14 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
         if action.targetFrame?.isMainFrame ?? true, !(url.fragment != nil && withoutAnchor(url) == withoutAnchor(webView.url)) {
             LinkTiming.start(tabID, from: "page-click")
         }
-        // A web page browses like a browser (sign-in flows cross sites). A local page's links open in the viewer as
-        // the next item, so ‹ and ⌘[ come back: another file or a web page; a link within the page just scrolls;
-        // a folder or a missing file goes to its app.
-        guard let item = shown?.item, ViewerKind.of(item) != .web else { return decisionHandler(.allow) }
+        // A web page browses like a browser (sign-in flows cross sites); a clicked link becomes the viewer's item
+        // once it loads (didFinish). A local page's links open in the viewer as the next item, so ‹ and ⌘[ come
+        // back: another file or a web page; a link within the page just scrolls; a folder or a missing file goes
+        // to its app.
+        guard let item = shown?.item, ViewerKind.of(item) != .web else {
+            if action.targetFrame?.isMainFrame ?? false { followingLink = true }
+            return decisionHandler(.allow)
+        }
         if url.isFileURL, url.standardizedFileURL.path == URL(fileURLWithPath: item).standardizedFileURL.path {
             return decisionHandler(.allow)
         }
@@ -538,6 +542,17 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
     }
 
     static let webSchemes: Set<String> = ["http", "https", "file", "about", "data", "blob"]
+
+    /// A link clicked in a web page, waiting for its page to load.
+    private var followingLink = false
+
+    /// The item a web page browsed to: the loaded URL after a link click in a web item, nil otherwise (a redirect
+    /// or a script's navigation keeps the item, and so does a local page, whose links open as items themselves).
+    static func followedItem(shown: String, loaded: URL?, clicked: Bool) -> String? {
+        guard clicked, ViewerKind.of(shown) == .web, let loaded, ["http", "https"].contains(loaded.scheme?.lowercased() ?? ""),
+              loaded.absoluteString != shown else { return nil }
+        return loaded.absoluteString
+    }
 
     /// Whether a non-web link may go to its app: only a click on a link in the page itself, not a script's
     /// navigation or an iframe's.
@@ -568,10 +583,25 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
             loadStartedAt = nil
             loadCommittedAt = nil
         }
+        let clicked = followingLink
+        followingLink = false
+        if let current = shown?.item, let next = Self.followedItem(shown: current, loaded: webView.url, clicked: clicked) {
+            // The page stays loaded: the item changes under it, so the header, history and saved state follow.
+            shown?.item = next
+            onOpen?(next)
+        }
         guard let item = shown?.item else { return }
         // A page browsed in place (a .web item) shows its new URL; anything else, the item.
         let name = ViewerKind.of(item) == .web ? (webView.url?.absoluteString ?? item) : item
         LinkTiming.shown(tabID, item: name, kind: "\(ViewerKind.shown(item, raw: raw))")
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        if webView === web { followingLink = false }
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if webView === web { followingLink = false }
     }
 
     // MARK: WKUIDelegate

@@ -21,6 +21,16 @@ struct ReviewFixTests {
         #expect(ViewerHost.webSchemes.contains("https") && !ViewerHost.webSchemes.contains("shortcuts"))
     }
 
+    @Test func aLinkClickedInAWebPageBecomesTheItem() {
+        let page = "https://example.com/reports/a.html"
+        let next = URL(string: "https://example.com/reports/b.html")
+        #expect(ViewerHost.followedItem(shown: page, loaded: next, clicked: true) == next?.absoluteString)
+        #expect(ViewerHost.followedItem(shown: page, loaded: next, clicked: false) == nil)              // a redirect or script
+        #expect(ViewerHost.followedItem(shown: page, loaded: URL(string: page), clicked: true) == nil)  // reloaded itself
+        #expect(ViewerHost.followedItem(shown: "/tmp/a.html", loaded: next, clicked: true) == nil)      // a local page
+        #expect(ViewerHost.followedItem(shown: page, loaded: URL(string: "about:blank"), clicked: true) == nil)
+    }
+
     @Test func aFolderMustBeEnterableNotJustPresent() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-enter-\(UUID().uuidString)").path
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
