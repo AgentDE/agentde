@@ -214,11 +214,14 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
             scroll.drawsBackground = true
             scroll.backgroundColor = theme.terminalBackground
             install(scroll)
+            let language = kind == .text ? Self.codeLanguage(item) : nil
+            showLineNumbers(language != nil, in: scroll, text: text, theme: theme)
             if keepScroll, reused, let editing, editing.path == item {
                 switch TextEdits.onDiskChange(disk: file.text, saved: editing.saved, shown: text.string) {
                 case .keep:
                     // Our own save coming back, or a theme change: the text stays as you have it, restyled.
                     text.textStorage?.addAttributes(Self.textAttributes(theme), range: NSRange(location: 0, length: (text.string as NSString).length))
+                    if let language, let storage = text.textStorage { CodeColors.apply(language, to: storage, theme: theme) }
                     text.typingAttributes = Self.textAttributes(theme)
                     if file.text == text.string { self.editing?.saved = file.text }
                     return
@@ -242,10 +245,13 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
             text.delegate = editable ? self : nil
             let selection = text.selectedRange()
             text.textStorage?.setAttributedString(ViewerHost.styled(file.text, diff: ViewerKind.of(item) == .diff, theme: theme))
+            if let language, let storage = text.textStorage { CodeColors.apply(language, to: storage, theme: theme) }
             text.typingAttributes = Self.textAttributes(theme)
+            (scroll.verticalRulerView as? LineNumberRuler)?.textChanged()
             if keepScroll { text.setSelectedRange(NSRange(location: min(selection.location, (file.text as NSString).length), length: 0)) }
             editing = editable ? (item, file.text) : nil
             if keepScroll { scroll.contentView.scroll(to: offset) }
+            applyPendingLine(item)
         case .media:
             // The same file again (it changed on disk): a fresh item at the same spot, still paused or playing.
             if let player = (content as? AVPlayerView)?.player, (player.currentItem?.asset as? AVURLAsset)?.url == url {
@@ -275,6 +281,58 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
             }
         case .other:
             showQuickLook(url)
+        }
+    }
+
+    /// Code and config files get line numbers and colors; prose (.txt, .log, Markdown as text) and data tables don't.
+    static func codeLanguage(_ item: String) -> CodeColors.Language? {
+        let name = (item as NSString).lastPathComponent.lowercased()
+        let ext = (item as NSString).pathExtension
+        return CodeColors.language(forExtension: ext.isEmpty ? name : ext)
+    }
+
+    private func showLineNumbers(_ show: Bool, in scroll: NSScrollView, text: NSTextView, theme: Theme) {
+        if show {
+            let ruler = (scroll.verticalRulerView as? LineNumberRuler) ?? LineNumberRuler(textView: text, scrollView: scroll)
+            ruler.theme = theme
+            if scroll.verticalRulerView !== ruler { scroll.verticalRulerView = ruler }
+            scroll.hasVerticalRuler = true
+            scroll.rulersVisible = true
+        } else {
+            scroll.rulersVisible = false
+        }
+    }
+
+    // MARK: Going to a line
+
+    /// The line a ⌘-clicked `path:line` asked for, until its file is on screen.
+    private var pendingLine: (item: String, line: Int)?
+
+    /// Shows `line` of `item` once it's showing as text (now, if it already is).
+    func goTo(line: Int, in item: String) {
+        pendingLine = (item, line)
+        if shown?.item == item { applyPendingLine(item) }
+    }
+
+    private func applyPendingLine(_ item: String) {
+        guard let pending = pendingLine, pending.item == item else { return }
+        pendingLine = nil
+        // After layout, so a viewer that just opened scrolls at its real size.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.shown?.item == item, let text = self.textView else { return }
+            let range = LineIndex.range(ofLine: pending.line, in: text.string as NSString)
+            text.setSelectedRange(range)
+            if let layout = text.layoutManager, let container = text.textContainer, let clip = text.enclosingScrollView?.contentView {
+                layout.ensureLayout(forCharacterRange: NSRange(location: 0, length: NSMaxRange(range)))
+                let rect = layout.boundingRect(forGlyphRange: layout.glyphRange(forCharacterRange: range, actualCharacterRange: nil), in: container)
+                // A third of the way down, so what leads up to it shows too.
+                let y = max(0, rect.minY + text.textContainerInset.height - clip.bounds.height / 3)
+                clip.scroll(to: NSPoint(x: 0, y: min(y, max(0, text.frame.height - clip.bounds.height))))
+                text.enclosingScrollView?.reflectScrolledClipView(clip)
+            } else {
+                text.scrollRangeToVisible(range)
+            }
+            text.showFindIndicator(for: range)
         }
     }
 

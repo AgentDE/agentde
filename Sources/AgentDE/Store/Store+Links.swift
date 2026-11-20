@@ -46,6 +46,7 @@ extension Store {
         case .file(let path):
             guard let owner, let (g, _) = locate(owner.id) else { return }
             let folders = [owner.cwd, groups[g].dir]
+            let line = FileLink.line(path)
             let open: (URL?, String) -> Void = { [weak self] file, how in
                 DebugLog.log("click → \(how) in \(Int(Date().timeIntervalSince(clicked) * 1000)) ms", "link")
                 guard let file else {
@@ -53,7 +54,7 @@ extension Store {
                     NSSound.beep()
                     return
                 }
-                self?.openFileLink(file, from: owner.id, defaultApp: defaultApp, hasViewer: hasViewer)
+                self?.openFileLink(file, line: line, from: owner.id, defaultApp: defaultApp, hasViewer: hasViewer)
             }
             // Exact paths are a few stat calls; the Spotlight search behind them can take seconds, so it runs
             // in the background and finishes the click when it's done.
@@ -63,12 +64,13 @@ extension Store {
                 // A partial path (`tmp/rail/handoff.html`) relative to somewhere else: the agent's own transcript
                 // has the full path of what it wrote or read, so that's asked first; then Spotlight and a walk.
                 let transcript = Store.transcript(of: owner)
+                let bare = FileLink.withoutLine(Store.trimmedLink(path))
                 DispatchQueue.global(qos: .userInitiated).async {
-                    if let transcript, let found = Store.findInTranscript(Store.trimmedLink(path), transcript: transcript) {
+                    if let transcript, let found = Store.findInTranscript(bare, transcript: transcript) {
                         DispatchQueue.main.async { open(found, "transcript") }
                         return
                     }
-                    let found = Store.searchFileLink(Store.trimmedLink(path), in: folders)
+                    let found = Store.searchFileLink(bare, in: folders)
                     DispatchQueue.main.async { open(found, found == nil ? "none" : "spotlight") }
                 }
             }
@@ -115,8 +117,9 @@ extension Store {
         return nil
     }
 
-    /// Opens a resolved file link: its default app (⌥), a File Explorer tab for a folder, else the tab's viewer.
-    private func openFileLink(_ file: URL, from tabID: UUID, defaultApp: Bool, hasViewer: Bool) {
+    /// Opens a resolved file link: its default app (⌥), a File Explorer tab for a folder, else the tab's viewer,
+    /// at the link's line when it named one (`path:33`).
+    private func openFileLink(_ file: URL, line: Int?, from tabID: UUID, defaultApp: Bool, hasViewer: Bool) {
         guard let owner = tab(tabID), let (g, _) = locate(tabID) else { return }
         if defaultApp {
             NSWorkspace.shared.open(file)
@@ -126,6 +129,7 @@ extension Store {
         } else if hasViewer {
             LinkTiming.start(owner.id)
             openInViewer(file.path, tab: owner.id)
+            if let line { terminals.viewers.host(for: owner.id).goTo(line: line, in: file.path) }
         } else {
             NSWorkspace.shared.open(file)
         }
@@ -157,7 +161,7 @@ extension Store {
     /// The same, and how it was found: "exact" (a path, or near one), "spotlight" (the search fallback) or "none".
     static func resolveFileLinkReporting(_ link: String, relativeTo folders: [String]) -> (url: URL?, how: String) {
         if let found = resolveFileLinkExact(link, relativeTo: folders) { return (found, "exact") }
-        let found = searchFileLink(trimmedLink(link), in: folders)
+        let found = searchFileLink(FileLink.withoutLine(trimmedLink(link)), in: folders)
         return (found, found == nil ? "none" : "spotlight")
     }
 
