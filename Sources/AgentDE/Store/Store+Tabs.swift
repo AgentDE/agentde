@@ -182,6 +182,19 @@ extension Store {
         if let id = activeTab?.id { closeTab(id) }
     }
 
+    /// A tab is renamed in its sidebar row, like a group: the sidebar shows and the tab's group opens, so the row
+    /// is there to type in.
+    func beginRenamingTab(_ id: UUID) {
+        guard let (g, _) = locate(id) else { return }
+        if groups[g].collapsed == true {
+            groups[g].collapsed = nil
+            scheduleSave()
+        }
+        sidebarVisible = true
+        if activeTab?.id != id { selectTab(id, focus: false) }
+        renamingTabID = id
+    }
+
     func renameTab(_ id: UUID, to name: String) {
         guard let (g, t) = locate(id) else { return }
         let trimmed = name.trimmingCharacters(in: .whitespaces)

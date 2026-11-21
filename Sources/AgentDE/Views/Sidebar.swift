@@ -245,10 +245,15 @@ private struct SidebarTabRow: View {
                 if state != .needsYou, store.wantsAttention(tab) { AskRing(size: 13) }
             }
             .frame(width: 14)
-            Text(store.title(for: tab))
-                .font(.system(size: 12.5, weight: active ? .medium : .regular))
-                .foregroundStyle(active ? theme.text : theme.secondary)
-                .lineLimit(1)
+            if store.renamingTabID == tab.id {
+                RenameField(initial: store.title(for: tab)) { store.renameTab(tab.id, to: $0) }
+                    .font(.system(size: 12.5))
+            } else {
+                Text(store.title(for: tab))
+                    .font(.system(size: 12.5, weight: active ? .medium : .regular))
+                    .foregroundStyle(active ? theme.text : theme.secondary)
+                    .lineLimit(1)
+            }
             Spacer(minLength: 0)
             if store.isPinned(tab: tab, in: group.id) {
                 Image(systemName: "pin.fill").font(.system(size: 8.5)).foregroundStyle(theme.muted)
@@ -272,6 +277,7 @@ private struct SidebarTabRow: View {
         .activeOutline(active, radius: 6, dashed: true)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
+        .onTapGesture(count: 2) { store.beginRenamingTab(tab.id) }
         .onTapGesture { store.selectTab(tab.id) }
         .draggable("tab:\(tab.id.uuidString)")
         .contextMenu { TabMenu(tab: tab) }
@@ -309,7 +315,7 @@ struct TabMenu: View {
     /// Three groups: the tab, its agent, closing. The agent group always has Show Browser Above, so no group is
     /// ever empty and dividers never double up.
     var body: some View {
-        Button("Rename") { store.selectTab(tab.id, focus: false); store.renamingTabID = tab.id }
+        Button("Rename") { store.beginRenamingTab(tab.id) }
         if store.pinnableSession(tab) != nil, let group = store.groups.first(where: { $0.tabs.contains { $0.id == tab.id } }) {
             Button(store.isPinned(tab: tab, in: group.id) ? "Unpin" : "Pin to Top") {
                 withAnimation(.snappy(duration: 0.2)) { store.togglePinnedTab(tab.id) }

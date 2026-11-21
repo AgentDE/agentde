@@ -98,7 +98,7 @@ struct AgentDECommands: Commands {
             Button("Close Tab") { store.closeActiveTab() }.keyboardShortcut("w")
             Button("Reopen Closed Tab") { store.reopenClosedTab() }.keyboardShortcut("t", modifiers: [.command, .option, .shift])
                 .disabled(store.closedTabs.isEmpty)
-            Button("Rename Tab") { if let id = store.activeTab?.id { store.renamingTabID = id } }.keyboardShortcut("r")
+            Button("Rename Tab") { if let id = store.activeTab?.id { store.beginRenamingTab(id) } }.keyboardShortcut("r")
             Button("Fork Session into New Tab") { store.runTool("fork") }.keyboardShortcut("f", modifiers: [.command, .option])
             Button("Rewind to an Earlier Message") { store.runTool("rewind") }.keyboardShortcut("z", modifiers: [.command, .option])
             Button("Compact Conversation") { store.runTool("compact") }

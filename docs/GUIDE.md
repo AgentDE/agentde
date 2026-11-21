@@ -63,7 +63,7 @@ Open AgentDE like any app, or run `agentde` from any terminal (the command is in
 | Codex | `codex` (drops to your shell when Codex exits) | ⌘⌥T |
 | Files | The File Explorer: a folder tree with previews | ⌘⇧E |
 
-The **+** after the last tab opens a new tab of any kind. Closing a tab's process (`exit`, or quitting Claude and then the shell) closes the tab. A Claude tab is named after its Claude session; rename it with ⌘R or a double-click. Starting Claude in a shell tab turns it into a Claude tab.
+The **+** after the last tab opens a new tab of any kind. Closing a tab's process (`exit`, or quitting Claude and then the shell) closes the tab. A Claude tab is named after its Claude session; rename it with ⌘R or a double-click (on the tab or its sidebar row): the name is edited in the sidebar, which shows and opens the tab's group if needed. Starting Claude in a shell tab turns it into a Claude tab.
 
 **The sidebar** lists every group with its tabs. Click the chevron to collapse or expand a group; ⌥-click to do all of them. Collapsing is saved, and collapsed groups show status dots next to the name. Hover over a tab's row for its ✕, which closes it as ⌘W does.
 

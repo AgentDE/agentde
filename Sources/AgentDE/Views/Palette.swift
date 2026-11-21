@@ -45,7 +45,7 @@ struct CommandPalette: View {
             ("Open folder in Finder", "folder", { store.openInFinder() }),
             ("Search all sessions", "text.magnifyingglass", { store.searchOpen = true }),
             ("Find in this tab", "magnifyingglass", { if let id = store.activeTab?.id { store.terminals.find(id, .showFindInterface) } }),
-            ("Rename tab", "pencil", { if let id = store.activeTab?.id { store.renamingTabID = id } }),
+            ("Rename tab", "pencil", { if let id = store.activeTab?.id { store.beginRenamingTab(id) } }),
             ("Jump to next waiting tab", "bell", { store.jumpToAttention() }),
             ("Reopen closed tab", "arrow.uturn.backward", { store.reopenClosedTab() }),
         ]

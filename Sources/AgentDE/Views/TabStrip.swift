@@ -98,17 +98,11 @@ private struct TabChip: View {
                 SparkleBurst(token: store.runtime[tab.id]?.sparkleToken ?? 0, firedAt: store.runtime[tab.id]?.sparkleAt, color: color)
             }
             .frame(width: 14)
-            if store.renamingTabID == tab.id {
-                RenameField(initial: store.title(for: tab)) { store.renameTab(tab.id, to: $0) }
-                    .font(.system(size: 12.5))
-                    .frame(width: 140)
-            } else {
-                Text(store.title(for: tab))
-                    .font(.system(size: 12.5, weight: active ? .medium : .regular))
-                    .foregroundStyle(active ? theme.text : theme.secondary)
-                    .lineLimit(1)
-                    .frame(maxWidth: 180)
-            }
+            Text(store.title(for: tab))
+                .font(.system(size: 12.5, weight: active ? .medium : .regular))
+                .foregroundStyle(active ? theme.text : theme.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: 180)
             ZStack {
                 if hovering {
                     Button { store.closeTab(tab.id) } label: {
@@ -135,7 +129,7 @@ private struct TabChip: View {
         }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .onTapGesture(count: 2) { store.renamingTabID = tab.id }
+        .onTapGesture(count: 2) { store.beginRenamingTab(tab.id) }
         .onTapGesture { store.selectTab(tab.id) }
         .draggable("tab:\(tab.id.uuidString)") {
             Text(store.title(for: tab)).font(.system(size: 12.5)).padding(6)

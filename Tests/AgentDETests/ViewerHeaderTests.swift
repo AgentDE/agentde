@@ -42,4 +42,25 @@ struct ViewerHeaderTests {
         let menu = width(ViewerHistoryMenu(tab: tab) { Text("a.md") }, store: store, proposed: 600)
         #expect(menu < 120, "menu \(menu) pt for a 4-letter name")
     }
+
+    /// Renaming a tab (⌘R, a double-click, the menu) edits it in the sidebar: the sidebar shows, the tab's
+    /// collapsed group opens, and the tab is the one on screen.
+    @Test func renamingHappensInTheSidebar() throws {
+        let store = try store()
+        let first = TabModel(kind: .shell, cwd: "/tmp"), second = TabModel(kind: .shell, cwd: "/tmp")
+        var group = GroupModel(name: "g", colorIndex: 0, dir: "/tmp", tabs: [first, second])
+        group.selectedTabID = first.id
+        group.collapsed = true
+        store.groups = [group]
+        store.selectedGroupID = group.id
+        store.sidebarVisible = false
+        store.beginRenamingTab(second.id)
+        #expect(store.renamingTabID == second.id)
+        #expect(store.sidebarVisible)
+        #expect(store.groups[0].collapsed != true)
+        #expect(store.groups[0].selectedTabID == second.id)
+        store.renameTab(second.id, to: "  perf  ")
+        #expect(store.renamingTabID == nil)
+        #expect(store.groups[0].tabs[1].customTitle == "perf")
+    }
 }
