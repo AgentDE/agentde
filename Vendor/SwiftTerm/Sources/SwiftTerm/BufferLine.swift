@@ -347,6 +347,16 @@ public final class BufferLine: CustomDebugStringConvertible {
     /// `fillData` values, if it is smaller, the data is trimmed
     public func resize (cols: Int, fillData: CharData)
     {
+        // AgentDE patch: a compacted line changes only its logical width when it can, instead of being
+        // expanded here and compacted again by `Buffer.resize` (twice the allocations per line per resize).
+        if stored < dataSize {
+            if cols == dataSize { return }
+            if (cols > dataSize && fillData.isSameCell(as: tail)) || (cols < dataSize && cols >= stored) {
+                dataSize = cols
+                bump()
+                return
+            }
+        }
         expand()
         defer { stored = dataSize }
         let len = dataSize

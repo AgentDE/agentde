@@ -240,11 +240,11 @@ final class AgentMonitor {
             let name = store.tab(id).map { store.title(for: $0) } ?? id.uuidString.prefix(8).description
             line += String(format: " | heavy output: %@ %.1fMB/min", name, Double(bytes) / 1_048_576)
         }
-        // Shells this app started that no tab owns any more (they shouldn't exist; log them if they do).
+        // Shells this app started that no tab owns any more (they shouldn't exist; log them if they do). Nothing
+        // is reaped here: the app's other children are Foundation `Process`es (git, gh, mdfind), which reap
+        // themselves, and taking their exit status would leave `waitUntilExit` waiting forever.
         let owned = Set(store.terminals.shellPids.keys)
-        var orphans = ProcessTree.ownChildren().filter { !owned.contains($0) }
-        // Exited shells nobody collected: reap them rather than leave zombies.
-        orphans.removeAll { ProcessTree.isZombie($0) && waitpid($0, nil, WNOHANG) == $0 }
+        let orphans = ProcessTree.ownChildren().filter { !owned.contains($0) && !ProcessTree.isZombie($0) }
         if !orphans.isEmpty { line += " | shells with no tab: " + orphans.map(String.init).joined(separator: ",") }
         DebugLog.log(line, "heartbeat")
     }

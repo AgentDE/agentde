@@ -59,7 +59,7 @@ final class PullRequestMonitor {
         task.environment = env
         let out = Pipe()
         task.standardOutput = out
-        task.standardError = Pipe()
+        task.standardError = FileHandle.nullDevice   // an unread pipe would block gh once it filled
         guard (try? task.run()) != nil else { return nil }
         let killer = DispatchWorkItem { if task.isRunning { task.terminate() } }
         DispatchQueue.global().asyncAfter(deadline: .now() + 20, execute: killer)

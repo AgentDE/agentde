@@ -96,6 +96,7 @@ final class SessionSearch {
                                       sessionId: recent.sessionId, cwd: recent.cwd, scrollback: nil, agent: Agents.byID(recent.agent)))
             }
         }
+        ScrollbackCache.forget(keeping: Set(store.groups.flatMap { $0.tabs.map(\.id) }))
         progress = (0, sources.count)
         sections = []
         let sessionIds = Set(sources.compactMap(\.sessionId))
@@ -185,12 +186,32 @@ extension SessionSearch {
     }
 }
 
+/// Each tab's scrollback text as last read for search, with the output generation it was read at: typing a
+/// query reads a tab again only if it printed something since (it used to rebuild every shell tab's lines on
+/// every keystroke).
+/// Used on the main thread only (search snapshots its sources there).
+enum ScrollbackCache {
+    nonisolated(unsafe) private static var cache: [UUID: (generation: Int, width: Int, lines: [String])] = [:]
+
+    static func lines(_ id: UUID, generation: Int, width: Int, read: () -> [String]) -> [String] {
+        if let hit = cache[id], hit.generation == generation, hit.width == width { return hit.lines }
+        let lines = read()
+        cache[id] = (generation, width, lines)
+        return lines
+    }
+
+    static func forget(keeping ids: Set<UUID>) { cache = cache.filter { ids.contains($0.key) } }
+}
+
 extension TerminalRegistry {
     /// A tab's scrollback as text, for searching. Nil if the tab's terminal hasn't started.
     func scrollback(_ id: UUID) -> [String]? {
         guard let session = session(id), session.started else { return nil }
-        // All the history the terminal keeps (Settings → Terminal), not a fixed slice.
-        return session.view.getTerminal().scrollbackLines(last: max(5_000, store?.settings.scrollbackLines ?? 10_000))
+        let terminal = session.view.getTerminal()
+        // All the history the terminal keeps (Settings → Terminal), not a fixed slice. A resize reflows it.
+        return ScrollbackCache.lines(id, generation: session.outputGeneration, width: terminal.cols) {
+            terminal.scrollbackLines(last: max(5_000, store?.settings.scrollbackLines ?? 10_000))
+        }
     }
 
     /// Scrolls a tab's terminal to the most recent occurrence of `term` and selects it.

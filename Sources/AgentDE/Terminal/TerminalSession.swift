@@ -44,6 +44,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     private var reconnecting = false
     /// Bytes of output since the last heartbeat; a stuck agent spewing output shows up in the log.
     private var bytesSinceHeartbeat = 0
+    /// Grows with every chunk of output, so a cached read of the scrollback knows when it's out of date.
+    private(set) var outputGeneration = 0
     /// When live output last arrived (not a replay). A working Claude's spinner redraws every second.
     private(set) var lastOutputAt: Date?
 
@@ -172,6 +174,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             if terminating { endProcesses(); retire() }
         case .output(let bytes, let replay):
             bytesSinceHeartbeat += bytes.count
+            outputGeneration &+= 1
             if !replay { lastOutputAt = Date() }
             replaying = replay
             view.feed(byteArray: bytes[...])
@@ -290,7 +293,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
                 env["ZDOTDIR"] = ShellIntegration.directory.path
                 if !run.isEmpty { env["AGENTDE_RUN"] = run }
             } else {
-                args = run.isEmpty ? ["-l"] : ["-l", "-i", "-c", "\(run)\nexec \(shell) -l"]
+                args = run.isEmpty ? ["-l"] : ["-l", "-i", "-c", "\(run)\nexec \(TerminalSession.shellQuoted(shell)) -l"]
             }
         }
         let terminal = view.getTerminal()
@@ -373,7 +376,8 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
     func terminate() {
         terminating = true
         if shellPid > 0 || !started {
-            if shellPid > 0 { endProcesses() }
+            // Once the shell has exited its pid may belong to something else by now: nothing to hang up.
+            if shellPid > 0, !exited { endProcesses() }
             connection?.close()
             retire()
             return

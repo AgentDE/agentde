@@ -62,7 +62,9 @@ final class ClaudeSessionScanner {
                 if let cached = cache[file.path], cached.mtime == mtime, cached.sidecar == sidecar {
                     parsed = cached.parsed
                 } else {
-                    parsed = parse(file)
+                    // One pool per file: FileHandle's reads are autoreleased, and on a background queue they'd all
+                    // stay alive until the whole scan ends (over 1 GB across a few hundred transcripts).
+                    parsed = autoreleasepool { parse(file) }
                     cache[file.path] = (mtime, sidecar, parsed)
                 }
                 if let parsed, let name = parsed.name ?? jobs[parsed.sessionId] {

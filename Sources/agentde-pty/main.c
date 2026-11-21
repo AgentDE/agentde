@@ -39,6 +39,14 @@ extern char **environ;
 static int listen_fd = -1, client_fd = -1, master_fd = -1, sig_pipe[2] = {-1, -1};
 static pid_t child = -1;
 static const char *socket_path;
+// The socket this holder bound: on exit it removes the path only if it's still this one, never a successor's.
+static dev_t socket_dev;
+static ino_t socket_ino;
+
+static void unlink_own_socket(void) {
+    struct stat st;
+    if (socket_ino && stat(socket_path, &st) == 0 && st.st_dev == socket_dev && st.st_ino == socket_ino) unlink(socket_path);
+}
 
 // MARK: Output ring
 
@@ -325,7 +333,7 @@ static void finish(int status) {
     unsigned char st[4];
     put_u32(st, (uint32_t)status);
     send_frame('x', st, 4);
-    unlink(socket_path);
+    unlink_own_socket();
     _exit(0);
 }
 
@@ -381,6 +389,8 @@ int main(int argc, char **argv) {
         _exit(5);
     }
     cloexec(listen_fd);
+    struct stat bound;
+    if (stat(socket_path, &bound) == 0) { socket_dev = bound.st_dev; socket_ino = bound.st_ino; }
     if (pipe(sig_pipe) < 0) _exit(6);
     cloexec(sig_pipe[0]);
     cloexec(sig_pipe[1]);
@@ -393,7 +403,7 @@ int main(int argc, char **argv) {
     child = forkpty(&master_fd, NULL, NULL, &ws);
     if (child < 0) {
         (void)!write(ready[1], "0", 1);
-        unlink(socket_path);
+        unlink_own_socket();
         _exit(7);
     }
     if (child == 0) {
@@ -446,7 +456,7 @@ int main(int argc, char **argv) {
         }
         if (stop_requested) {
             kill(child, SIGHUP);
-            unlink(socket_path);
+            unlink_own_socket();
             _exit(0);
         }
         int status;

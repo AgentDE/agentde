@@ -17,19 +17,35 @@ enum OpenInViewer {
         #!/bin/sh
         # Written by \(AppBrand.name) at launch; edits are overwritten. In a tab, `open <file or web page>` shows it in
         # the tab's viewer; anything else goes to macOS's open. `/usr/bin/open` always reaches the real one.
-        # A web page goes to the viewer only when a shell ran open (you typed it): a program opening one (a CLI's
-        # sign-in, say) gets the browser, and so does any sign-in link.
+        # A web page goes to the viewer only when a shell ran open: a program opening one (a CLI's sign-in, say)
+        # gets the browser, and so does any sign-in link. When an agent (claude, codex) ran that shell, only a
+        # local page goes to the viewer: the viewer shares your sign-ins, so other sites open in the browser.
         if [ -n "${AGENTDE_TAB_ID-}" ] && [ "$#" -eq 1 ]; then
           parent=$(ps -o comm= -p "$PPID" 2>/dev/null); parent=${parent##*/}; parent=${parent#-}
           case "$1" in
             -*) ;;
             *redirect_uri=*|*code_challenge=*|*/oauth*|*/authorize*) ;;
-            http://*|https://*) case "$parent" in sh|bash|zsh|dash|ksh|fish) item=$1 ;; esac ;;
+            http://*|https://*)
+              case "$parent" in
+                sh|bash|zsh|dash|ksh|fish)
+                  case "$1" in
+                    http://localhost*|https://localhost*|http://127.0.0.1*|https://127.0.0.1*|http://0.0.0.0*|http://\\[::1\\]*|*.localhost|*.localhost:*|*.localhost/*) item=$1 ;;
+                    *)
+                      agent=; p=$PPID; i=0
+                      while [ "$i" -lt 16 ] && [ -n "$p" ] && [ "$p" -gt 1 ]; do
+                        c=$(ps -o comm= -p "$p" 2>/dev/null); c=${c##*/}
+                        # Up to the tab's holder: what's above it isn't the tab's.
+                        case "$c" in claude|codex) agent=1; break ;; agentde-pty) break ;; esac
+                        p=$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' '); i=$((i + 1))
+                      done
+                      [ -z "$agent" ] && item=$1 ;;
+                  esac ;;
+              esac ;;
             /*) [ -f "$1" ] && item=$1 ;;
             *) [ -f "$1" ] && item="$PWD/$1" ;;
           esac
           if [ -n "${item-}" ]; then
-            dir='\(requests.path)'
+            dir=\(TerminalSession.shellQuoted(requests.path))
             name="$AGENTDE_TAB_ID.$$"
             mkdir -p "$dir" && printf '%s\\n' "$item" > "$dir/.$name" && mv "$dir/.$name" "$dir/$name" && exit 0
           fi
@@ -47,6 +63,11 @@ enum OpenInViewer {
         try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
     }
 
+    /// The line Claude's Bash tool sources: the script's folder first on PATH, quoted so any folder name works.
+    static func claudeEnvFile(bin: String) -> String {
+        "export PATH=" + TerminalSession.shellQuoted(bin) + "\":$PATH\"\n"
+    }
+
     /// The environment a tab's shell gets: the script's folder first on PATH (the zsh wrapper puts it first
     /// again after the user's startup files), and for Claude a per-tab env file that does the same, unless the
     /// user already set `CLAUDE_ENV_FILE`.
@@ -55,7 +76,7 @@ enum OpenInViewer {
         if inherited["CLAUDE_ENV_FILE"] == nil {
             try? FileManager.default.createDirectory(at: claudeEnvDirectory, withIntermediateDirectories: true)
             let file = claudeEnvDirectory.appendingPathComponent(tab.uuidString + ".sh")
-            try? "export PATH=\"\(binDirectory.path):$PATH\"\n".write(to: file, atomically: true, encoding: .utf8)
+            try? claudeEnvFile(bin: binDirectory.path).write(to: file, atomically: true, encoding: .utf8)
             env["CLAUDE_ENV_FILE"] = file.path
         }
         return env

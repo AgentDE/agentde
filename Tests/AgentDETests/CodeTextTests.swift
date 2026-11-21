@@ -96,4 +96,19 @@ struct CodeTextTests {
         #expect(text?.split(separator: "\n").count == 20000)
         #expect(Store.output(of: "/bin/sleep", ["5"], timeout: 0.3) == nil)
     }
+
+    /// Search reads a tab's scrollback again only after it printed something or was resized (#10).
+    @Test func scrollbackIsReadOncePerOutput() {
+        let id = UUID()
+        var reads = 0
+        let read = { () -> [String] in reads += 1; return ["line \(reads)"] }
+        #expect(ScrollbackCache.lines(id, generation: 1, width: 80, read: read) == ["line 1"])
+        #expect(ScrollbackCache.lines(id, generation: 1, width: 80, read: read) == ["line 1"])
+        #expect(reads == 1)
+        #expect(ScrollbackCache.lines(id, generation: 2, width: 80, read: read) == ["line 2"])
+        #expect(ScrollbackCache.lines(id, generation: 2, width: 100, read: read) == ["line 3"])
+        ScrollbackCache.forget(keeping: [])
+        _ = ScrollbackCache.lines(id, generation: 2, width: 100, read: read)
+        #expect(reads == 4)
+    }
 }

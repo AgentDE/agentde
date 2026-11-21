@@ -20,16 +20,89 @@ struct OpenInViewerTests {
         try? FileManager.default.removeItem(at: fallback)
         try? FileManager.default.removeItem(at: requests)
 
+        // Typed: sh under the name of a tab's holder, as in the app, where nothing above the holder counts.
+        let holder = root.appendingPathComponent("agentde-pty")
+        if !FileManager.default.fileExists(atPath: holder.path) {
+            try FileManager.default.createSymbolicLink(atPath: holder.path, withDestinationPath: "/bin/sh")
+        }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.executableURL = typed ? holder : URL(fileURLWithPath: "/bin/sh")
         // The trailing `:` keeps sh from exec'ing the script in its own place, so sh stays its parent.
-        process.arguments = typed ? ["-c", "/bin/sh \"$0\" \"$@\"; :", script.path] + arguments : [script.path] + arguments
+        // holder → your shell → open, as when you type it in a tab.
+        let typedRun = "/bin/sh -c " + TerminalSession.shellQuoted("/bin/sh \"$0\" \"$@\"; :") + " \"$0\" \"$@\"; :"
+        process.arguments = typed ? ["-c", typedRun, script.path] + arguments : [script.path] + arguments
         process.currentDirectoryURL = work
         process.environment = ["PATH": "/usr/bin:/bin", "AGENTDE_REAL_OPEN": stub.path]
             .merging(inTab ? ["AGENTDE_TAB_ID": tab.uuidString] : [:]) { $1 }
         try process.run()
         process.waitUntilExit()
         return (OpenInViewer.pending(in: requests), (try? String(contentsOf: fallback, encoding: .utf8))?.trimmingCharacters(in: .newlines) ?? "")
+    }
+
+    /// Folder names with an apostrophe, `$` or backticks (a home folder like `O'Brien`) still work in the
+    /// generated shell text.
+    @Test func oddFolderNamesAreQuoted() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let odd = root.appendingPathComponent("it's $HOME `x`")
+        let work = root.appendingPathComponent("work"), requests = odd.appendingPathComponent("open")
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        try "hi".write(to: work.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let script = root.appendingPathComponent("open.sh")
+        try OpenInViewer.script(requests: requests).write(to: script, atomically: true, encoding: .utf8)
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", "/bin/sh \"$0\" \"$@\"; :", script.path, "a.txt"]
+        process.currentDirectoryURL = work
+        process.environment = ["PATH": "/usr/bin:/bin", "AGENTDE_TAB_ID": tab.uuidString, "AGENTDE_REAL_OPEN": "/usr/bin/true"]
+        try process.run()
+        process.waitUntilExit()
+        #expect(OpenInViewer.pending(in: requests).map(\.tab) == [tab])
+
+        let bin = odd.appendingPathComponent("bin").path
+        let env = root.appendingPathComponent("env.sh")
+        try OpenInViewer.claudeEnvFile(bin: bin).write(to: env, atomically: true, encoding: .utf8)
+        let source = Process(), out = Pipe()
+        source.executableURL = URL(fileURLWithPath: "/bin/sh")
+        source.arguments = ["-c", ". \"$0\"; printf %s \"$PATH\"", env.path]
+        source.environment = ["PATH": "/usr/bin:/bin"]
+        source.standardOutput = out
+        try source.run()
+        source.waitUntilExit()
+        #expect(String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self) == bin + ":/usr/bin:/bin")
+    }
+
+    /// `open` run by an agent (a `claude` or `codex` process above the shell): files and local pages go to the
+    /// viewer, other web pages to the browser (#14).
+    @Test func anAgentsWebPagesGoToTheBrowser() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let work = root.appendingPathComponent("work"), requests = root.appendingPathComponent("open")
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        try "hi".write(to: work.appendingPathComponent("a.txt"), atomically: true, encoding: .utf8)
+        let script = root.appendingPathComponent("open.sh")
+        try OpenInViewer.script(requests: requests).write(to: script, atomically: true, encoding: .utf8)
+        // Stand-ins named like a tab's holder and an agent (sh under those names), so the walk up from `open`
+        // stops at the tab's holder, as in the app, rather than at whatever runs these tests.
+        let holder = root.appendingPathComponent("agentde-pty"), claude = root.appendingPathComponent("claude")
+        try? FileManager.default.createSymbolicLink(atPath: holder.path, withDestinationPath: "/bin/sh")
+        try FileManager.default.createSymbolicLink(atPath: claude.path, withDestinationPath: "/bin/sh")
+        func open(_ item: String, agent: Bool) throws -> [String] {
+            try? FileManager.default.removeItem(at: requests)
+            let shell = "/bin/sh -c '/bin/sh \"$0\" \"$1\"; :' \"$0\" \"$1\"; :"
+            let process = Process()
+            process.executableURL = holder
+            process.arguments = ["-c", (agent ? "\"$2\" -c " + TerminalSession.shellQuoted(shell) + " \"$0\" \"$1\"" : shell) + "; :",
+                                 script.path, item, claude.path]
+            process.currentDirectoryURL = work
+            process.environment = ["PATH": "/usr/bin:/bin", "AGENTDE_TAB_ID": tab.uuidString, "AGENTDE_REAL_OPEN": "/usr/bin/true"]
+            try process.run()
+            process.waitUntilExit()
+            return OpenInViewer.pending(in: requests).map { ($0.item as NSString).lastPathComponent }
+        }
+        #expect(try open("https://example.com/page", agent: true).isEmpty)
+        #expect(try open("http://localhost:3000/dash", agent: true) == ["dash"])
+        #expect(try open("a.txt", agent: true) == ["a.txt"])
+        // Typed by you (no agent between the holder and the shell): the page goes to the viewer.
+        #expect(try open("https://example.com/page", agent: false) == ["page"])
     }
 
     @Test func aFileOrPageInATabGoesToItsViewer() throws {

@@ -66,6 +66,31 @@ struct ScrollbackCompactionTests {
         #expect(same(original, compact))
     }
 
+    /// A compacted line resizes without expanding when only its logical width changes (#9): wider with the
+    /// same fill as its tail, or narrower but not into its stored cells. The cells read the same either way.
+    @Test func compactedLinesResizeInPlace() {
+        let original = sampleLine()
+        let compact = BufferLine(from: original)
+        compact.compact()
+        let blank = original[119]
+        for cols in [200, 140, 60, 120] {
+            original.resize(cols: cols, fillData: blank)
+            compact.resize(cols: cols, fillData: blank)
+            #expect(compact.isCompacted, "expanded at \(cols)")
+            #expect(same(original, compact), "differs at \(cols)")
+        }
+        // Into the stored text, or wider with a different fill: it expands, and still reads the same.
+        var red = blank
+        red.attribute = original[6].attribute
+        original.resize(cols: 160, fillData: red)
+        compact.resize(cols: 160, fillData: red)
+        #expect(!compact.isCompacted && same(original, compact))
+        compact.compact()
+        original.resize(cols: 10, fillData: blank)
+        compact.resize(cols: 10, fillData: blank)
+        #expect(same(original, compact))
+    }
+
     @Test func copiesFromAndIntoCompactedLines() {
         let original = sampleLine()
         let compact = BufferLine(from: original)
@@ -114,8 +139,9 @@ struct ScrollbackCompactionTests {
         #expect(history.count > 250)
         #expect(history.filter(\.isCompacted).count > history.count * 9 / 10)
 
-        // The reader keeps the empty cell after a wide character as "\0" (SwiftTerm's behavior, compacted or not).
-        let text = terminal.scrollbackLines().map { $0.replacingOccurrences(of: "\0", with: "") }
+        // A wide character's empty second cell isn't read as "\0", so search text is what was printed.
+        let text = terminal.scrollbackLines()
+        #expect(!text.contains { $0.contains("\0") })
         for line in expected.suffix(200) {
             #expect(text.contains(line), "\(line)")
         }
@@ -125,7 +151,7 @@ struct ScrollbackCompactionTests {
         // Reflow on resize rewrites history lines: the text survives.
         terminal.resize(cols: 70, rows: 10)
         terminal.resize(cols: 140, rows: 10)
-        let after = terminal.scrollbackLines().map { $0.replacingOccurrences(of: "\0", with: "") }
+        let after = terminal.scrollbackLines()
         for line in expected.suffix(200) {
             #expect(after.contains(line), "\(line) after resize")
         }

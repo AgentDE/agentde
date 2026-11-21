@@ -173,6 +173,19 @@ struct PtyHostTests {
         await tab.wait { tab.exitStatus != nil }
     }
 
+    /// A holder that exits leaves a successor's socket at the same path alone (it used to unlink the path
+    /// unconditionally, cutting the new holder off from the app).
+    @Test func anExitingHolderLeavesItsSuccessorsSocket() async throws {
+        defer { cleanUp() }
+        let socket = try spawn("sleep 1")
+        let successor = try spawn("sleep 4")   // same path: binds a new socket over the first one's
+        #expect(socket == successor)
+        try await Task.sleep(nanoseconds: 2_500_000_000)   // the first holder's shell has exited by now
+        #expect(FileManager.default.fileExists(atPath: socket))
+        try await Task.sleep(nanoseconds: 2_500_000_000)   // ...and the successor still cleans up its own
+        #expect(!FileManager.default.fileExists(atPath: socket))
+    }
+
     @Test func socketFoldersDependOnlyOnTheStatePath() {
         #expect(PtyHost.stableHash("/a/state.json") == PtyHost.stableHash("/a/state.json"))
         #expect(PtyHost.stableHash("/a/state.json") != PtyHost.stableHash("/b/state.json"))
