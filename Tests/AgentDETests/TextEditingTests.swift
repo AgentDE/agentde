@@ -57,4 +57,50 @@ struct TextEditingTests {
         let text = try #require((host.subviews.first as? NSScrollView)?.documentView as? NSTextView)
         #expect(!text.isEditable)
     }
+
+    /// Saving swaps in a complete file: the text lands, the file keeps its permissions, and a symlink still
+    /// points at it rather than becoming a copy.
+    @Test func savingReplacesTheFileWhole() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-save-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let file = dir.appendingPathComponent("run.sh"), link = dir.appendingPathComponent("link.sh")
+        try "echo old\n".write(to: file, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: file.path)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: file)
+        try TextEdits.replace(link.path, with: "echo new\n")
+        #expect(try String(contentsOf: file, encoding: .utf8) == "echo new\n")
+        #expect((try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? Int) == 0o755)
+        #expect((try? FileManager.default.destinationOfSymbolicLink(atPath: link.path)) != nil)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).sorted() == ["link.sh", "run.sh"])   // no temp left
+    }
+
+    /// A named pipe isn't opened (it would block the window until something writes to it).
+    @Test func pipesAreNotShown() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-fifo-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let fifo = dir.appendingPathComponent("wait.txt").path
+        #expect(mkfifo(fifo, 0o600) == 0)
+        #expect(!ViewerHost.isShowable(fifo))
+        #expect(ViewerHost.isShowable(dir.path))
+        try "x".write(toFile: dir.appendingPathComponent("a.txt").path, atomically: true, encoding: .utf8)
+        #expect(ViewerHost.isShowable(dir.appendingPathComponent("a.txt").path))
+    }
+
+    /// Links clicked in rendered pages: web and mail open, local files and folders (an .app, a .command) are
+    /// only shown in Finder.
+    @Test func localLinksAreRevealedNotOpened() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-links-\(UUID().uuidString)")
+        let app = dir.appendingPathComponent("Setup.app"), script = dir.appendingPathComponent("run.command")
+        try FileManager.default.createDirectory(at: app, withIntermediateDirectories: true)
+        try "#!/bin/sh".write(to: script, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        #expect(ExternalLink.action(for: app) == .reveal)
+        #expect(ExternalLink.action(for: script) == .reveal)
+        #expect(ExternalLink.action(for: dir.appendingPathComponent("gone.app")) == .ignore)
+        #expect(ExternalLink.action(for: URL(string: "https://example.com")!) == .open)
+        #expect(ExternalLink.action(for: URL(string: "mailto:a@example.com")!) == .open)
+        #expect(ExternalLink.action(for: URL(string: "javascript:alert(1)")!) == .ignore)
+    }
 }

@@ -173,6 +173,20 @@ struct PtyHostTests {
         await tab.wait { tab.exitStatus != nil }
     }
 
+    /// The shell gets the umask the holder started with (files made in a tab are readable as in Terminal), while
+    /// the holder's own socket stays private.
+    @MainActor @Test func theShellKeepsTheUsualUmask() async throws {
+        defer { cleanUp() }
+        let old = umask(0o022)
+        defer { umask(old) }
+        let socket = try spawn("umask; sleep 4")
+        let tab = Recorder(fd: try #require(PtyHost.connect(path: socket)))
+        await tab.wait { (tab.replay + tab.output).contains("0022") }
+        #expect((tab.replay + tab.output).contains("0022"), "got: \((tab.replay + tab.output).debugDescription)")
+        var info = stat()
+        #expect(stat(socket, &info) == 0 && info.st_mode & 0o077 == 0)
+    }
+
     /// A holder that exits leaves a successor's socket at the same path alone (it used to unlink the path
     /// unconditionally, cutting the new holder off from the app).
     @Test func anExitingHolderLeavesItsSuccessorsSocket() async throws {
@@ -184,6 +198,15 @@ struct PtyHostTests {
         #expect(FileManager.default.fileExists(atPath: socket))
         try await Task.sleep(nanoseconds: 2_500_000_000)   // ...and the successor still cleans up its own
         #expect(!FileManager.default.fileExists(atPath: socket))
+    }
+
+    /// A home folder deep enough to push socket paths past 104 bytes gets a short private folder instead.
+    @Test func deepHomeFoldersGetShortSocketPaths() {
+        let usual = PtyHost.directory(config: "/Users/a/.config/agentde", hash: "9bd47cd4", uid: 501)
+        #expect(usual == "/Users/a/.config/agentde/pty/9bd47cd4")
+        let deep = PtyHost.directory(config: "/Volumes/ExternalDevelopmentDrive/Users/alexandra/.config/agentde", hash: "9bd47cd4", uid: 501)
+        #expect(deep == "/tmp/agentde-pty-501/9bd47cd4")
+        #expect((deep + "/" + UUID().uuidString + ".sock").utf8.count < 104)
     }
 
     @Test func socketFoldersDependOnlyOnTheStatePath() {

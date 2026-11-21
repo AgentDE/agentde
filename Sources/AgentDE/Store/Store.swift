@@ -192,8 +192,11 @@ final class Store {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         do {
             let data = try encoder.encode(state)
-            try FileManager.default.createDirectory(at: stateURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            // Private to you: startup commands can hold tokens.
+            try FileManager.default.createDirectory(at: stateURL.deletingLastPathComponent(), withIntermediateDirectories: true,
+                                                    attributes: [.posixPermissions: 0o700])
             try data.write(to: stateURL, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: stateURL.path)
             if saveError != nil { saveError = nil; DebugLog.log("state saved again", "app") }
             return true
         } catch {

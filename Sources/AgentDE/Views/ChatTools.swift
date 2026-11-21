@@ -64,7 +64,7 @@ extension Store {
     }
 
     /// Whether the agent's input line (found by its `prompt`) holds text you typed.
-    private func hasDraft(_ tab: TabModel) -> Bool {
+    func hasDraft(_ tab: TabModel) -> Bool {
         guard let prompt = agent(of: tab)?.definition.prompt?.first else { return false }
         return terminals.session(tab.id)?.inputHasDraft(prompt: prompt) == true
     }

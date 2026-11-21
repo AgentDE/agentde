@@ -23,7 +23,16 @@ enum PtyHost {
         return String(format: "%08x", hash)
     }
 
-    static let directory: String = AppBrand.configDirectory + "/pty/" + stableHash(stateFilePath)
+    static let directory: String = directory(config: AppBrand.configDirectory, hash: stableHash(stateFilePath), uid: getuid())
+
+    /// The socket folder: in the config folder, unless a socket path there would be too long for a Unix socket
+    /// (104 bytes, which a deep home folder can pass); then a private folder under /tmp.
+    static func directory(config: String, hash: String, uid: uid_t) -> String {
+        let usual = config + "/pty/" + hash
+        let longestSocket = usual + "/" + UUID().uuidString + ".sock"
+        guard longestSocket.utf8.count >= 104 else { return usual }
+        return "/tmp/" + (config as NSString).lastPathComponent.replacingOccurrences(of: ".", with: "") + "-pty-\(uid)/" + hash
+    }
 
     static func socketPath(for tabID: UUID) -> String { directory + "/" + tabID.uuidString + ".sock" }
 

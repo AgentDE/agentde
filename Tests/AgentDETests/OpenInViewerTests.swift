@@ -100,6 +100,9 @@ struct OpenInViewerTests {
         }
         #expect(try open("https://example.com/page", agent: true).isEmpty)
         #expect(try open("http://localhost:3000/dash", agent: true) == ["dash"])
+        // Look-alikes are other sites: a longer name, or localhost as user info.
+        #expect(try open("http://localhost.example.com/x", agent: true).isEmpty)
+        #expect(try open("http://localhost:1@example.com/x", agent: true).isEmpty)
         #expect(try open("a.txt", agent: true) == ["a.txt"])
         // Typed by you (no agent between the holder and the shell): the page goes to the viewer.
         #expect(try open("https://example.com/page", agent: false) == ["page"])

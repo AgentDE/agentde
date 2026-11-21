@@ -33,8 +33,23 @@ extension Store: AgentDEHost {
     var animations: Bool { settings.animations && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
 
+    /// Types for an extension (an answer, say). A message (ending in Return) into an agent never lands on a
+    /// prompt the agent is waiting on, like a permission dialog, where its keys would pick an option; and a
+    /// draft you're writing is stashed first (Claude's Ctrl+S), or the message isn't sent.
     @discardableResult
-    func type(_ text: String, into tab: UUID) -> Bool { terminals.typeIntoTerminal(tab, text) }
+    func type(_ text: String, into tab: UUID) -> Bool {
+        guard let model = self.tab(tab) else { return false }
+        guard text.hasSuffix("\r"), agent(of: model) != nil else { return terminals.typeIntoTerminal(tab, text) }
+        if runtime[tab]?.state == .needsYou { return false }
+        if hasDraft(model) {
+            guard let stash = agent(of: model)?.definition.stash, !stash.isEmpty,
+                  terminals.session(tab)?.acceptsInput == true else { return false }
+            terminals.sendKey(tab, Array(stash.utf8))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in _ = self?.terminals.typeIntoTerminal(tab, text) }
+            return true
+        }
+        return terminals.typeIntoTerminal(tab, text)
+    }
 
     @discardableResult
     func openTab(agent agentID: String?, in group: UUID, folder: String?, title: String?) -> UUID? {

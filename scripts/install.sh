@@ -15,6 +15,12 @@ LAUNCHER=$HOME/.local/bin/$COMMAND_NAME
 if [[ ${1:-} == --uninstall ]]; then
   rm -rf "$APP" "$LAUNCHER"
   echo "Removed $APP and $LAUNCHER (your state in ~/.config/$DATA_FOLDER is kept)"
+  # Claude Code's and Codex's config still run the workstream server from the removed app: show what would
+  # come out, and how (it's global config, so it isn't changed without asking).
+  echo
+  echo "Claude Code and Codex still point at the removed app's workstream server:"
+  scripts/register-workstream.sh --uninstall || true
+  echo "Run scripts/register-workstream.sh --uninstall --yes to remove it."
   exit 0
 fi
 

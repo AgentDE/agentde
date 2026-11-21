@@ -16,6 +16,9 @@ struct ViewerRoutingTests {
         ("https://claude.ai/artifact/SAiZc8wc4HG3hh98xzBxUx", "artifact"),
         ("https://pages.example.com/a/report.html", "artifact"),   // an extension's link rule
         ("https://example.com/pages/x/1", "web"),
+        ("https://example.com/?next=https://claude.ai/artifact/SAiZc8wc4HG3hh98xzBxUx", "web"),   // not an artifact
+        ("http://localhost@example.com/", "web"),
+        ("http://localhost.example.com/", "web"),
     ])
     func classifiesLinks(_ link: String, _ expected: String) {
         ViewerLinks.rules = [ViewerLinks.claude, LinkRule(pattern: #"https://pages\.example\.com/a/[\w.-]+"#, marker: "pages.example.com/a/")]

@@ -117,7 +117,8 @@ public protocol AgentDEHost: AnyObject {
 
     func selectTab(_ id: UUID, focus: Bool)
     /// Types text into a tab's terminal, as if pasted ("\r" presses Return). False when the tab has no running
-    /// terminal to type into (closed, or not started yet).
+    /// terminal to type into (closed, or not started yet), or, for a message ending in Return to an agent, when the
+    /// agent is waiting on a prompt (a permission dialog) or your draft in its input can't be set aside.
     @discardableResult
     func type(_ text: String, into tab: UUID) -> Bool
     /// Shows a file path or link in a tab's viewer.

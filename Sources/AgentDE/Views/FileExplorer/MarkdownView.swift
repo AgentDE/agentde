@@ -62,7 +62,7 @@ struct MarkdownView: NSViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if action.navigationType == .linkActivated, let url = action.request.url {
-                NSWorkspace.shared.open(url)
+                ExternalLink.open(url)
                 decisionHandler(.cancel)
             } else {
                 decisionHandler(.allow)

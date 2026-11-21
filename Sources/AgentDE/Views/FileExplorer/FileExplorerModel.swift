@@ -135,7 +135,7 @@ final class FileExplorerModel {
         git.arguments = ["-C", root.path, "ls-files", "-z", "--cached", "--others", "--exclude-standard"]
         let out = Pipe()
         git.standardOutput = out
-        git.standardError = Pipe()
+        git.standardError = FileHandle.nullDevice   // an unread pipe blocks git once its warnings fill it
         if (try? git.run()) != nil {
             let data = out.fileHandleForReading.readDataToEndOfFile()
             git.waitUntilExit()

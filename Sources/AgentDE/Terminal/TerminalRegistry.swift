@@ -98,21 +98,35 @@ final class TerminalRegistry {
     }
 
     /// Types text into a tab as if from the keyboard. A trailing "\r" is sent separately after a pause,
-    /// so TUIs like Claude Code treat it as Enter rather than part of a paste.
+    /// so TUIs like Claude Code treat it as Enter rather than part of a paste. Typing into the same tab again
+    /// before that Enter waits for it, so two answers never run together as one message.
     @discardableResult
     func typeIntoTerminal(_ id: UUID, _ text: String) -> Bool {
         guard let session = sessions[id], session.started, session.acceptsInput else { return false }
         let view = session.view
         let submit = text.hasSuffix("\r")
         // Control characters (newlines, escapes) in file names or check names must never act as keys.
-        let body = (submit ? String(text.dropLast()) : text).unicodeScalars
-            .filter { !CharacterSet.controlCharacters.contains($0) }
-        view.send(txt: String(String.UnicodeScalarView(body)))
+        let body = String(String.UnicodeScalarView((submit ? String(text.dropLast()) : text).unicodeScalars
+            .filter { !CharacterSet.controlCharacters.contains($0) }))
+        let now = Date()
+        let (start, enter, busy) = Self.typingSchedule(now: now, busyUntil: typingBusyUntil[id], submit: submit)
+        typingBusyUntil[id] = busy
+        DispatchQueue.main.asyncAfter(deadline: .now() + start.timeIntervalSince(now)) { view.send(txt: body) }
         if submit {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { view.send(txt: "\r") }
+            DispatchQueue.main.asyncAfter(deadline: .now() + enter.timeIntervalSince(now)) { view.send(txt: "\r") }
         }
         return true
     }
+
+    /// When typed text goes in, when its Enter follows, and when the tab is free for the next message.
+    static func typingSchedule(now: Date, busyUntil: Date?, submit: Bool) -> (start: Date, enter: Date, busy: Date) {
+        let start = max(now, busyUntil ?? now)
+        let enter = start.addingTimeInterval(submit ? 0.35 : 0)
+        return (start, enter, enter.addingTimeInterval(submit ? 0.15 : 0))
+    }
+
+    /// When each tab's last typed message has been submitted (`typeIntoTerminal`).
+    private var typingBusyUntil: [UUID: Date] = [:]
 }
 
 extension Store {

@@ -64,12 +64,16 @@ import json, os, shlex, shutil, sys
 path, binary, apply, uninstall = sys.argv[1], sys.argv[2], sys.argv[3] == "1", sys.argv[4] == "1"
 settings = json.load(open(path)) if os.path.exists(path) else {}
 before = json.dumps(settings, sort_keys=True)
+def sh(p):
+    """The binary as one shell word: double-quoted as before for ordinary paths, fully quoted when it has
+    characters a double-quoted string would still expand ($, `, \\, !, ")."""
+    return shlex.quote(p) if set(p) & set('$`\\!"') else f'"{p}"'
 rule = "mcp__workstream__*"
 wanted = {
     "SessionStart": {"matcher": "startup|resume|compact",
-                     "hooks": [{"type": "command", "command": f'"{binary}" context'}]},
-    "UserPromptSubmit": {"hooks": [{"type": "command", "command": f'"{binary}" prompt-context'}]},
-    "SubagentStart": {"hooks": [{"type": "command", "command": f'"{binary}" subagent-context'}]},
+                     "hooks": [{"type": "command", "command": f'{sh(binary)} context'}]},
+    "UserPromptSubmit": {"hooks": [{"type": "command", "command": f'{sh(binary)} prompt-context'}]},
+    "SubagentStart": {"hooks": [{"type": "command", "command": f'{sh(binary)} subagent-context'}]},
 }
 def ours(entry):
     """A hook entry this script added: one whose commands run workstream-mcp."""
@@ -97,7 +101,7 @@ else:
 # The status line: your command runs inside `workstream-mcp statusline -- '<command>'`, which saves Claude's
 # status input for the app's Stats and prints your command's output unchanged. Only an existing command
 # status line is wrapped; uninstalling puts the original command back exactly.
-wrapper = f'"{binary}" statusline -- '
+wrapper = f'{sh(binary)} statusline -- '
 line = settings.get("statusLine")
 if isinstance(line, dict) and line.get("type") == "command" and isinstance(line.get("command"), str):
     command = line["command"]
@@ -141,7 +145,9 @@ import os, re, shutil, sys
 path, binary, apply, uninstall = sys.argv[1], sys.argv[2], sys.argv[3] == "1", sys.argv[4] == "1"
 text = open(path).read() if os.path.exists(path) else ""
 table = re.compile(r'(?ms)^\[mcp_servers\.workstream\]\n.*?(?=^\[|\Z)')
-block = f'[mcp_servers.workstream]\ncommand = "{binary}"\n'
+# A TOML basic string: backslashes and quotes escaped.
+command = '"' + binary.replace('\\', '\\\\').replace('"', '\\"') + '"'
+block = f'[mcp_servers.workstream]\ncommand = {command}\n'
 found = table.search(text)
 new = text
 if uninstall:

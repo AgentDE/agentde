@@ -197,6 +197,14 @@ struct SavedStateTests {
         #expect(dropped == 1)
     }
 
+    /// Saved state is private to you (startup commands can hold tokens).
+    @Test func savedStateIsPrivate() throws {
+        let store = try load(#"{"groups": [], "settings": {}}"#)
+        #expect(store.save())
+        let mode = try FileManager.default.attributesOfItem(atPath: dir.appendingPathComponent("state.json").path)[.posixPermissions] as? Int
+        #expect(mode == 0o600)
+    }
+
     @Test func cleanStateLoadsWithoutABackup() throws {
         let group = UUID().uuidString
         let store = try load(#"{"groups": [{"id": "\#(group)", "name": "repo", "colorIndex": 0, "dir": "/tmp", "tabs": []}], "settings": {}}"#)

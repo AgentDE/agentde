@@ -28,8 +28,16 @@ enum OpenInViewer {
             http://*|https://*)
               case "$parent" in
                 sh|bash|zsh|dash|ksh|fish)
+                  # A local page: the host is exactly localhost, 127.0.0.1 or [::1] (no user info, no longer name).
                   case "$1" in
-                    http://localhost*|https://localhost*|http://127.0.0.1*|https://127.0.0.1*|http://0.0.0.0*|http://\\[::1\\]*|*.localhost|*.localhost:*|*.localhost/*) item=$1 ;;
+                    *@*) loopback= ;;
+                    http://localhost|http://localhost[:/]*|https://localhost|https://localhost[:/]*) loopback=1 ;;
+                    http://127.0.0.1|http://127.0.0.1[:/]*|https://127.0.0.1|https://127.0.0.1[:/]*) loopback=1 ;;
+                    http://\\[::1\\]|http://\\[::1\\][:/]*) loopback=1 ;;
+                    *) loopback= ;;
+                  esac
+                  case "$loopback" in
+                    1) item=$1 ;;
                     *)
                       agent=; p=$PPID; i=0
                       while [ "$i" -lt 16 ] && [ -n "$p" ] && [ "$p" -gt 1 ]; do

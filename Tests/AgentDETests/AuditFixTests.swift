@@ -118,6 +118,16 @@ struct AuditFixTests {
         #expect(html.contains("height: 540px"))      // 16:9 at 960 wide
     }
 
+    /// A hostile deck can't inject markup through a color, and absurd sizes don't crash the renderer.
+    @Test func pptxColorsAndSizesAreChecked() {
+        #expect(PptxRenderer.isHexColor("12083A") && !PptxRenderer.isHexColor("\"><script>x</script>") && !PptxRenderer.isHexColor("fff"))
+        let html = PptxRenderer.html([PptxRenderer.Slide(background: nil, shapes: [PptxRenderer.Shape(x: 1e300, y: .nan, w: 1, h: 1)])],
+                                     width: 1, height: 1e300)
+        #expect(html.contains("height: 20000px"))
+        let zero = PptxRenderer.html([], width: 0, height: .infinity)
+        #expect(zero.contains("<!doctype html>"))
+    }
+
     /// A bare file name an agent prints is a link; a domain isn't.
     @Test func bareFileNamesAreLinks() {
         let terminal = Terminal(delegate: NullTerminalDelegate(), options: TerminalOptions(cols: 80, rows: 5))

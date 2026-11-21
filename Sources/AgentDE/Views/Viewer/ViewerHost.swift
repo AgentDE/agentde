@@ -72,6 +72,7 @@ final class ViewerRegistry {
 
     func remove(_ id: UUID) {
         hosts[id]?.saveEdits()
+        hosts[id]?.stopWatching()   // closes the watched file's descriptor
         hosts[id]?.removeFromSuperview()
         hosts[id] = nil
     }
@@ -174,6 +175,11 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
             showMissing(item)
             return
         }
+        // A named pipe or device would block the window on open: only regular files and folders are shown.
+        if !item.hasPrefix("http"), !Self.isShowable(item) {
+            showNote("\((item as NSString).lastPathComponent) isn't a regular file.")
+            return
+        }
         let kind = ViewerKind.shown(item, raw: raw)
         // A ⌘-click's timing ends once the item is on screen: web content when it finishes loading, the rest here.
         defer { if ![.markdown, .html, .web, .office].contains(kind) { LinkTiming.shown(tabID, item: item, kind: "\(kind)") } }
@@ -226,7 +232,7 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
                     if file.text == text.string { self.editing?.saved = file.text }
                     return
                 case .conflict:
-                    askAboutConflict(item, disk: file.text)
+                    askAboutConflict(item, disk: file.text, mine: text.string)
                     return
                 case .reload:
                     break
@@ -383,6 +389,12 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
         }
     }
 
+    /// A regular file or a folder (after following symlinks), not a pipe, socket or device.
+    static func isShowable(_ path: String) -> Bool {
+        let type = (try? FileManager.default.attributesOfItem(atPath: (path as NSString).resolvingSymlinksInPath))?[.type] as? FileAttributeType
+        return type == .typeRegular || type == .typeDirectory
+    }
+
     /// At most 2 MB of a text file, so a huge log can't stall the window.
     static func readText(_ url: URL) -> String { readTextFile(url).text }
 
@@ -462,11 +474,19 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
         content = view
     }
 
+    func stopWatching() {
+        pendingReload?.cancel()
+        fileWatch?.cancel()
+        fileWatch = nil
+    }
+
+    deinit { fileWatch?.cancel() }
+
     /// Reloads when the file changes; follows it across an atomic save (written elsewhere, renamed over it).
     private func watch(_ item: String) {
         fileWatch?.cancel()
         fileWatch = nil
-        guard !item.hasPrefix("http") else { return }
+        guard !item.hasPrefix("http"), Self.isShowable(item) else { return }   // opening a pipe would block
         let fd = open(item, O_EVTONLY)
         guard fd >= 0 else { return }
         let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write, .extend, .delete, .rename], queue: .main)
@@ -520,19 +540,28 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
         pendingSave = nil
         guard let editing, let text = textView, text.string != editing.saved else { return }
         let disk = Self.readTextFile(URL(fileURLWithPath: editing.path))
-        guard disk.text == editing.saved else { return askAboutConflict(editing.path, disk: disk.text) }
         let mine = text.string
+        guard disk.text == editing.saved else { return askAboutConflict(editing.path, disk: disk.text, mine: mine) }
+        if write(mine, to: editing.path) { self.editing?.saved = mine }
+    }
+
+    /// Writes edits without ever leaving the file half-written: to a temporary file beside it, then swapped in
+    /// (the original's permissions and other attributes carry over). A symlink's target is what changes.
+    @discardableResult
+    private func write(_ text: String, to path: String) -> Bool {
         do {
-            try mine.write(toFile: editing.path, atomically: false, encoding: .utf8)
-            self.editing?.saved = mine
+            try TextEdits.replace(path, with: text)
+            return true
         } catch {
-            DebugLog.log("couldn't save \((editing.path as NSString).lastPathComponent): \(error.localizedDescription)", "viewer")
+            DebugLog.log("couldn't save \((path as NSString).lastPathComponent): \(error.localizedDescription)", "viewer")
             NSSound.beep()
+            return false
         }
     }
 
     /// The file changed on disk while you had unsaved edits: keep yours (written over it) or take the file's.
-    private func askAboutConflict(_ item: String, disk: String) {
+    /// `mine` is your text as it was, so Keep Mine still saves it if you've moved on to another item meanwhile.
+    private func askAboutConflict(_ item: String, disk: String, mine: String) {
         guard let window, !askingAboutConflict else { return }
         askingAboutConflict = true
         let alert = NSAlert()
@@ -543,12 +572,12 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
         alert.beginSheetModal(for: window) { [weak self] response in
             guard let self else { return }
             self.askingAboutConflict = false
-            guard self.editing?.path == item else { return }
-            let now = Self.readTextFile(URL(fileURLWithPath: item)).text
-            self.editing?.saved = now
+            let stillShown = self.editing?.path == item
             if response == .alertFirstButtonReturn {
-                self.saveEdits()
-            } else {
+                // Still editing it: save what's there now (it may have grown since); otherwise the text as it was.
+                let text = stillShown ? (self.textView?.string ?? mine) : mine
+                if self.write(text, to: item), stillShown { self.editing?.saved = text }
+            } else if stillShown {
                 self.editing = nil
                 self.render(item, keepScroll: true)
             }
@@ -594,7 +623,7 @@ final class ViewerHost: NSView, WKNavigationDelegate, WKUIDelegate, NSTextViewDe
         } else if ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
             onOpen?(url.absoluteString)
         } else {
-            NSWorkspace.shared.open(url)
+            ExternalLink.open(url)
         }
         decisionHandler(.cancel)
     }
@@ -737,5 +766,38 @@ enum TextEdits {
     static func onDiskChange(disk: String, saved: String, shown: String) -> Action {
         if disk == saved || disk == shown { return .keep }
         return shown == saved ? .reload : .conflict
+    }
+
+    /// Replaces a file's text safely: written in full beside it first, then swapped in, so a full disk or a crash
+    /// leaves the old file whole. The original's attributes (permissions) are kept; a symlink keeps pointing at it.
+    static func replace(_ path: String, with text: String) throws {
+        let target = URL(fileURLWithPath: path).resolvingSymlinksInPath()
+        let temporary = target.deletingLastPathComponent().appendingPathComponent(".\(target.lastPathComponent).\(UUID().uuidString).tmp")
+        do {
+            try text.write(to: temporary, atomically: false, encoding: .utf8)
+            _ = try FileManager.default.replaceItemAt(target, withItemAt: temporary)
+        } catch {
+            try? FileManager.default.removeItem(at: temporary)
+            throw error
+        }
+    }
+}
+
+/// A clicked link that leaves the app. Pages, mail and app links open; a local file or folder is shown in Finder
+/// instead of opened, so a link in a cloned repo's README can't launch an app bundle or run a script.
+enum ExternalLink {
+    enum Action: Equatable { case open, reveal, ignore }
+
+    static func action(for url: URL) -> Action {
+        guard url.isFileURL else { return ["about", "data", "blob", "javascript"].contains(url.scheme?.lowercased() ?? "") ? .ignore : .open }
+        return FileManager.default.fileExists(atPath: url.path) ? .reveal : .ignore
+    }
+
+    static func open(_ url: URL) {
+        switch action(for: url) {
+        case .open: NSWorkspace.shared.open(url)
+        case .reveal: NSWorkspace.shared.activateFileViewerSelecting([url])
+        case .ignore: DebugLog.log("ignored link \(url.scheme ?? "?"):", "link")
+        }
     }
 }

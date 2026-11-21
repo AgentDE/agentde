@@ -68,7 +68,7 @@ An extension is a class with an `id` (stable: it namespaces the extension's save
 | `animations` | Whether the user wants motion (Settings → Fun, and Reduce Motion) |
 | `extensions` | The loaded extensions, for working with each other: `host.extensions.compactMap { $0 as? SomeProtocol }` |
 | `selectTab(_:focus:)` | Selects a tab |
-| `type(_:into:)` | Types text into a tab's terminal, as if pasted; `"\r"` presses Return |
+| `type(_:into:)` | Types text into a tab's terminal, as if pasted; `"\r"` presses Return. A message to an agent waits out a permission prompt (returns false) and stashes your draft first |
 | `openInViewer(_:tab:select:)` | Shows a file path or link in a tab's viewer |
 | `openTab(agent:in:folder:title:)` | Opens a new tab running that agent (`"claude"`, `"codex"`, an added agent's id; nil for a shell) and returns its id |
 | `value`, `setValue` | Per-tab values (below) |

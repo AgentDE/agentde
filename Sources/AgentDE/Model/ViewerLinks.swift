@@ -7,8 +7,10 @@ enum ViewerLinks {
                                  title: { _ in "Claude artifact" })
     static var rules: [LinkRule] = [claude]
 
+    /// The rule's pattern must match from the link's start: `https://example.com/?u=https://claude.ai/artifact/…`
+    /// is example.com's page, not an artifact.
     private static func matches(_ rule: LinkRule, _ link: String) -> Bool {
-        link.contains(rule.marker) && link.range(of: rule.pattern, options: .regularExpression) != nil
+        link.contains(rule.marker) && link.range(of: "^(?:" + rule.pattern + ")", options: .regularExpression) != nil
     }
 
     /// The link's one form for its page, if a rule claims it.

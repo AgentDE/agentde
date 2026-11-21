@@ -56,8 +56,10 @@ enum PptxRenderer {
 
     /// The slides as one page, each 960 px wide, stacked.
     static func html(_ slides: [Slide], width: Double, height: Double) -> String {
+        // A broken or hostile file can claim any size: keep the page's numbers finite and sane.
+        let width = width.isFinite && width > 0 ? width : 9_144_000, height = height.isFinite && height > 0 ? height : 6_858_000
         let scale = 960 / width
-        let slideHeight = Int((height * scale).rounded())
+        let slideHeight = Int(min(max((height * scale).rounded(), 1), 20_000))
         var out = """
         <!doctype html><html><head><meta charset="utf-8"><style>
         body { margin: 0; padding: 16px 0; background: #2b2d33; font-family: -apple-system, "Helvetica Neue", sans-serif; }
@@ -100,7 +102,12 @@ enum PptxRenderer {
         return out + "</body></html>"
     }
 
-    private static func px(_ value: Double) -> String { String(format: "%.1f", value) }
+    private static func px(_ value: Double) -> String { String(format: "%.1f", value.isFinite ? min(max(value, -100_000), 100_000) : 0) }
+
+    /// Six hex digits, as `a:srgbClr` should hold.
+    static func isHexColor(_ value: String) -> Bool {
+        value.count == 6 && value.allSatisfy(\.isHexDigit)
+    }
 
     static func escape(_ text: String) -> String {
         text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
@@ -180,7 +187,8 @@ private final class SlideReader: NSObject, XMLParserDelegate {
             placed = false
             return
         }
-        if name == "a:srgbClr", let value = attributes["val"] {
+        // Colors go into the page's styles, so only a real hex color is taken (anything else could break out of them).
+        if name == "a:srgbClr", let value = attributes["val"], PptxRenderer.isHexColor(value) {
             if path.contains("p:bg"), shape == nil, slide.background == nil { slide.background = value }
             else if run != nil, path.contains("a:rPr") { run?.color = value }
             else if shape != nil, parent == "a:solidFill", path.contains("p:spPr"), !path.contains("a:ln") { shape?.fill = value }

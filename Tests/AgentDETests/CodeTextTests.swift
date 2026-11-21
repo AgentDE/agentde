@@ -111,4 +111,14 @@ struct CodeTextTests {
         _ = ScrollbackCache.lines(id, generation: 2, width: 100, read: read)
         #expect(reads == 4)
     }
+
+    /// Two messages typed into one tab back to back don't run together: the second waits for the first's Enter.
+    @Test func typingWaitsForThePreviousEnter() {
+        let now = Date()
+        let first = TerminalRegistry.typingSchedule(now: now, busyUntil: nil, submit: true)
+        #expect(first.start == now && first.enter > first.start)
+        let second = TerminalRegistry.typingSchedule(now: now, busyUntil: first.busy, submit: true)
+        #expect(second.start > first.enter)
+        #expect(TerminalRegistry.typingSchedule(now: now.addingTimeInterval(5), busyUntil: first.busy, submit: false).start == now.addingTimeInterval(5))
+    }
 }

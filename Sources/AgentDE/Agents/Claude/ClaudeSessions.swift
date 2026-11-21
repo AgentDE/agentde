@@ -142,7 +142,8 @@ extension Store {
         // Interactive login shell, like the tabs, so `claude` is on PATH even when .zshrc puts it there.
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        task.arguments = ["-lic", "claude stop \(job)"]
+        // Through `tail`, so however much the shell's startup files print, the pipe never fills and blocks it.
+        task.arguments = ["-lic", "claude stop \(job) 2>&1 | tail -n 3; exit ${pipestatus[1]}"]
         let output = Pipe()
         task.standardOutput = output
         task.standardError = output

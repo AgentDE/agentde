@@ -96,7 +96,7 @@ enum GitChanges {
         task.arguments = args
         let out = Pipe()
         task.standardOutput = out
-        task.standardError = Pipe()
+        task.standardError = FileHandle.nullDevice   // an unread pipe blocks git once its warnings fill it
         guard (try? task.run()) != nil else { return nil }
         let data = out.fileHandleForReading.readDataToEndOfFile()
         task.waitUntilExit()

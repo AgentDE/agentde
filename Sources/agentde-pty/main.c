@@ -375,7 +375,8 @@ int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
     signal(SIGTERM, SIG_DFL);
     signal(SIGINT, SIG_DFL);
-    umask(077);
+    // Private socket and files for the holder itself; the shell gets the umask the holder started with back.
+    mode_t inherited_umask = umask(077);
     reset_modes();
     ring = ring_cap ? malloc(ring_cap) : NULL;
     if (ring_cap && !ring) ring_cap = 0;
@@ -411,6 +412,7 @@ int main(int argc, char **argv) {
         signal(SIGHUP, SIG_DFL);
         signal(SIGPIPE, SIG_DFL);
         signal(SIGCHLD, SIG_DFL);
+        umask(inherited_umask);
         sigset_t none;
         sigemptyset(&none);
         sigprocmask(SIG_SETMASK, &none, NULL);
