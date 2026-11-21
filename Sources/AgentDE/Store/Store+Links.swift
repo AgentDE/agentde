@@ -222,19 +222,35 @@ extension Store {
 
     /// Files named `name` under `folder`, from Spotlight. Replaceable in tests, which can't wait for indexing.
     nonisolated(unsafe) static var fileSearch: (_ name: String, _ folder: String) -> [String] = { name, folder in
-        guard FileManager.default.fileExists(atPath: folder) else { return [] }
+        guard FileManager.default.fileExists(atPath: folder),
+              let text = output(of: "/usr/bin/mdfind", ["-onlyin", folder, "-name", name], timeout: 2) else { return [] }
+        return text.split(separator: "\n").map(String.init)
+    }
+
+    /// A command's standard output, or nil if it doesn't finish within `timeout` (it's stopped). The output is
+    /// read while the command runs, so a long list can't fill the pipe and stall it into the timeout.
+    static func output(of executable: String, _ arguments: [String], timeout: TimeInterval) -> String? {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/mdfind")
-        process.arguments = ["-onlyin", folder, "-name", name]
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
         let out = Pipe()
         process.standardOutput = out
         process.standardError = FileHandle.nullDevice
-        guard (try? process.run()) != nil else { return [] }
-        let deadline = Date().addingTimeInterval(2)
-        while process.isRunning, Date() < deadline { Thread.sleep(forTimeInterval: 0.02) }
-        if process.isRunning { process.terminate(); return [] }
-        let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        return text.split(separator: "\n").map(String.init)
+        guard (try? process.run()) != nil else { return nil }
+        let output = PipeOutput()
+        let reading = DispatchGroup()
+        reading.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            output.data = out.fileHandleForReading.readDataToEndOfFile()
+            reading.leave()
+        }
+        if reading.wait(timeout: .now() + timeout) == .timedOut {
+            process.terminate()
+            reading.wait()
+            return nil
+        }
+        process.waitUntilExit()
+        return String(decoding: output.data, as: UTF8.self)
     }
 
     private static func resolveLink(_ link: String, relativeTo folders: [String]) -> URL? {
@@ -402,4 +418,9 @@ extension Store {
         groups[g].tabs[t].panelSections = (groups[g].tabs[t].panelSections ?? [:]).merging([key: open]) { $1 }
         scheduleSave()
     }
+}
+
+/// What a background read of a pipe collected (handed over through a DispatchGroup wait).
+private final class PipeOutput: @unchecked Sendable {
+    var data = Data()
 }

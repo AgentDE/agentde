@@ -89,4 +89,11 @@ struct CodeTextTests {
         #expect(ViewerHost.codeLanguage("/r/run.log") == nil)
         #expect(ViewerHost.codeLanguage("/r/data.csv") == nil)
     }
+
+    /// A search that prints more than a pipe holds (64 KB) still finishes; it used to stall into the timeout.
+    @Test func longCommandOutputIsReadWhileItRuns() {
+        let text = Store.output(of: "/bin/sh", ["-c", "yes /some/long/path/to/a/file.swift | head -n 20000"], timeout: 2)
+        #expect(text?.split(separator: "\n").count == 20000)
+        #expect(Store.output(of: "/bin/sleep", ["5"], timeout: 0.3) == nil)
+    }
 }

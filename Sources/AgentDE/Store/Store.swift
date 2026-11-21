@@ -203,6 +203,8 @@ final class Store {
         }
     }
 
+    private var backedUpUnreadableState = false
+
     /// Loads saved state group by group and tab by tab, so one unreadable entry (say, from a newer version)
     /// drops only itself. If anything is dropped, or the file can't be read at all, the original is kept as
     /// `state.json.unreadable-<time>` before AgentDE ever writes over it.
@@ -215,8 +217,11 @@ final class Store {
         }
         let decoder = JSONDecoder()
         var dropped = 0, migrated = false
-        for case var rawGroup as [String: Any] in object["groups"] as? [Any] ?? [] {
-            let rawTabs = rawGroup["tabs"] as? [Any] ?? []
+        // Every value that isn't what it should be counts, so any lossy load keeps the original.
+        let rawGroups = SavedStateList.items(object["groups"], dropped: &dropped)
+        for raw in rawGroups {
+            guard var rawGroup = raw as? [String: Any] else { dropped += 1; continue }
+            let rawTabs = SavedStateList.items(rawGroup["tabs"], dropped: &dropped)
             rawGroup["tabs"] = []
             guard let groupData = try? JSONSerialization.data(withJSONObject: rawGroup),
                   var group = try? decoder.decode(GroupModel.self, from: groupData) else { dropped += 1; continue }
@@ -256,6 +261,8 @@ final class Store {
     }
 
     private func backUpUnreadableState(_ reason: String) {
+        guard !backedUpUnreadableState else { return }
+        backedUpUnreadableState = true
         let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let backup = stateURL.deletingLastPathComponent().appendingPathComponent("state.json.unreadable-\(stamp)")
         try? FileManager.default.copyItem(at: stateURL, to: backup)
@@ -285,5 +292,14 @@ final class Store {
         alert.addButton(withTitle: button)
         alert.addButton(withTitle: "Cancel")
         return alert.runModal() == .alertFirstButtonReturn
+    }
+}
+
+/// A list in saved state: missing or null is an empty list; anything else that isn't a list is a loss.
+enum SavedStateList {
+    static func items(_ value: Any?, dropped: inout Int) -> [Any] {
+        if let list = value as? [Any] { return list }
+        if value != nil, !(value is NSNull) { dropped += 1 }
+        return []
     }
 }

@@ -15,7 +15,8 @@ Run a dozen Claude Code and Codex sessions side by side, see at a glance which o
 <p align="center"><img src="docs/images/demo.gif" width="800" alt="AgentDE in use: many agents in one window, one turns amber and is answered from the workstream panel, a file opens above the chat, and the window is extended with widgets and themes"></p>
 
 - **Native and light.** SwiftUI and AppKit, no Electron. Under 100 MB of memory (as Activity Monitor shows it) with a few groups loaded, under 1% CPU when idle.
-- **Knows what each agent is doing.** A dot per tab: working, needs you, or done, with no setup. Notifications when an agent waits on you.
+- **Knows what each agent is doing.** Each tab's icon lights up: working, needs you, or done, with no setup. Notifications when an agent waits on you.
+- **Two at once.** Drag a tab onto the chat to see two agents side by side.
 - **Tabs that don't die.** Every tab's shell runs in its own small holder process, so agents keep working when you quit, update or crash.
 - **A viewer above the chat.** ⌘-click any path or link an agent prints to see the file, page, diff, PDF or video right there.
 - **A side panel to see what's going on.** The tab's files, its uncommitted changes and recent commits (click one for its diff), and the workstream: agents keep a shared record of each piece of work (overview, rules, memory, questions for you, progress, files) through an MCP server.

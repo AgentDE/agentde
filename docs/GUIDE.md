@@ -167,7 +167,7 @@ The list refreshes every 30 seconds.
 
 **A group's folder** is where its new tabs start, and what its Recent list and worktrees use. Right-click the group → **Default Folder…** to change it (say, the repository moved). Open tabs keep their own folders; a tab can be anywhere, and **Move to Group** puts it in another group.
 
-**Only today's tabs.** The filter button beside **Groups** hides tabs that haven't been active today, Recent and Older, and groups with nothing left. A tab counts if its agent worked or waited on you today, you switched to it today, it has a status dot or an open question, or it's on screen. A day starts at 4 AM. Click the button again for everything.
+**Only today's tabs.** The filter button beside **Groups** hides tabs that haven't been active today, Recent and Older, and groups with nothing left. A tab counts if its agent worked or waited on you today, you switched to it today, it shows a status (working, needs you, done) or an open question, or it's on screen. A day starts at 4 AM. Click the button again for everything.
 
 ## Startup command (conda and friends)
 
@@ -203,7 +203,7 @@ A tab's icon (Claude's is a small pixel critter, Codex's a knot) takes the color
 - **Why it's waiting:** when Claude reports it, in the tab's tooltip, the status bar and the command palette (⇧⌘P).
 - **Notifications:** a macOS banner when an agent needs you, or finishes while you're elsewhere; a click brings AgentDE forward on that tab. Turn either, or the sound, off in Settings → Agents.
 
-**Codex and other agents.** Any agent with hooks can report its state. Each tab's environment has `AGENTDE_STATUS_FILE`, and a hook writes one line to it: `working`, `needs-you` or `idle`, then the agent's pid (`$PPID` in a hook), then optionally what it's waiting for. A second line, `session <id>`, names the agent's session: that's how a new Codex tab learns which thread to resume after a reboot (the registered hooks read it from the hook's input). AgentDE trusts a line only while that pid runs inside the tab, so a dot never outlives its agent. Outside AgentDE the variable isn't set and the hook does nothing.
+**Codex and other agents.** Any agent with hooks can report its state. Each tab's environment has `AGENTDE_STATUS_FILE`, and a hook writes one line to it: `working`, `needs-you` or `idle`, then the agent's pid (`$PPID` in a hook), then optionally what it's waiting for. A second line, `session <id>`, names the agent's session: that's how a new Codex tab learns which thread to resume after a reboot (the registered hooks read it from the hook's input). AgentDE trusts a line only while that pid runs inside the tab, so a status never outlives its agent. Outside AgentDE the variable isn't set and the hook does nothing.
 
 - **Codex:** `make register-agent-status` shows the hooks it would add to `~/.codex/hooks.json` (`YES=1` adds them; `scripts/register-agent-status.sh --uninstall` removes them). Then run `/hooks` in Codex once to trust them.
 - **Others** (Gemini CLI, OpenCode, your own): call this from the hook for each state, as `working` when a turn starts or a tool finishes, `needs-you` before a permission prompt, `idle` when a turn stops:
@@ -320,7 +320,7 @@ Each tab's environment includes `TERM_PROGRAM=AgentDE` and `AGENTDE_TAB_ID=<uuid
 |---|---|
 | macOS keeps asking for permissions after updates | Run `make signing` once, then `make install`. Or give AgentDE **Full Disk Access** in System Settings → Privacy & Security |
 | A Claude tab says `claude: command not found` | Tabs run your login shell (`zsh -l`), so `claude` must be on the `PATH` your `.zprofile` or `.zshrc` sets |
-| Status dots never appear | Check that `~/.claude/sessions/` has a JSON file for the running session; older Claude Code versions don't write it |
+| Tab icons never light up | Check that `~/.claude/sessions/` has a JSON file for the running session; older Claude Code versions don't write it |
 | Hard to see what's active | Settings → Look → High contrast: black and white with orange outlines on the active tab and group |
 | Tabs or groups missing after an update | Unreadable parts of the saved state are dropped one by one, and the original is kept as `state.json.unreadable-<time>`; the debug log says what was dropped |
 | `make` stops with "No package at …" or "Couldn't clone …" | An extension in `extensions.json` isn't beside this repo and couldn't be cloned: check its `repo` and your network, clone it yourself, or take it out of the file |

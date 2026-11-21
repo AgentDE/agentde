@@ -176,6 +176,27 @@ struct SavedStateTests {
         #expect(files.contains { $0.hasPrefix("state.json.unreadable-") })
     }
 
+    /// Values of the wrong type (a group that's a string, `tabs` that's a number, `groups` that's an object) are
+    /// losses too: the original is kept before anything writes over it.
+    @Test func wrongTypesCountAsLossesAndKeepTheOriginal() throws {
+        let good = UUID().uuidString
+        for json in [
+            #"{"groups": ["oops", {"id": "\#(good)", "name": "good", "colorIndex": 0, "dir": "/tmp", "tabs": []}], "settings": {}}"#,
+            #"{"groups": [{"id": "\#(good)", "name": "good", "colorIndex": 0, "dir": "/tmp", "tabs": 7}], "settings": {}}"#,
+            #"{"groups": {"id": "\#(good)"}, "settings": {}}"#,
+        ] {
+            try? FileManager.default.removeItem(at: dir)
+            _ = try load(json)
+            let files = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+            #expect(files.contains { $0.hasPrefix("state.json.unreadable-") }, "no backup for \(json)")
+        }
+        var dropped = 0
+        #expect(SavedStateList.items(nil, dropped: &dropped).isEmpty && SavedStateList.items(NSNull(), dropped: &dropped).isEmpty)
+        #expect(dropped == 0)
+        _ = SavedStateList.items("x", dropped: &dropped)
+        #expect(dropped == 1)
+    }
+
     @Test func cleanStateLoadsWithoutABackup() throws {
         let group = UUID().uuidString
         let store = try load(#"{"groups": [{"id": "\#(group)", "name": "repo", "colorIndex": 0, "dir": "/tmp", "tabs": []}], "settings": {}}"#)
