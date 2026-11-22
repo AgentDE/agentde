@@ -49,8 +49,9 @@ public enum Worktrees {
     public struct WorktreeError: Error { public let message: String }
 
     private static func git(_ arguments: [String]) -> (status: Int32, output: String) {
+        guard let git = Tools.git else { return (127, "git isn't installed (xcode-select --install)") }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.executableURL = URL(fileURLWithPath: git)
         process.arguments = arguments
         // Never wait on a password prompt nobody can see: a fetch that needs one just fails.
         var env = ProcessInfo.processInfo.environment

@@ -231,7 +231,12 @@ static size_t inlen;
 static unsigned char *pending_input;
 static size_t pending_len, pending_cap;
 
+// At most this much typed or pasted input waits for a program that isn't reading it; past that it's dropped
+// rather than grown without limit (a 2 MB paste still fits whole).
+#define MAX_PENDING_INPUT (16u << 20)
+
 static void queue_input(const unsigned char *p, size_t n) {
+    if (pending_len + n > MAX_PENDING_INPUT) return;
     if (pending_len + n > pending_cap) {
         size_t cap = pending_cap ? pending_cap : 4096;
         while (cap < pending_len + n) cap *= 2;
@@ -465,9 +470,11 @@ int main(int argc, char **argv) {
         if (waitpid(child, &status, WNOHANG) == child) finish(status);
         if (mi >= 0 && (fds[mi].revents & POLLOUT)) flush_input();
         if (mi >= 0 && (fds[mi].revents & (POLLIN | POLLHUP | POLLERR))) master_open = read_master();
+        int accepted = 0;
         if (li >= 0 && (fds[li].revents & POLLIN)) {
             int fd = accept(listen_fd, NULL, NULL);
             if (fd >= 0) {
+                accepted = 1;
                 // A newer client (AgentDE relaunched) replaces the old one.
                 drop_client();
                 inlen = 0;
@@ -476,6 +483,7 @@ int main(int argc, char **argv) {
                 send_replay();
             }
         }
-        if (ci >= 0 && client_fd >= 0 && fds[ci].revents) read_client();
+        // The poll result in `ci` was the old client's: a new one is read from the next poll, never blindly.
+        if (!accepted && ci >= 0 && client_fd >= 0 && fds[ci].revents) read_client();
     }
 }

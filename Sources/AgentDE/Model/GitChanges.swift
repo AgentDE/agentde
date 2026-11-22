@@ -1,4 +1,5 @@
 import Foundation
+import AgentDEKit
 
 /// One changed file in a working tree, against HEAD.
 struct GitChange: Equatable, Identifiable {
@@ -91,8 +92,9 @@ enum GitChanges {
     }
 
     private static func run(_ args: [String], ok: Set<Int32> = [0]) -> Data? {
+        guard let git = Tools.git else { return nil }
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        task.executableURL = URL(fileURLWithPath: git)
         task.arguments = args
         let out = Pipe()
         task.standardOutput = out

@@ -1,4 +1,5 @@
 import AppKit
+import AgentDEKit
 import SwiftUI
 
 /// The open pull request for a branch, with its checks rolled up.
@@ -21,7 +22,7 @@ final class PullRequestMonitor {
     private let queue = DispatchQueue(label: "agentde.pull-requests", qos: .utility)
     private var lastFetch: [String: Date] = [:]
     private var inFlight = Set<String>()
-    private let gh = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh", "/usr/bin/gh"].first { FileManager.default.isExecutableFile(atPath: $0) }
+    private let gh = Tools.find("gh")
 
     init(store: Store) {
         self.store = store

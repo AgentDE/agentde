@@ -12,6 +12,11 @@ enum LinkTarget: Equatable {
     /// A path or `file://` URL, not yet resolved against the tab's folders.
     case file(String)
 
+    /// Schemes a ⌘-click opens without asking.
+    static func opensWithoutAsking(_ url: URL) -> Bool {
+        ["http", "https", "mailto"].contains(url.scheme?.lowercased() ?? "")
+    }
+
     static func classify(_ link: String) -> LinkTarget {
         guard let url = URL(string: link), let scheme = url.scheme?.lowercased(), scheme != "file" else { return .file(link) }
         if scheme == "http" || scheme == "https", let host = url.host?.lowercased(),
@@ -36,7 +41,9 @@ extension Store {
         switch LinkTarget.classify(link) {
         case .web(let url):
             DebugLog.log("click → web in 0 ms", "link")
-            NSWorkspace.shared.open(url)
+            // Web pages and mail open directly. Another app's link (shortcuts://, slack://…) can hide behind any
+            // text in a terminal (OSC 8), so it's shown in full and opens only if you say so.
+            if LinkTarget.opensWithoutAsking(url) || Self.confirmAppLink(url) { NSWorkspace.shared.open(url) }
         case .localWeb(let url), .artifact(let url):
             DebugLog.log("click → web in 0 ms", "link")
             if defaultApp || !hasViewer { NSWorkspace.shared.open(url) } else if let owner {
@@ -63,10 +70,10 @@ extension Store {
             } else {
                 // A partial path (`tmp/rail/handoff.html`) relative to somewhere else: the agent's own transcript
                 // has the full path of what it wrote or read, so that's asked first; then Spotlight and a walk.
-                let transcript = Store.transcript(of: owner)
                 let bare = FileLink.withoutLine(Store.trimmedLink(path))
                 DispatchQueue.global(qos: .userInitiated).async {
-                    if let transcript, let found = Store.findInTranscript(bare, transcript: transcript) {
+                    // Finding the transcript can walk a folder (Codex's sessions), so it's done here, off the main thread.
+                    if let transcript = Store.transcript(of: owner), let found = Store.findInTranscript(bare, transcript: transcript) {
                         DispatchQueue.main.async { open(found, "transcript") }
                         return
                     }
@@ -75,6 +82,17 @@ extension Store {
                 }
             }
         }
+    }
+
+    /// Asks before handing a link to another app, showing the whole link.
+    static func confirmAppLink(_ url: URL) -> Bool {
+        let alert = NSAlert()
+        let app = NSWorkspace.shared.urlForApplication(toOpen: url).map { FileManager.default.displayName(atPath: $0.path) }
+        alert.messageText = "Open this link\(app.map { " in \($0)" } ?? "")?"
+        alert.informativeText = String(url.absoluteString.prefix(500))
+        alert.addButton(withTitle: "Open")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     /// The tab's agent transcript: Claude's session file, or Codex's session log.

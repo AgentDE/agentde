@@ -1,4 +1,4 @@
-import Darwin
+import Foundation
 
 /// Process-table helpers for owning and cleaning up what tabs launch.
 enum ProcessTree {
@@ -49,6 +49,31 @@ enum ProcessTree {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
         guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return false }
         return info.kp_proc.p_stat == SZOMB
+    }
+
+    /// When a process started.
+    static func startTime(_ pid: pid_t) -> Date? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
+        let start = info.kp_proc.p_un.__p_starttime
+        return Date(timeIntervalSince1970: Double(start.tv_sec) + Double(start.tv_usec) / 1_000_000)
+    }
+
+    /// Whether `pid` started at `recorded` (Claude's `procStart`, "Sun Nov 15 23:26:45 2026" in UTC), within 2 s.
+    /// No record, or one in another format, counts as a match: only a clear mismatch rejects.
+    static func started(_ pid: pid_t, at recorded: String?) -> Bool {
+        guard let recorded, let expected = parseProcStart(recorded), let actual = startTime(pid) else { return true }
+        return abs(actual.timeIntervalSince(expected)) <= 2
+    }
+
+    static func parseProcStart(_ text: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "EEE MMM d HH:mm:ss yyyy"
+        return formatter.date(from: text.split(whereSeparator: \.isWhitespace).joined(separator: " "))
     }
 
     /// Direct children of this app: the shells it started for tabs.

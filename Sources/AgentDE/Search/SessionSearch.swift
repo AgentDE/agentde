@@ -99,6 +99,7 @@ final class SessionSearch {
         ScrollbackCache.forget(keeping: Set(store.groups.flatMap { $0.tabs.map(\.id) }))
         progress = (0, sources.count)
         sections = []
+        Self.dropIndexWhenIdle()
         let sessionIds = Set(sources.compactMap(\.sessionId))
         queue.async { [weak self] in
             guard let self else { return }
@@ -117,6 +118,15 @@ final class SessionSearch {
                 }
             }
         }
+    }
+
+    /// The index holds every searched session's messages; ten minutes after the last search it's let go.
+    nonisolated(unsafe) private static var idleDrop: DispatchWorkItem?
+    private static func dropIndexWhenIdle() {
+        idleDrop?.cancel()
+        let drop = DispatchWorkItem { sharedIndex.clear() }
+        idleDrop = drop
+        sharedQueue.asyncAfter(deadline: .now() + 600, execute: drop)
     }
 
     private func isStale(_ gen: Int) -> Bool {

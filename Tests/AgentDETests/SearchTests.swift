@@ -66,6 +66,18 @@ struct TranscriptIndexTests {
         #expect(entries.last?.text == "and the playtest dashboard")
     }
 
+    /// A transcript bigger than one read chunk (lines straddling the chunk edges, a huge tool-output line) is
+    /// indexed in pieces with every message found once.
+    @Test func readsBigTranscriptsInChunks() throws {
+        let url = try transcript()
+        var text = ""
+        for i in 0..<20 { text += line("user", "message \(i)") + "{\"type\":\"tool\",\"blob\":\"" + String(repeating: "x", count: 500_000) + "\"}\n" }
+        try text.write(to: url, atomically: true, encoding: .utf8)
+        #expect(UInt64(text.utf8.count) > TranscriptIndex.chunkBytes * 2)
+        let entries = TranscriptIndex().entries(sessionId: session, cwd: cwd, format: ClaudeTranscript(projectsDir: projects))
+        #expect(entries.map(\.text) == (0..<20).map { "message \($0)" })
+    }
+
     @Test func skipsHarnessTextAndToolOutput() throws {
         let url = try transcript()
         let toolResult = "{\"type\":\"user\",\"message\":{\"content\":[{\"type\":\"tool_result\",\"content\":\"secret output\"}]}}\n"

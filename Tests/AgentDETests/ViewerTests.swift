@@ -32,6 +32,14 @@ struct ViewerRoutingTests {
         #expect(kind == expected)
     }
 
+    /// ⌘-click opens web pages and mail directly; other apps' links ask first.
+    @Test func onlyWebAndMailOpenWithoutAsking() {
+        #expect(LinkTarget.opensWithoutAsking(URL(string: "https://example.com")!))
+        #expect(LinkTarget.opensWithoutAsking(URL(string: "mailto:a@example.com")!))
+        #expect(!LinkTarget.opensWithoutAsking(URL(string: "shortcuts://run-shortcut?name=x")!))
+        #expect(!LinkTarget.opensWithoutAsking(URL(string: "vscode://file/tmp/a")!))
+    }
+
     @Test func picksHowToShowAnItem() {
         #expect(ViewerKind.of("/a/REPORT.md") == .markdown)
         #expect(ViewerKind.of("/a/report.html") == .html)

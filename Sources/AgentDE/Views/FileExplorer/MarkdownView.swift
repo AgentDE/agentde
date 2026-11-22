@@ -26,9 +26,11 @@ struct MarkdownView: NSViewRepresentable {
         view.loadHTMLString(MarkdownView.page(for: url, theme: theme), baseURL: url.deletingLastPathComponent())
     }
 
-    /// The file rendered as a themed HTML page.
+    /// The file rendered as a themed HTML page: at most its first 2 MB, like text files, so a huge Markdown
+    /// file (a generated log, say) can't stall the window.
     static func page(for url: URL, theme: Theme) -> String {
-        let source = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let file = ViewerHost.readTextFile(url)
+        let source = file.whole ? file.text : file.text + "\n\n*Only the first 2 MB is shown.*"
         return "<!doctype html><html><head><meta charset=\"utf-8\"><style>\(css(theme))</style></head><body>"
             + MarkdownRenderer.html(source) + "</body></html>"
     }

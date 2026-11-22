@@ -45,8 +45,8 @@ enum ClaudeVersion {
     static func installed(link: URL = defaultLink) -> String? {
         if let version = parse(executablePath: link.resolvingSymlinksInPath().path) { return version }
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        task.arguments = ["-lc", "claude --version"]
+        task.executableURL = URL(fileURLWithPath: LoginShell.path)
+        task.arguments = LoginShell.arguments("claude --version", interactive: false)
         let output = Pipe()
         task.standardOutput = output
         task.standardError = FileHandle.nullDevice

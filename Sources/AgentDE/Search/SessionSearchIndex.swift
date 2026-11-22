@@ -50,6 +50,14 @@ final class TranscriptIndex {
         return found
     }
 
+    static let chunkBytes: UInt64 = 4 << 20
+
+    /// Drops everything: search runs again from the files when it's next used.
+    func clear() {
+        files = [:]
+        located = [:]
+    }
+
     /// Drops everything indexed for sessions outside `sessionIds`, so closed tabs and aged-out recent
     /// sessions don't hold memory for the rest of the run.
     func retainOnly(sessionIds: Set<String>) {
@@ -66,25 +74,29 @@ final class TranscriptIndex {
         defer { try? handle.close() }
         let size = (try? handle.seekToEnd()) ?? 0
         if size < state.offset { state = FileState() }   // rewritten: start over
-        if size > state.offset {
-            try? handle.seek(toOffset: state.offset)
-            // Read exactly up to the size measured above and advance by what was actually read, so bytes
-            // appended mid-read are picked up next time instead of being read twice.
-            guard let fresh = try? handle.read(upToCount: Int(size - state.offset)) else { return state.entries }
-            var chunk = state.remainder
-            chunk.append(fresh)
-            state.offset += UInt64(fresh.count)
-            // Keep an unterminated last line for next time.
-            if let lastNewline = chunk.lastIndex(of: UInt8(ascii: "\n")) {
-                state.remainder = Data(chunk[chunk.index(after: lastNewline)...])
-                chunk = Data(chunk[..<lastNewline])
-            } else {
-                state.remainder = chunk
-                chunk = Data()
+        try? handle.seek(toOffset: state.offset)
+        // Up to the size measured above, in chunks, so a multi-gigabyte transcript (tool output, images) is never
+        // in memory at once; only its messages are kept. Bytes appended mid-read are picked up next time.
+        while size > state.offset {
+            let more = autoreleasepool { () -> Bool in
+                guard let fresh = try? handle.read(upToCount: Int(min(size - state.offset, Self.chunkBytes))), !fresh.isEmpty else { return false }
+                var chunk = state.remainder
+                chunk.append(fresh)
+                state.offset += UInt64(fresh.count)
+                // Keep an unterminated last line for the next chunk (or the next call).
+                if let lastNewline = chunk.lastIndex(of: UInt8(ascii: "\n")) {
+                    state.remainder = Data(chunk[chunk.index(after: lastNewline)...])
+                    chunk = Data(chunk[..<lastNewline])
+                } else {
+                    state.remainder = chunk
+                    chunk = Data()
+                }
+                for line in chunk.split(separator: UInt8(ascii: "\n")) {
+                    if let entry = format.entry(line, order: state.entries.count) { state.entries.append(entry) }
+                }
+                return true
             }
-            for line in chunk.split(separator: UInt8(ascii: "\n")) {
-                if let entry = format.entry(line, order: state.entries.count) { state.entries.append(entry) }
-            }
+            if !more { break }
         }
         files[url.path] = state
         return state.entries

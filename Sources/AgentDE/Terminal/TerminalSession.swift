@@ -294,6 +294,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
                 if !run.isEmpty { env["AGENTDE_RUN"] = run }
             } else {
                 args = run.isEmpty ? ["-l"] : ["-l", "-i", "-c", "\(run)\nexec \(TerminalSession.shellQuoted(shell)) -l"]
+                if let first = Self.bashPathFix(shell: shell, inherited: env) { env["PROMPT_COMMAND"] = first }
             }
         }
         let terminal = view.getTerminal()
@@ -336,6 +337,24 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
             && access(folder, X_OK) == 0
     }
 
+    /// For bash: macOS's path_helper (run by every login shell) moves the app's `bin` folder behind /usr/bin, so `open`
+    /// would be the system's. Bash runs PROMPT_COMMAND before its first prompt; this one puts the folder first
+    /// again and removes itself. Nil for other shells, or when you have a PROMPT_COMMAND of your own.
+    static func bashPathFix(shell: String, inherited: [String: String]) -> String? {
+        guard (shell as NSString).lastPathComponent == "bash", (inherited["PROMPT_COMMAND"] ?? "").isEmpty else { return nil }
+        return #"PATH="$AGENTDE_BIN:${PATH//"$AGENTDE_BIN:"/}"; unset PROMPT_COMMAND"#
+    }
+
+    /// LANG for a tab when the app was launched without one (from Finder): your system language and region in
+    /// UTF-8, as Terminal sets it, if macOS has that locale; else en_US.UTF-8.
+    static func lang(for locale: Locale, installed: (String) -> Bool = { FileManager.default.fileExists(atPath: "/usr/share/locale/" + $0) }) -> String {
+        if let language = locale.language.languageCode?.identifier, let region = locale.region?.identifier {
+            let name = "\(language)_\(region).UTF-8"
+            if installed(name) { return name }
+        }
+        return "en_US.UTF-8"
+    }
+
     /// Text as one shell word, whatever it contains.
     static func shellQuoted(_ text: String) -> String {
         "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
@@ -365,7 +384,7 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
         if store?.settings.openInViewer ?? true { env.merge(OpenInViewer.environment(tab: tab.id, inherited: env)) { $1 } }
         // What extensions add (the workstream this terminal's agents attach to, say).
         if let store { env.merge(store.launchEnvironment(for: tab.id)) { $1 } }
-        if env["LANG"] == nil { env["LANG"] = "en_US.UTF-8" }
+        if env["LANG"] == nil { env["LANG"] = Self.lang(for: Locale.current) }
         return env
     }
 
@@ -491,5 +510,16 @@ final class TerminalSession: NSObject, TerminalViewDelegate {
                 store.terminals.terminate(self.tabID)
             }
         }
+    }
+}
+
+/// Your login shell, as tabs run it, for helper commands (`claude stop`, `claude --version`): whatever puts
+/// `claude` on PATH for you (zsh, bash or fish config) applies to them too.
+enum LoginShell {
+    static var path: String { ProcessInfo.processInfo.environment["SHELL"].flatMap { $0.isEmpty ? nil : $0 } ?? "/bin/zsh" }
+
+    /// Separate flags: fish, bash and zsh all take `-l -i -c`.
+    static func arguments(_ command: String, interactive: Bool = true) -> [String] {
+        (interactive ? ["-l", "-i", "-c"] : ["-l", "-c"]) + [command]
     }
 }

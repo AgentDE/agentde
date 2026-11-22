@@ -108,6 +108,21 @@ struct OpenInViewerTests {
         #expect(try open("https://example.com/page", agent: false) == ["page"])
     }
 
+    /// A bash tab gets the app's bin folder first on PATH again after path_helper moved it back.
+    @Test func bashTabsPutTheShimFirstAgain() throws {
+        let fix = try #require(TerminalSession.bashPathFix(shell: "/bin/bash", inherited: [:]))
+        #expect(TerminalSession.bashPathFix(shell: "/bin/zsh", inherited: [:]) == nil)
+        #expect(TerminalSession.bashPathFix(shell: "/bin/bash", inherited: ["PROMPT_COMMAND": "mine"]) == nil)
+        let process = Process(), out = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", "eval \"$PROMPT_COMMAND\"; printf %s \"$PATH|${PROMPT_COMMAND-unset}\""]
+        process.environment = ["AGENTDE_BIN": "/x/bin", "PATH": "/usr/bin:/x/bin:/bin", "PROMPT_COMMAND": fix]
+        process.standardOutput = out
+        try process.run()
+        process.waitUntilExit()
+        #expect(String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self) == "/x/bin:/usr/bin:/bin|unset")
+    }
+
     @Test func aFileOrPageInATabGoesToItsViewer() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let work = root.appendingPathComponent("work")

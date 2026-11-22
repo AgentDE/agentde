@@ -2,16 +2,11 @@ import Foundation
 
 /// Reads the end of a Claude transcript for the last thing the assistant said.
 enum TranscriptPeek {
-    /// `~/.claude/projects/<cwd with every non-alphanumeric character as "-">/<session>.jsonl`
-    static func transcriptURL(sessionId: String, cwd: String) -> URL {
-        let encoded = String(cwd.map { $0.isLetter || $0.isNumber || $0 == "-" ? $0 : "-" })
-        return URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent(".claude/projects").appendingPathComponent(encoded)
-            .appendingPathComponent(sessionId + ".jsonl")
-    }
-
+    /// The transcript is found the way search finds it: under the folder Claude derives from `cwd`, else by its
+    /// session id in any project folder (a folder name with non-ASCII letters, a worktree, a resume elsewhere).
     static func lastAssistantText(sessionId: String, cwd: String, limit: Int = 180) -> String? {
-        guard let handle = try? FileHandle(forReadingFrom: transcriptURL(sessionId: sessionId, cwd: cwd)) else { return nil }
+        guard let url = ClaudeTranscript().url(session: sessionId, cwd: cwd),
+              let handle = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? handle.close() }
         let size = (try? handle.seekToEnd()) ?? 0
         try? handle.seek(toOffset: size > 262_144 ? size - 262_144 : 0)

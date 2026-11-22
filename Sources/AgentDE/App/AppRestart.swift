@@ -22,11 +22,11 @@ enum AppRestart {
 
     /// `$0` the bundle, `$1` its executable, `$2` the pid to wait for, `$3` the log, `$4` how many times to `open`.
     /// "Running" means a process whose command line starts with the executable (not this helper, which only
-    /// mentions it).
+    /// mentions it), compared literally: a path with `(`, `+` or `[` isn't a pattern.
     static let relaunchScript = #"""
         bundle=$0 exe=$1 pid=$2 log=$3 tries=$4
         while kill -0 "$pid" 2>/dev/null; do sleep 0.2; done
-        running() { pgrep -f -- "^$exe" >/dev/null 2>&1; }
+        running() { ps -axo command= | EXE="$exe" awk 'index($0, ENVIRON["EXE"]) == 1 { found = 1 } END { exit !found }'; }
         attempt=0
         while [ "$attempt" -lt "$tries" ]; do
           attempt=$((attempt + 1))

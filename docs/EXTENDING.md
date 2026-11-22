@@ -22,6 +22,7 @@ The API is the `AgentDEKit` library (`Sources/AgentDEKit/`):
 | `DebugLog.swift` | `DebugLog.log(_:_:)`: writes to the app's debug log |
 | `AppBrand.swift` | The build's name (`AppBrand.name`) and folder (`AppBrand.configDirectory`) |
 | `Worktrees.swift`, `SafeID.swift`, `Tabs.swift`, `PluginManifest.swift` | Git worktrees, id validation for shell commands, `TabKind` and `AgentState`, the JSON plugin format |
+| `Tools.swift` | `Tools.git` (nil without the Command Line Tools, so their install dialog never opens) and `Tools.find(_:)` for other command-line tools |
 
 An extension is a class with an `id` (stable: it namespaces the extension's saved data) and a `name` (shown in Settings). Every hook has a default that does nothing, so an extension implements only what it adds. The app creates extensions at launch, in `extensions.json` order, calls `start(host:)` after saved state is loaded and `stop()` at quit. Hooks are called on the main thread.
 

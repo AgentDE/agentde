@@ -4,6 +4,8 @@ import Darwin
 /// One entry from Claude Code's live session registry (`~/.claude/sessions/<pid>.json`).
 struct ClaudeSessionEntry: Decodable {
     var pid: Int32
+    /// When Claude's process started ("Sun Nov 15 23:26:45 2026", UTC): tells a reused pid from the real one.
+    var procStart: String? = nil
     var sessionId: String?
     var name: String?
     /// "user" (named with /rename), "auto" (Claude named it from the conversation) or "derived" (made from the
@@ -128,7 +130,9 @@ final class AgentMonitor {
         var jobs: [String: ClaudeSessionEntry] = [:]
         var liveIds = Set<String>()
         var livePids = Set<pid_t>()
-        for var entry in registry.read() where kill(entry.pid, 0) == 0 {
+        // A registry file left by a crash or reboot can name a pid that's now another process: it must have started
+        // when the file says.
+        for var entry in registry.read() where kill(entry.pid, 0) == 0 && ProcessTree.started(entry.pid, at: entry.procStart) {
             livePids.insert(entry.pid)
             if ClaudeVersion.valid(entry.version) == nil {
                 if versionsByPid[entry.pid] == nil { versionsByPid[entry.pid] = ClaudeVersion.running(pid: entry.pid) ?? "" }

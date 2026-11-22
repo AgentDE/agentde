@@ -128,6 +128,41 @@ struct AuditFixTests {
         #expect(zero.contains("<!doctype html>"))
     }
 
+    /// A registry file whose pid was reused (after a crash or reboot) doesn't match the process now running.
+    @Test func reusedPidsDontMatchClaudesRecord() {
+        #expect(ProcessTree.parseProcStart("Sun Nov 15 23:26:45 2026") == Date(timeIntervalSince1970: 1_794_785_205))
+        #expect(ProcessTree.parseProcStart("Thu Nov  5 08:00:51 2026") != nil)
+        let me = getpid()
+        let started = ProcessTree.startTime(me)!
+        let utc = DateFormatter()
+        utc.locale = Locale(identifier: "en_US_POSIX"); utc.timeZone = TimeZone(identifier: "UTC"); utc.dateFormat = "EEE MMM d HH:mm:ss yyyy"
+        #expect(ProcessTree.started(me, at: utc.string(from: started)))
+        #expect(!ProcessTree.started(me, at: utc.string(from: started.addingTimeInterval(-3600))))
+        #expect(ProcessTree.started(me, at: nil) && ProcessTree.started(me, at: "not a date"))
+    }
+
+    /// Tabs launched from Finder get your own language and region, not always US English.
+    @Test func tabsGetYourLocale() {
+        #expect(TerminalSession.lang(for: Locale(identifier: "fr_FR")) == "fr_FR.UTF-8")
+        #expect(TerminalSession.lang(for: Locale(identifier: "ja_JP")) == "ja_JP.UTF-8")
+        #expect(TerminalSession.lang(for: Locale(identifier: "en_GB@rg=uszzzz")).hasSuffix(".UTF-8"))
+        #expect(TerminalSession.lang(for: Locale(identifier: "xx_YY"), installed: { _ in false }) == "en_US.UTF-8")
+        #expect(TerminalSession.lang(for: Locale(identifier: "fr")) == "en_US.UTF-8")   // no region
+    }
+
+    /// Tools are found where people install them, not only in Homebrew's folders.
+    @Test func toolsAreFoundInTheUsualFolders() throws {
+        #expect(Tools.git != nil)   // this Mac has the Command Line Tools
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-tools-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let tool = dir.appendingPathComponent("made-up-tool")
+        try "#!/bin/sh\n".write(to: tool, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tool.path)
+        #expect(Tools.find("made-up-tool", environment: ["PATH": dir.path]) == tool.path)
+        #expect(Tools.find("made-up-tool", environment: [:]) == nil)
+    }
+
     /// A bare file name an agent prints is a link; a domain isn't.
     @Test func bareFileNamesAreLinks() {
         let terminal = Terminal(delegate: NullTerminalDelegate(), options: TerminalOptions(cols: 80, rows: 5))

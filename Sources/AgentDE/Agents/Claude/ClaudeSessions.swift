@@ -139,16 +139,20 @@ extension Store {
     func stopBackgroundJob(_ job: String) {
         guard let job = SafeID.job(job) else { return }
         stoppingJobs.insert(job)
-        // Interactive login shell, like the tabs, so `claude` is on PATH even when .zshrc puts it there.
+        // Your interactive login shell, like the tabs, so `claude` is on PATH wherever your config puts it. Output
+        // goes to a file, not a pipe, so however much the startup files print, nothing blocks.
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        // Through `tail`, so however much the shell's startup files print, the pipe never fills and blocks it.
-        task.arguments = ["-lic", "claude stop \(job) 2>&1 | tail -n 3; exit ${pipestatus[1]}"]
-        let output = Pipe()
-        task.standardOutput = output
-        task.standardError = output
+        task.executableURL = URL(fileURLWithPath: LoginShell.path)
+        task.arguments = LoginShell.arguments("claude stop \(job)")
+        let log = FileManager.default.temporaryDirectory.appendingPathComponent("agentde-stop-\(job).log")
+        FileManager.default.createFile(atPath: log.path, contents: nil)
+        let output = try? FileHandle(forWritingTo: log)
+        task.standardOutput = output ?? FileHandle.nullDevice
+        task.standardError = output ?? FileHandle.nullDevice
         task.terminationHandler = { finished in
-            let text = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            try? output?.close()
+            let text = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
+            try? FileManager.default.removeItem(at: log)
             let last = text.split(separator: "\n").last.map(String.init) ?? ""
             DebugLog.log("claude stop \(job) exit \(finished.terminationStatus): \(last.prefix(200))", "agent")
             let failed = finished.terminationStatus != 0

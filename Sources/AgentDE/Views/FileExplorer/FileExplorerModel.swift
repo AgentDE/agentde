@@ -1,4 +1,5 @@
 import AppKit
+import AgentDEKit
 
 /// A File Explorer tab: a lazily loaded folder tree with a Quick Look preview, and a filter that finds
 /// any file in the repo by name. Read-only on purpose; editing belongs in your editor or with the agent.
@@ -130,7 +131,7 @@ final class FileExplorerModel {
     private static func listFiles(_ root: URL) -> [String] {
         var files: [String] = []
         let git = Process()
-        git.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        git.executableURL = URL(fileURLWithPath: Tools.git ?? "/usr/bin/false")   // without git: the walk below
         // -z: raw NUL-separated paths, so names with spaces, quotes, newlines or non-ASCII come through intact.
         git.arguments = ["-C", root.path, "ls-files", "-z", "--cached", "--others", "--exclude-standard"]
         let out = Pipe()
