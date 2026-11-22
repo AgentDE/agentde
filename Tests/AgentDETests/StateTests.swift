@@ -7,7 +7,7 @@ struct SettingsTests {
     @Test func oneBadValueResetsOnlyItself() throws {
         let saved = #"{"theme": "neon", "fontSize": 15, "sparkles": false}"#
         let settings = AgentDESettings.decodeLenient(from: Data(saved.utf8))
-        #expect(Theme.definition(settings.theme).id == "claude")   // unknown theme → the default
+        #expect(Theme.definition(settings.theme).id == AgentDESettings.defaultTheme)   // unknown theme → the default
         #expect(settings.fontSize == 15)
         #expect(settings.sparkles == false)
         #expect(settings.animations == true) // missing key → default

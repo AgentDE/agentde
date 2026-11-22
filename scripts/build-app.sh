@@ -23,20 +23,40 @@ else
   PRODUCT=AgentDEBuild
   HELPERS=("$PWD"$'\t'agentde-pty ${(f)"$(python3 -I scripts/assemble.py "${EXTENSIONS:-extensions.json}" "$PACKAGE")"})
 fi
-swift build -c "$CONFIG" --package-path "$PACKAGE" --product "$PRODUCT"
-BIN=$(swift build -c "$CONFIG" --package-path "$PACKAGE" --show-bin-path)
+# ARCHS="arm64 x86_64" builds every executable for each and joins them (a universal app, for a download);
+# by default only this Mac's architecture is built.
+ARCH_LIST=(${=ARCHS:-})
+build_exe() {   # <package dir> <product> <destination>
+  local dir=$1 product=$2 dest=$3 slices=() arch
+  if (( ${#ARCH_LIST} )); then
+    for arch in $ARCH_LIST; do
+      swift build -c "$CONFIG" --package-path "$dir" --product "$product" --arch "$arch"
+      # Copied aside at once: some build systems put every architecture's product in the same folder.
+      slices+=("$dest.$arch")
+      cp "$(swift build -c "$CONFIG" --package-path "$dir" --arch "$arch" --show-bin-path)/$product" "$dest.$arch"
+      lipo -verify_arch "$arch" "$dest.$arch"
+    done
+    lipo -create $slices -output "$dest"
+    rm -f $slices
+  else
+    swift build -c "$CONFIG" --package-path "$dir" --product "$product"
+    cp "$(swift build -c "$CONFIG" --package-path "$dir" --show-bin-path)/$product" "$dest"
+  fi
+}
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN/$PRODUCT" "$APP/Contents/MacOS/$APP_NAME"
+build_exe "$PACKAGE" "$PRODUCT" "$APP/Contents/MacOS/$APP_NAME"
+BIN=$(swift build -c "$CONFIG" --package-path "$PACKAGE" ${ARCH_LIST:+--arch} ${ARCH_LIST[1]:-} --show-bin-path)
 cp -R "$BIN/SwiftTerm_SwiftTerm.bundle" "$APP/Contents/Resources/"
 for helper in $HELPERS; do
   dir=${helper%%$'\t'*} product=${helper##*$'\t'}
-  swift build -c "$CONFIG" --package-path "$dir" --product "$product"
-  cp "$(swift build -c "$CONFIG" --package-path "$dir" --show-bin-path)/$product" "$APP/Contents/MacOS/$product"
+  build_exe "$dir" "$product" "$APP/Contents/MacOS/$product"
 done
 [[ -f $ICON ]] && cp "$ICON" "$APP/Contents/Resources/AppIcon.icns"
 cp -R Resources/AppIcons "$APP/Contents/Resources/"   # the icons Settings offers
+# Registering workstreams from an installed app (a download has no checkout): it finds the app it's in.
+cp scripts/register-workstream.sh scripts/brand.sh "$APP/Contents/Resources/"
 # A brand's own resources (more icons, files its extensions read) join the bundle's.
 [[ -n $BRAND_RESOURCES && -d $BRAND_RESOURCES ]] && ditto "$BRAND_RESOURCES" "$APP/Contents/Resources"
 

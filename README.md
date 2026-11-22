@@ -38,7 +38,21 @@ AgentDE assumes your agents do the low-level work (editing files, running git) a
 
 ## Install
 
-Runs on macOS 14 or later. Building needs macOS 15.6 or later with the Xcode Command Line Tools 26 or newer (`xcode-select --install`; full Xcode isn't needed), and tabs need `claude` or `codex` on your `PATH`.
+Runs on macOS 14 or later, on Apple silicon and Intel. Tabs need `claude` or `codex` on your `PATH`.
+
+```bash
+brew install --cask agentde/tap/agentde
+```
+
+Or download `AgentDE-<version>.zip` from the [latest release](https://github.com/AgentDE/agentde/releases/latest) (signed and notarized), unzip it, and drag AgentDE to Applications. Then, once, register the workstream MCP server and hooks for Claude Code and Codex (without `--yes` it only shows what it would change):
+
+```bash
+/Applications/AgentDE.app/Contents/Resources/register-workstream.sh --yes
+```
+
+### Build from source
+
+Building needs macOS 15.6 or later with the Xcode Command Line Tools 26 or newer (`xcode-select --install`; full Xcode isn't needed).
 
 ```bash
 git clone https://github.com/AgentDE/agentde && cd agentde

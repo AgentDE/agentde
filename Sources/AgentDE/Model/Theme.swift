@@ -63,11 +63,66 @@ extension Theme {
                          terminalBackground: .black, terminalForeground: .white,
                          terminalSelection: NSColor(hex: 0x264F78), outline: Color(hex: 0xF38518))
         },
+        ThemeDefinition(id: "forest", name: "Forest (always dark)", alwaysDark: true) { _ in
+            Theme(window: Color(hex: 0x111A16), sidebar: Color(hex: 0x0C1310), text: Color(hex: 0xE4EFE8),
+                         secondary: Color(hex: 0xA6BBB0), muted: Color(hex: 0x6F8579), border: Color.white.opacity(0.08),
+                         hover: Color.white.opacity(0.05), selected: Color.white.opacity(0.09),
+                         terminalBackground: NSColor(hex: 0x111A16), terminalForeground: NSColor(hex: 0xD9E8DF),
+                         terminalSelection: NSColor(hex: 0x24402F))
+        },
+        ThemeDefinition(id: "ember", name: "Ember (always dark)", alwaysDark: true) { _ in
+            Theme(window: Color(hex: 0x1A1412), sidebar: Color(hex: 0x140F0D), text: Color(hex: 0xF3E9E3),
+                         secondary: Color(hex: 0xC2ADA2), muted: Color(hex: 0x8C766B), border: Color.white.opacity(0.08),
+                         hover: Color.white.opacity(0.05), selected: Color.white.opacity(0.09),
+                         terminalBackground: NSColor(hex: 0x1A1412), terminalForeground: NSColor(hex: 0xEADBD2),
+                         terminalSelection: NSColor(hex: 0x4A2E24))
+        },
+        ThemeDefinition(id: "ocean", name: "Ocean") { dark in
+            dark ? Theme(window: Color(hex: 0x0F1B24), sidebar: Color(hex: 0x0A141B), text: Color(hex: 0xE3EEF5),
+                         secondary: Color(hex: 0xA2B7C6), muted: Color(hex: 0x6B8293), border: Color.white.opacity(0.08),
+                         hover: Color.white.opacity(0.05), selected: Color.white.opacity(0.09),
+                         terminalBackground: NSColor(hex: 0x0F1B24), terminalForeground: NSColor(hex: 0xD6E6F0),
+                         terminalSelection: NSColor(hex: 0x1F3D52))
+                 : Theme(window: Color(hex: 0xF3F8FB), sidebar: Color(hex: 0xE6EFF5), text: Color(hex: 0x10212E),
+                         secondary: Color(hex: 0x4A6273), muted: Color(hex: 0x7D93A3), border: Color.black.opacity(0.08),
+                         hover: Color.black.opacity(0.04), selected: Color.black.opacity(0.07),
+                         terminalBackground: NSColor(hex: 0xF3F8FB), terminalForeground: NSColor(hex: 0x13293A),
+                         terminalSelection: NSColor(hex: 0xC9DDEA))
+        },
+        // Solarized, by Ethan Schoonover (MIT): https://ethanschoonover.com/solarized
+        ThemeDefinition(id: "solarized", name: "Solarized") { dark in
+            dark ? Theme(window: Color(hex: 0x002B36), sidebar: Color(hex: 0x00232C), text: Color(hex: 0x93A1A1),
+                         secondary: Color(hex: 0x839496), muted: Color(hex: 0x586E75), border: Color.white.opacity(0.08),
+                         hover: Color.white.opacity(0.05), selected: Color(hex: 0x073642),
+                         terminalBackground: NSColor(hex: 0x002B36), terminalForeground: NSColor(hex: 0x839496),
+                         terminalSelection: NSColor(hex: 0x073642))
+                 : Theme(window: Color(hex: 0xFDF6E3), sidebar: Color(hex: 0xEEE8D5), text: Color(hex: 0x586E75),
+                         secondary: Color(hex: 0x657B83), muted: Color(hex: 0x93A1A1), border: Color.black.opacity(0.08),
+                         hover: Color.black.opacity(0.04), selected: Color(hex: 0xE4DDC8),
+                         terminalBackground: NSColor(hex: 0xFDF6E3), terminalForeground: NSColor(hex: 0x657B83),
+                         terminalSelection: NSColor(hex: 0xEEE8D5))
+        },
+        // Modeled on VS Code's default themes (Dark Modern and Light Modern).
+        ThemeDefinition(id: "code", name: "Code") { dark in
+            dark ? Theme(window: Color(hex: 0x1F1F1F), sidebar: Color(hex: 0x181818), text: Color(hex: 0xCCCCCC),
+                         secondary: Color(hex: 0x9D9D9D), muted: Color(hex: 0x6E7681), border: Color(hex: 0x2B2B2B),
+                         hover: Color.white.opacity(0.05), selected: Color(hex: 0x37373D),
+                         terminalBackground: NSColor(hex: 0x1F1F1F), terminalForeground: NSColor(hex: 0xCCCCCC),
+                         terminalSelection: NSColor(hex: 0x264F78))
+                 : Theme(window: Color(hex: 0xFFFFFF), sidebar: Color(hex: 0xF8F8F8), text: Color(hex: 0x3B3B3B),
+                         secondary: Color(hex: 0x616161), muted: Color(hex: 0x8B949E), border: Color(hex: 0xE5E5E5),
+                         hover: Color.black.opacity(0.04), selected: Color(hex: 0xE4E6F1),
+                         terminalBackground: NSColor(hex: 0xFFFFFF), terminalForeground: NSColor(hex: 0x3B3B3B),
+                         terminalSelection: NSColor(hex: 0xADD6FF))
+        },
     ]
     /// Built-in themes, then extensions' (set at launch).
     static var all = builtIn
 
-    static func definition(_ id: String) -> ThemeDefinition { all.first { $0.id == id } ?? builtIn[0] }
+    /// An unknown id (a removed plugin's theme, say) falls back to the default theme.
+    static func definition(_ id: String) -> ThemeDefinition {
+        all.first { $0.id == id } ?? builtIn.first { $0.id == AgentDESettings.defaultTheme } ?? builtIn[0]
+    }
 
     static func resolve(_ id: String, dark: Bool) -> Theme { definition(id).resolve(dark) }
 

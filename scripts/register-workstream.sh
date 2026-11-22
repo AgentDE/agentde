@@ -27,7 +27,9 @@ for arg in "$@"; do
   esac
 done
 
-# WORKSTREAM_APP names the app whose server to register; else this build's (scripts/brand.sh).
+# WORKSTREAM_APP names the app whose server to register; run from inside an app's Resources, that app; else
+# this build's (scripts/brand.sh).
+[[ ${0:A} == *.app/Contents/Resources/* ]] && WORKSTREAM_APP=${WORKSTREAM_APP:-${0:A:h:h:h}}
 source "${0:A:h}/brand.sh"
 APP=${WORKSTREAM_APP:-/Applications/$APP_NAME.app}
 [[ -d $APP || -n ${WORKSTREAM_APP:-} ]] || APP=$HOME/Applications/$APP_NAME.app

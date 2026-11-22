@@ -8,6 +8,10 @@ How it works inside: [ARCHITECTURE.md](ARCHITECTURE.md). Writing extensions and 
 
 ## Install
 
+**Download.** `brew install --cask agentde/tap/agentde`, or the zip from the [latest release](https://github.com/AgentDE/agentde/releases/latest): a universal app (Apple silicon and Intel), signed with a Developer ID and notarized by Apple, so it opens without warnings. Drag it to Applications, then register workstreams once with the script inside the app: `/Applications/AgentDE.app/Contents/Resources/register-workstream.sh --yes` (without `--yes` it shows what it would change). Updates: `brew upgrade --cask agentde`, or a newer zip.
+
+**Build from source** (to change it, or to follow `main`):
+
 ```bash
 git clone https://github.com/AgentDE/agentde && cd agentde
 make signing                    # once: a local signing identity, so macOS keeps your permission answers across builds
@@ -18,7 +22,9 @@ make register-workstream YES=1  # ...and makes those changes
 
 The first build clones the extensions in `extensions.json` next to this repo (see [Extensions](#extensions)).
 
-**Registering workstreams** adds the `workstream` MCP server, an allow rule for its tools, and its hooks to Claude Code (`~/.claude/settings.json`, backed up first) and Codex (`~/.codex/config.toml`). It does nothing outside AgentDE tabs. Run it again after moving the app; `scripts/register-workstream.sh --uninstall --yes` takes it back.
+**Registering workstreams** adds the `workstream` MCP server, an allow rule for its tools, and its hooks to Claude Code (`~/.claude/settings.json`, backed up first) and Codex (`~/.codex/config.toml`). It does nothing outside AgentDE tabs. Run it again after moving the app; `--uninstall --yes` takes it back.
+
+**Releasing** (maintainers): `scripts/release.sh` builds the universal app, signs it with your "Developer ID Application" certificate (hardened runtime, `scripts/release.entitlements`), has Apple notarize it (credentials saved once with `xcrun notarytool store-credentials agentde`), staples the ticket, and writes `dist/AgentDE-<version>.zip` and its SHA-256 for the release and the Homebrew cask.
 
 Open AgentDE like any app, or run `agentde` from any terminal (the command is in `~/.local/bin`, which must be on your `PATH`). Run `make install` again to update: it replaces the installed app, and a running copy keeps working until you restart it (**Update installed · Restart** in the status bar). Restarting keeps every tab running.
 
@@ -294,7 +300,7 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 
 | Tab | Options |
 |---|---|
-| Look | Light, dark or match system; theme (Claude warm, Graphite cool, Midnight, High contrast, plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); density; sidebar width |
+| Look | Light, dark or match system; theme (High contrast by default; Claude warm, Graphite cool, Midnight, Forest, Ember, Ocean, Solarized, Code (modeled on VS Code's defaults), plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); density; sidebar width |
 | Terminal | Font, size, scrollback (default 10,000 lines), startup command, ask for a name when starting a Claude or Codex tab (on by default; Claude's session takes it with `--name`, a Codex tab as its title), recent sessions (on/off, Codex too, how many days), what new tabs start (any agent, or a shell), `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
 | Fun | Animated status icons, the finish sparkle and how long a turn must run to earn one, Termi in the tab strip |
 | Agents | Notifications (needs you, done, sound), PR status (on/off, open in GitHub or Graphite) |

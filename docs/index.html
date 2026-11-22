@@ -40,11 +40,14 @@
 
   <section id="install" class="install">
     <h2>Install</h2>
-    <p>Runs on macOS 14 or later. Building needs macOS 15.6 or later with the Xcode Command Line Tools 26 or newer (<code>xcode-select --install</code>), and tabs need <code>claude</code> or <code>codex</code> on your <code>PATH</code>.</p>
+    <p>Runs on macOS 14 or later, on Apple silicon and Intel. Tabs need <code>claude</code> or <code>codex</code> on your <code>PATH</code>.</p>
+<pre><code>brew install --cask agentde/tap/agentde</code></pre>
+    <p>Or download the zip from the <a href="https://github.com/AgentDE/agentde/releases/latest">latest release</a> (signed and notarized) and drag AgentDE to Applications. Then, once, register the workstream MCP server and hooks:</p>
+<pre><code>/Applications/AgentDE.app/Contents/Resources/register-workstream.sh --yes</code></pre>
+    <p>To build from source instead (macOS 15.6 or later, Xcode Command Line Tools 26 or newer):</p>
 <pre><code>git clone https://github.com/AgentDE/agentde && cd agentde
-make signing                    # once, so macOS remembers your permission answers
-make install                    # about 4 minutes the first time
-make register-workstream YES=1  # once: the workstream MCP server and hooks</code></pre>
+make signing && make install
+make register-workstream YES=1</code></pre>
     <p class="muted">The full steps, what each one changes, and uninstalling: <a href="GUIDE.html#install">Guide → Install</a>.</p>
   </section>
 

@@ -4,9 +4,12 @@ enum Appearance: String, Codable, CaseIterable { case system, light, dark }
 enum Density: String, Codable, CaseIterable { case compact, comfortable }
 
 struct AgentDESettings: Codable, Equatable {
+    /// The theme a new install starts with.
+    static let defaultTheme = "highContrast"
+
     var appearance: Appearance = .system
     /// A theme id (`Theme.builtIn`, or an extension's).
-    var theme = "claude"
+    var theme = AgentDESettings.defaultTheme
     /// A group palette id (`GroupPalette.builtIn`, or an extension's).
     var palette = "soft"
     var fontName: String = "SF Mono"
