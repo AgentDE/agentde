@@ -1,4 +1,4 @@
-// Draws AgentDE's app icon: a `>_` prompt with a small sparkle on a dark tile.
+// Draws AgentDE's app icon: Termi, the mascot (a terminal window with a face), centered on a dark tile.
 // Usage: swift scripts/make-icon.swift <out.png>   (1024×1024)
 import AppKit
 
@@ -22,36 +22,34 @@ ctx.clip()
 let gradient = CGGradient(colorsSpace: space, colors: [color(0x2A2A30), color(0x141417)] as CFArray, locations: [0, 1])!
 ctx.drawLinearGradient(gradient, start: CGPoint(x: 0, y: tile.maxY), end: CGPoint(x: 0, y: tile.minY), options: [])
 
-// `>`: two strokes.
-ctx.setLineCap(.round)
-ctx.setLineJoin(.round)
-ctx.setLineWidth(78)
-ctx.setStrokeColor(color(0xF5F4EE))
-ctx.move(to: CGPoint(x: 290, y: 640))
-ctx.addLine(to: CGPoint(x: 470, y: 512))
-ctx.addLine(to: CGPoint(x: 290, y: 384))
-ctx.strokePath()
-
-// `_`: the cursor, in the working color.
-ctx.setStrokeColor(color(0x3DD6A0))
-ctx.move(to: CGPoint(x: 540, y: 384))
-ctx.addLine(to: CGPoint(x: 730, y: 384))
-ctx.strokePath()
-
-// A four-point sparkle, top right.
-func sparkle(at c: CGPoint, radius r: CGFloat) {
-    let path = CGMutablePath()
-    let waist = r * 0.22
-    path.move(to: CGPoint(x: c.x, y: c.y + r))
-    path.addQuadCurve(to: CGPoint(x: c.x + r, y: c.y), control: CGPoint(x: c.x + waist, y: c.y + waist))
-    path.addQuadCurve(to: CGPoint(x: c.x, y: c.y - r), control: CGPoint(x: c.x + waist, y: c.y - waist))
-    path.addQuadCurve(to: CGPoint(x: c.x - r, y: c.y), control: CGPoint(x: c.x - waist, y: c.y - waist))
-    path.addQuadCurve(to: CGPoint(x: c.x, y: c.y + r), control: CGPoint(x: c.x - waist, y: c.y + waist))
-    ctx.addPath(path)
-    ctx.setFillColor(color(0xF2B45A))
+// Termi in his working green, from the mascot's 200-unit drawing (y down). His outline (x 22–178, y 38–174)
+// is centered on the tile.
+let scale: CGFloat = 4.3
+let center = CGPoint(x: 100, y: 106)
+func box(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ r: CGFloat, _ fill: UInt32) {
+    let rect = CGRect(x: 512 + (x - center.x) * scale, y: 512 - (y + h - center.y) * scale, width: w * scale, height: h * scale)
+    ctx.addPath(CGPath(roundedRect: rect, cornerWidth: r * scale, cornerHeight: r * scale, transform: nil))
+    ctx.setFillColor(color(fill))
     ctx.fillPath()
 }
-sparkle(at: CGPoint(x: 700, y: 700), radius: 92)
+let shade: UInt32 = 0x127256, body: UInt32 = 0x1D9E75, glow: UInt32 = 0x6FD9B2, screen: UInt32 = 0x0E1114, white: UInt32 = 0xFFFFFF
+box(68, 146, 20, 28, 4, shade)      // legs
+box(112, 146, 20, 28, 4, shade)
+box(22, 100, 18, 30, 6, shade)      // arms
+box(160, 100, 18, 30, 6, shade)
+box(36, 44, 128, 110, 14, shade)    // body's shadow
+box(36, 38, 128, 110, 14, body)     // body
+box(48, 47, 14, 12, 3, white)       // the window's three dots
+box(68, 47, 14, 12, 3, white)
+box(88, 47, 14, 12, 3, white)
+box(46, 66, 108, 74, 7, screen)     // the screen: his face
+box(65, 90, 16, 20, 2, glow)        // eyes, each with a glint
+box(68, 93, 5, 5, 0, white)
+box(119, 90, 16, 20, 2, glow)
+box(122, 93, 5, 5, 0, white)
+box(82, 116, 6, 5, 0, glow)         // smile
+box(88, 121, 24, 6, 1, glow)
+box(112, 116, 6, 5, 0, glow)
 
 let image = ctx.makeImage()!
 let rep = NSBitmapImageRep(cgImage: image)
