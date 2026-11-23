@@ -26,12 +26,17 @@ codesign --verify --strict --deep --verbose=1 "$APP"
 
 mkdir -p dist
 rm -f "$ZIP"
-ditto -c -k --keepParent "$APP" "$ZIP"
+ditto -c -k --norsrc --noextattr --noqtn --keepParent "$APP" "$ZIP"
 xcrun notarytool submit "$ZIP" --keychain-profile "$PROFILE" --wait
 # The ticket goes into the app itself, so it opens without asking Apple even offline; then zip it again.
 xcrun stapler staple "$APP"
 rm -f "$ZIP"
-ditto -c -k --keepParent "$APP" "$ZIP"
+# No resource forks or extended attributes: Homebrew extracts casks with plain unzip, which would leave their
+# ._ files inside the app and break its signature ("damaged"). Checked the way Homebrew unpacks it:
+ditto -c -k --norsrc --noextattr --noqtn --keepParent "$APP" "$ZIP"
+CHECK=$(mktemp -d)
+unzip -qq -o "$ZIP" -d "$CHECK" && codesign --verify --strict --deep "$CHECK/$APP_NAME.app" || { echo "The zip doesn't verify after unzip." >&2; exit 1; }
+rm -rf "$CHECK"
 spctl --assess --type execute --verbose=2 "$APP"
 echo "$ZIP"
 shasum -a 256 "$ZIP"
