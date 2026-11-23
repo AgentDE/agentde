@@ -2,67 +2,345 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AgentDE · a native macOS home for terminal agents</title>
-<meta name="description" content="Run Claude Code and Codex sessions side by side in a small native macOS app: live agent status, a viewer above the chat, workstreams, tabs that survive quit and crash.">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AgentDE · where your terminal agents live</title>
+<meta name="description" content="An agent-first Mac app for Claude Code and Codex: every tab shows whether its agent is working, needs you or is done. Tabs that survive a quit, a viewer above the chat, workstreams. Free and open source.">
 <meta property="og:title" content="AgentDE">
-<meta property="og:description" content="A small, native macOS home for your terminal agents.">
+<meta property="og:description" content="All your terminal agents in one native Mac window. Free and open source.">
 <meta property="og:image" content="https://agentde.github.io/agentde/images/hero.png">
 <link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
-<link rel="stylesheet" href="site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090B15; --surface: #10132A; --raised: #0C0F21; --line: rgba(163,168,195,.16); --line-strong: rgba(163,168,195,.32);
+    --fg: #E6E8F2; --secondary: #A3A8C3; --muted: #6E7391;
+    --green: #1D9E75; --green-glow: #3DD6A0; --amber: #EF9F27; --blue: #378ADD;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+  body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -1;
+    background: radial-gradient(900px 500px at 70% -10%, rgba(29,158,117,.14), transparent 60%),
+                radial-gradient(700px 400px at 0% 20%, rgba(55,138,221,.08), transparent 60%); }
+  a { color: var(--green-glow); text-decoration: none; } a:hover { text-decoration: underline; }
+  code { font-family: var(--mono); font-size: .9em; background: var(--raised); border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+
+  /* Nav */
+  nav.top { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px); background: rgba(9,11,21,.72); border-bottom: 1px solid var(--line); }
+  nav.top .wrap { display: flex; align-items: center; gap: 22px; height: 58px; }
+  .logo { display: flex; align-items: center; gap: 10px; font: 800 17px var(--mono); color: var(--fg); letter-spacing: -.02em; }
+  .logo:hover { text-decoration: none; }
+  .logo svg { width: 26px; height: 26px; }
+  nav.top .links { display: flex; gap: 18px; margin-left: auto; font: 13px var(--mono); flex-wrap: wrap; }
+  nav.top .links a { color: var(--secondary); } nav.top .links a:hover { color: var(--fg); text-decoration: none; }
+  .badge { font: 600 11.5px var(--mono); color: var(--green-glow); border: 1px solid rgba(61,214,160,.35); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+
+  /* Hero */
+  .hero { padding: 76px 0 34px; text-align: center; }
+  .hero .termi { width: 92px; height: 92px; margin: 0 auto 18px; display: block; animation: bob 3.2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+  h1 { font: 800 clamp(34px, 6vw, 62px)/1.04 var(--mono); letter-spacing: -.045em; margin: 0 auto 18px; max-width: 900px; text-wrap: balance; }
+  h1 .glow { color: var(--green-glow); }
+  .lede { font-size: clamp(16px, 2vw, 19px); color: var(--secondary); max-width: 660px; margin: 0 auto 30px; text-wrap: pretty; }
+  .install-box { display: inline-flex; align-items: center; gap: 12px; max-width: 100%; background: var(--surface); border: 1px solid var(--line-strong);
+    border-radius: 12px; padding: 12px 12px 12px 18px; font: 14.5px var(--mono); box-shadow: 0 0 0 4px rgba(29,158,117,.08); }
+  .install-box .prompt { color: var(--green-glow); user-select: none; }
+  .install-box code { all: unset; color: var(--fg); overflow-x: auto; white-space: nowrap; }
+  .copy { font: 600 12px var(--mono); color: var(--bg); background: var(--green-glow); border: 0; border-radius: 8px; padding: 7px 12px; cursor: pointer; flex-shrink: 0; }
+  .copy:hover { filter: brightness(1.08); }
+  .alt-install { margin-top: 14px; font: 13px var(--mono); color: var(--muted); }
+
+  /* Live strip */
+  .strip { margin: 46px auto 0; max-width: 760px; background: var(--raised); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; text-align: left; }
+  .strip .chrome { display: flex; gap: 7px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  .strip .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #2A2E48; }
+  .tabs { display: flex; gap: 6px; padding: 10px 12px; flex-wrap: wrap; }
+  .tab { display: flex; align-items: center; gap: 8px; padding: 6px 11px; border-radius: 8px; font: 12.5px var(--mono); color: var(--secondary); border: 1px solid transparent; }
+  .tab.on { background: var(--surface); color: var(--fg); border-color: var(--line); }
+  .px { width: 13px; height: 11px; flex-shrink: 0; background: currentColor; color: var(--muted);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 11'%3E%3Cpath d='M1 1h11v7H1zM3 8h2v2H3zM8 8h2v2H8z'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 11'%3E%3Cpath d='M1 1h11v7H1zM3 8h2v2H3zM8 8h2v2H8z'/%3E%3C/svg%3E") center/contain no-repeat;
+    transition: color .3s; }
+  .s-working .px { color: var(--green); } .s-needs .px { color: var(--amber); animation: pulse 1.1s ease-in-out infinite; } .s-done .px { color: var(--blue); }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .statusline { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 9px 14px; border-top: 1px solid var(--line); font: 12px var(--mono); color: var(--muted); }
+  .statusline b { color: var(--fg); font-weight: 600; }
+  .statusline .key { color: var(--amber); }
+
+  /* Demo */
+  .demo { margin: 64px auto 0; max-width: 980px; }
+  .demo video { width: 100%; height: auto; display: block; border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 40px 100px rgba(0,0,0,.55); }
+
+  /* Sections */
+  section { padding: 84px 0 0; }
+  .eyebrow { font: 600 12px var(--mono); color: var(--green-glow); letter-spacing: .08em; text-transform: uppercase; margin: 0 0 10px; }
+  h2 { font: 800 clamp(26px, 4vw, 38px)/1.12 var(--mono); letter-spacing: -.035em; margin: 0 0 14px; text-wrap: balance; }
+  .sub { color: var(--secondary); max-width: 640px; margin: 0 0 30px; }
+
+  .states { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .state { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .state .head { display: flex; align-items: center; gap: 10px; font: 600 15px var(--mono); margin-bottom: 6px; }
+  .state .px { width: 18px; height: 15px; }
+  .state p { margin: 0; color: var(--secondary); font-size: 14.5px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px; min-width: 0; transition: border-color .2s, transform .2s; }
+  .card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  .card .k { font: 600 11.5px var(--mono); color: var(--amber); margin-bottom: 10px; display: block; }
+  .card h3 { font: 700 17px var(--mono); letter-spacing: -.02em; margin: 0 0 8px; }
+  .card p { margin: 0; color: var(--secondary); font-size: 14.5px; }
+
+  .agents { display: flex; gap: 10px; flex-wrap: wrap; }
+  .agent { font: 600 14px var(--mono); padding: 9px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+  .agent.more { color: var(--secondary); font-weight: 400; }
+
+  .keys { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .keys-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  .keys td { padding: 11px 18px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .keys tr:last-child td { border-bottom: 0; }
+  .keys td:first-child { white-space: nowrap; width: 1%; }
+  kbd { font: 600 12.5px var(--mono); background: var(--raised); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 6px; padding: 2px 7px; color: var(--fg); }
+
+  .numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .num { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; }
+  .num b { display: block; font: 800 34px/1.1 var(--mono); letter-spacing: -.04em; color: var(--fg); }
+  .num span { color: var(--secondary); font-size: 14px; }
+
+  .news { display: grid; gap: 12px; }
+  .release { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; }
+  .release .meta { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; font: 13px var(--mono); }
+  .release .meta b { color: var(--fg); font-size: 15px; } .release .meta span { color: var(--muted); }
+  .release ul { margin: 8px 0 0; padding-left: 20px; color: var(--secondary); font-size: 14.5px; }
+
+  .steps { display: grid; gap: 14px; }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; }
+  .step h3 { font: 700 15px var(--mono); margin: 0 0 8px; }
+  .step p { margin: 0 0 10px; color: var(--secondary); font-size: 14.5px; }
+  pre { margin: 0; background: var(--raised); border: 1px solid var(--line); border-radius: 9px; padding: 12px 14px; overflow-x: auto; font: 13px/1.6 var(--mono); }
+  pre .c { color: var(--muted); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+  .tile { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; color: var(--fg); }
+  .tile:hover { border-color: rgba(61,214,160,.45); text-decoration: none; }
+  .tile b { font: 700 14.5px var(--mono); display: block; margin-bottom: 3px; } .tile span { color: var(--secondary); font-size: 13.5px; }
+  .tile b::after { content: " ↗"; color: var(--muted); font-weight: 400; }
+
+  footer { margin-top: 96px; border-top: 1px solid var(--line); padding: 28px 0 calc(40px + env(safe-area-inset-bottom)); font: 13px var(--mono); color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  @media (max-width: 640px) { nav.top .links { display: none; } .hero { padding-top: 52px; }
+    .install-box { font-size: 12.5px; text-align: left; } .install-box code { white-space: normal; overflow-wrap: anywhere; } }
+  @media (prefers-reduced-motion: reduce) { .hero .termi, .s-needs .px { animation: none; } html { scroll-behavior: auto; } .card { transition: none; } }
+</style>
 </head>
 <body>
-<header class="bar">
-  <a class="brand" href="./">AgentDE</a>
-  <nav><a href="GUIDE.html">Guide</a><a href="EXTENDING.html">Extending</a><a href="ARCHITECTURE.html">Architecture</a><a href="https://github.com/AgentDE">GitHub</a></nav>
-</header>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="termi" viewBox="20 36 160 140">
+    <rect x="68" y="146" width="20" height="28" rx="4" fill="#127256"/><rect x="112" y="146" width="20" height="28" rx="4" fill="#127256"/>
+    <rect x="22" y="100" width="18" height="30" rx="6" fill="#127256"/><rect x="160" y="100" width="18" height="30" rx="6" fill="#127256"/>
+    <rect x="36" y="44" width="128" height="110" rx="14" fill="#127256"/><rect x="36" y="38" width="128" height="110" rx="14" fill="#1D9E75"/>
+    <rect x="48" y="47" width="14" height="12" rx="3" fill="#FFF"/><rect x="68" y="47" width="14" height="12" rx="3" fill="#FFF"/><rect x="88" y="47" width="14" height="12" rx="3" fill="#FFF"/>
+    <rect x="46" y="66" width="108" height="74" rx="7" fill="#0E1114"/>
+    <rect x="65" y="90" width="16" height="20" rx="2" fill="#6FD9B2"/><rect x="68" y="93" width="5" height="5" fill="#FFF"/>
+    <rect x="119" y="90" width="16" height="20" rx="2" fill="#6FD9B2"/><rect x="122" y="93" width="5" height="5" fill="#FFF"/>
+    <rect x="82" y="116" width="6" height="5" fill="#6FD9B2"/><rect x="88" y="121" width="24" height="6" rx="1" fill="#6FD9B2"/><rect x="112" y="116" width="6" height="5" fill="#6FD9B2"/>
+  </symbol>
+</svg>
+
+<nav class="top">
+  <div class="wrap">
+    <a class="logo" href="./"><svg><use href="#termi"/></svg>agentde</a>
+    <span class="badge" id="version">v0.4.2</span>
+    <div class="links">
+      <a href="#status">status</a><a href="#features">features</a><a href="#keys">keys</a><a href="#install">install</a>
+      <a href="GUIDE.html">guide</a><a href="https://github.com/AgentDE/agentde">github ↗</a>
+    </div>
+  </div>
+</nav>
 
 <main>
-  <section class="hero">
-    <h1>A small, native home<br>for your terminal agents.</h1>
-    <p class="lede">Run a dozen Claude Code and Codex sessions side by side, see at a glance which one needs you, and pick up any of them after a quit, an update or a crash.</p>
-    <div class="cta">
-      <a class="button" href="#install">Install</a>
-      <a class="button ghost" href="https://github.com/AgentDE/agentde">View on GitHub</a>
+  <div class="wrap">
+    <header class="hero">
+      <svg class="termi" role="img" aria-label="Termi, the AgentDE mascot"><use href="#termi"/></svg>
+      <h1>Where your <span class="glow">agents</span> live.</h1>
+      <p class="lede">An agent-first Mac app for Claude Code and Codex. Every tab shows whether its agent is working, needs you, or is done, so you stop alt-tabbing and start answering. Free, open source, and built to be vibe coded into your own.</p>
+      <div class="install-box">
+        <span class="prompt">$</span><code id="brew">brew install --cask agentde/tap/agentde</code>
+        <button class="copy" id="copy" type="button">copy</button>
+      </div>
+      <div class="alt-install">or <a href="https://github.com/AgentDE/agentde/releases/latest">download the notarized app ↓</a> · macOS 14+, Apple silicon and Intel</div>
+
+      <div class="strip" aria-label="A tab strip whose agents change state">
+        <div class="chrome"><i></i><i></i><i></i></div>
+        <div class="tabs" id="tabs">
+          <span class="tab s-working on"><span class="px"></span>crash on resume</span>
+          <span class="tab s-needs"><span class="px"></span>push token refresh</span>
+          <span class="tab s-done"><span class="px"></span>release notes</span>
+          <span class="tab s-working"><span class="px"></span>churn cohort query</span>
+        </div>
+        <div class="statusline"><span id="summary"><b>2</b> working · <b>1</b> needs you · <b>1</b> done</span><span><span class="key">⌘J</span> jump to the one that needs you</span></div>
+      </div>
+    </header>
+
+    <div class="demo">
+      <video src="images/demo.mp4" poster="images/hero.png" autoplay loop muted playsinline aria-label="AgentDE in use: tab icons that show each agent's state, an agent question answered from the workstream panel, a code file opening above the chat, and two agents side by side"></video>
     </div>
-    <video class="shot" src="images/demo.mp4" poster="images/hero.png" width="800" autoplay loop muted playsinline aria-label="AgentDE in use: tab icons that show each agent's state, an agent question answered from the workstream panel, a code file opening above the chat, and two agents side by side"></video>
-  </section>
 
-  <section class="grid">
-    <div><h3><span class="dot green"></span>Who needs you?</h3><p>Each tab's icon lights up: working, needs you, or done. A banner when an agent waits on you, and a click takes you straight there. No setup.</p></div>
-    <div><h3><span class="dot amber"></span>Tabs that don't die</h3><p>Each tab's shell runs in its own tiny holder process. Quit, update or crash, and every agent keeps going; the window comes back to them.</p></div>
-    <div><h3><span class="dot blue"></span>A viewer above the chat</h3><p>⌘-click any path or link an agent prints: Markdown, HTML, PDFs, images, video, diffs and code open right above the conversation, with back and forward.</p></div>
-    <div><h3><span class="dot violet"></span>Workstreams</h3><p>Agents keep a shared record of each piece of work through an MCP server: overview, rules, memory, questions for you, progress and files, beside the chat and back after every compaction.</p></div>
-    <div><h3><span class="dot green"></span>Native and light</h3><p>SwiftUI and AppKit, no Electron. Under 100 MB of memory with a few groups loaded, under 1% CPU when idle. Builds with just the Command Line Tools.</p></div>
-    <div><h3><span class="dot violet"></span>Make it yours</h3><p>Native extensions in Swift for anything deep; JSON plugins for widgets, link rules, themes and palettes, no build needed. Built for vibe coding, too: point your agent at the source and change anything.</p></div>
-  </section>
+    <section id="status">
+      <p class="eyebrow">Status at a glance</p>
+      <h2>Three colors. You always know.</h2>
+      <p class="sub">No setup and no screen scraping: AgentDE reads Claude Code's own session registry, and any agent with hooks can report in.</p>
+      <div class="states">
+        <div class="state s-working"><div class="head"><span class="px"></span>working</div><p>The agent is busy. Leave it be.</p></div>
+        <div class="state s-needs"><div class="head"><span class="px"></span>needs you</div><p>A question or a permission prompt. A banner, a sound, and one click takes you there.</p></div>
+        <div class="state s-done"><div class="head"><span class="px"></span>done</div><p>Finished while you were elsewhere. It stays blue until you look.</p></div>
+      </div>
+    </section>
 
-  <section id="install" class="install">
-    <h2>Install</h2>
-    <p>Runs on macOS 14 or later, on Apple silicon and Intel. Tabs need <code>claude</code> or <code>codex</code> on your <code>PATH</code>.</p>
-<pre><code>brew install --cask agentde/tap/agentde</code></pre>
-    <p>Or download the zip from the <a href="https://github.com/AgentDE/agentde/releases/latest">latest release</a> (signed and notarized) and drag AgentDE to Applications. Then, once, register the workstream MCP server and hooks:</p>
-<pre><code>/Applications/AgentDE.app/Contents/Resources/register-workstream.sh --yes</code></pre>
-    <p>To build from source instead (macOS 15.6 or later, Xcode Command Line Tools 26 or newer):</p>
-<pre><code>git clone https://github.com/AgentDE/agentde && cd agentde
-make signing && make install
-make register-workstream YES=1</code></pre>
-    <p class="muted">The full steps, what each one changes, and uninstalling: <a href="GUIDE.html#install">Guide → Install</a>.</p>
-  </section>
+    <section id="features">
+      <p class="eyebrow">Built around the agent</p>
+      <h2>Everything an agent session needs. Nothing it doesn't.</h2>
+      <div class="cards">
+        <div class="card"><span class="k">⌘J · ⌃Tab</span><h3>Get to the right agent</h3><p>⌘J jumps to the next agent that needs you. ⌃Tab flips between your busy agents, most recent first, across every project. Yes, alt-tabbing is fully supported.</p></div>
+        <div class="card"><span class="k">quit · update · crash</span><h3>Tabs that don't die</h3><p>Each tab's shell runs in its own tiny holder process. Quit, update or crash, and every agent keeps going. The window comes back to them.</p></div>
+        <div class="card"><span class="k">⌘-click</span><h3>A viewer above the chat</h3><p>⌘-click any path an agent prints and it opens right above the conversation, at the line it named: Markdown, HTML, PDFs, images, video, diffs and code.</p></div>
+        <div class="card"><span class="k">MCP</span><h3>Workstreams</h3><p>Agents keep a shared record of each piece of work: overview, rules, memory, questions for you, progress and files. It sits beside the chat and comes back after every compaction.</p></div>
+        <div class="card"><span class="k">⌘D · drag</span><h3>Two at once</h3><p>Drag a tab onto the chat to see two agents side by side, or split any way you like. The side panel shows the tab's files and changes.</p></div>
+        <div class="card"><span class="k">vibe code it</span><h3>Make it yours</h3><p>Nine themes, JSON plugins for widgets, link rules and themes, native extensions in Swift. Or point your agent at the source: it comes with notes for agents and a map of the code.</p></div>
+      </div>
+    </section>
 
-  <section class="repos">
-    <h2>The pieces</h2>
-    <table>
-      <tr><td><a href="https://github.com/AgentDE/agentde">agentde</a></td><td>The app: groups, tabs, agent status, the viewer, search, the extension API</td></tr>
-      <tr><td><a href="https://github.com/AgentDE/workstream-mcp">workstream-mcp</a></td><td>The MCP server behind workstreams. Works with plain Claude Code or Codex too, no app needed</td></tr>
-      <tr><td><a href="https://github.com/AgentDE/agentde-workstreams">agentde-workstreams</a></td><td>The workstream panel beside each chat, and the Usage widget</td></tr>
-      <tr><td><a href="https://github.com/AgentDE/agentde-widgets">agentde-widgets</a></td><td>The sidebar widget spot, the Calendar widget, and widgets from JSON plugins</td></tr>
-      <tr><td><a href="https://github.com/AgentDE/agentde-linear">agentde-linear</a></td><td>Linear tickets in workstreams, and a widget with your open issues</td></tr>
-    </table>
-  </section>
+    <section id="agents">
+      <p class="eyebrow">Bring your agent</p>
+      <h2>Claude Code and Codex, built in.</h2>
+      <p class="sub">Each agent brings its own tools to the chat's corner (rewind, compact, fork, restart). Any other terminal agent can report its status through hooks, and plugins add more.</p>
+      <div class="agents"><span class="agent">Claude Code</span><span class="agent">Codex</span><span class="agent">any shell</span><span class="agent more">+ any CLI agent with hooks</span></div>
+    </section>
+
+    <section id="numbers">
+      <p class="eyebrow">Native, and light</p>
+      <h2>SwiftUI and AppKit. No Electron.</h2>
+      <div class="numbers">
+        <div class="num"><b>0.4 GB</b><span>for 30 agent tabs, against 1.9 GB for four fresh VS Code windows (measured on one Mac)</span></div>
+        <div class="num"><b>&lt;1%</b><span>CPU when idle</span></div>
+        <div class="num"><b>~10 MB</b><span>download: one universal app, signed and notarized</span></div>
+        <div class="num"><b>MIT</b><span>licensed. No account, no cloud: your code and sessions stay on your Mac</span></div>
+      </div>
+    </section>
+
+    <section id="keys">
+      <p class="eyebrow">Keyboard first</p>
+      <h2>All on ⌘.</h2>
+      <div class="keys-wrap"><table class="keys">
+        <tr><td><kbd>⌘T</kbd></td><td>New Claude tab (<kbd>⌥⌘T</kbd> Codex, <kbd>⇧⌘T</kbd> shell)</td></tr>
+        <tr><td><kbd>⌘J</kbd></td><td>Next agent that needs you, then finished ones</td></tr>
+        <tr><td><kbd>⌃Tab</kbd></td><td>Switch between busy agents, most recent first</td></tr>
+        <tr><td><kbd>⌘K</kbd></td><td>Jump to any tab, group or past conversation</td></tr>
+        <tr><td><kbd>⌘-click</kbd></td><td>Open a path or link in the viewer</td></tr>
+        <tr><td><kbd>⌥⌘Z</kbd></td><td>Rewind the agent to an earlier message</td></tr>
+        <tr><td><kbd>⌥⌘F</kbd></td><td>Fork the session into a new tab</td></tr>
+        <tr><td><kbd>⌘D</kbd></td><td>Split the pane</td></tr>
+        <tr><td><kbd>⇧⌘F</kbd></td><td>Search every session</td></tr>
+      </table></div>
+      <p class="sub" style="margin-top:14px">Every key: <a href="GUIDE.html#keys">Guide → Keys</a>.</p>
+    </section>
+
+    <section id="news">
+      <p class="eyebrow">What's new</p>
+      <h2>Shipping often.</h2>
+      <div class="news" id="releases">
+        <div class="release"><div class="meta"><b>v0.4.2</b><span>⌃Tab switches between your busy agents</span></div></div>
+        <div class="release"><div class="meta"><b>v0.4.1</b><span>A signed, notarized download and Homebrew; Termi; more themes</span></div></div>
+      </div>
+      <p class="sub" style="margin-top:14px"><a href="https://github.com/AgentDE/agentde/releases">All releases ↗</a></p>
+    </section>
+
+    <section id="install">
+      <p class="eyebrow">Get it running</p>
+      <h2>Two commands.</h2>
+      <div class="steps">
+        <div class="step"><h3>1. Install</h3><p>Homebrew, or <a href="https://github.com/AgentDE/agentde/releases/latest">the zip</a>: drag AgentDE to Applications. Tabs need <code>claude</code> or <code>codex</code> on your PATH.</p>
+<pre>brew install --cask agentde/tap/agentde</pre></div>
+        <div class="step"><h3>2. Register workstreams (once)</h3><p>Adds the workstream MCP server and its hooks to Claude Code and Codex. Without <code>--yes</code> it only shows what it would change.</p>
+<pre>/Applications/AgentDE.app/Contents/Resources/register-workstream.sh --yes</pre></div>
+        <div class="step"><h3>Or build it yourself</h3><p>macOS 15.6+ with the Xcode Command Line Tools 26 or newer. No Xcode needed.</p>
+<pre>git clone https://github.com/AgentDE/agentde && cd agentde
+make signing && make install   <span class="c"># about 4 minutes the first time</span>
+make register-workstream YES=1</pre></div>
+      </div>
+    </section>
+
+    <section id="more">
+      <p class="eyebrow">Everything else</p>
+      <h2>Read on.</h2>
+      <div class="tiles">
+        <a class="tile" href="GUIDE.html"><b>Guide</b><span>Every feature, key and setting</span></a>
+        <a class="tile" href="EXTENDING.html"><b>Extending</b><span>Native extensions and JSON plugins</span></a>
+        <a class="tile" href="ARCHITECTURE.html"><b>Architecture</b><span>How it works inside</span></a>
+        <a class="tile" href="https://github.com/AgentDE/workstream-mcp"><b>workstream-mcp</b><span>The MCP server; works without the app too</span></a>
+        <a class="tile" href="https://github.com/AgentDE/agentde-workstreams"><b>agentde-workstreams</b><span>The workstream panel and the Usage widget</span></a>
+        <a class="tile" href="https://github.com/AgentDE/agentde-widgets"><b>agentde-widgets</b><span>The widget spot, Calendar, plugin widgets</span></a>
+        <a class="tile" href="https://github.com/AgentDE/agentde-linear"><b>agentde-linear</b><span>Linear tickets in workstreams</span></a>
+        <a class="tile" href="https://github.com/AgentDE/homebrew-tap"><b>homebrew-tap</b><span>brew install --cask agentde/tap/agentde</span></a>
+      </div>
+    </section>
+  </div>
 </main>
 
-<footer>MIT licensed · <a href="https://github.com/AgentDE">github.com/AgentDE</a></footer>
+<footer><div class="wrap"><span>MIT licensed · built with Claude Code</span><a href="https://github.com/AgentDE">github.com/AgentDE</a></div></footer>
+
+<script>
+  // Copy the install command.
+  document.getElementById('copy').addEventListener('click', async (e) => {
+    const text = document.getElementById('brew').textContent;
+    try { await navigator.clipboard.writeText(text); e.target.textContent = 'copied'; }
+    catch { const r = document.createRange(); r.selectNodeContents(document.getElementById('brew')); getSelection().removeAllRanges(); getSelection().addRange(r); }
+    setTimeout(() => { e.target.textContent = 'copy'; }, 1600);
+  });
+
+  // The strip's agents change state now and then, as real ones do.
+  (function () {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const tabs = [...document.querySelectorAll('#tabs .tab')];
+    const cycle = ['s-working', 's-needs', 's-done', ''];
+    const summary = document.getElementById('summary');
+    function count() {
+      const n = (c) => tabs.filter((t) => t.classList.contains(c)).length;
+      summary.innerHTML = `<b>${n('s-working')}</b> working · <b>${n('s-needs')}</b> needs you · <b>${n('s-done')}</b> done`;
+    }
+    setInterval(() => {
+      const t = tabs[Math.floor(Math.random() * tabs.length)];
+      const now = cycle.findIndex((c) => c && t.classList.contains(c));
+      t.classList.remove('s-working', 's-needs', 's-done');
+      const next = cycle[(now + 1) % cycle.length];
+      if (next) t.classList.add(next);
+      count();
+    }, 1800);
+  })();
+
+  // The version and what's new, from GitHub's releases (the page works without them).
+  fetch('https://api.github.com/repos/AgentDE/agentde/releases?per_page=4')
+    .then((r) => r.ok ? r.json() : Promise.reject())
+    .then((releases) => {
+      if (!Array.isArray(releases) || !releases.length) return;
+      document.getElementById('version').textContent = releases[0].tag_name;
+      const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const plain = (s) => esc(s).replace(/\*\*([^*]+)\*\*/g, '$1').replace(/`([^`]+)`/g, '<code>$1</code>');
+      document.getElementById('releases').innerHTML = releases.slice(0, 3).map((r) => {
+        const date = new Date(r.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        const items = (r.body || '').split('\n').filter((l) => /^- /.test(l)).slice(0, 4).map((l) => `<li>${plain(l.slice(2))}</li>`).join('');
+        return `<div class="release"><div class="meta"><b><a href="${esc(r.html_url)}">${esc(r.tag_name)}</a></b><span>${date}</span></div>${items ? `<ul>${items}</ul>` : ''}</div>`;
+      }).join('');
+    })
+    .catch(() => {});
+</script>
 </body>
 </html>
