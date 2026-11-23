@@ -34,8 +34,11 @@ struct RootView: View {
             } else if store.searchOpen {
                 SessionSearchPanel()
                     .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+            } else if let switcher = store.tabSwitcher {
+                TabSwitcherView(state: switcher)
             }
         }
+        .onAppear { TabSwitcherKeys.install(store) }
         .animation(.snappy(duration: 0.22), value: store.sidebarVisible)
         .animation(.snappy(duration: 0.15), value: store.paletteOpen)
         .animation(.snappy(duration: 0.15), value: store.searchOpen)

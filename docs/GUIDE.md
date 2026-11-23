@@ -278,6 +278,7 @@ Right-click a tab → **Send to Background** to take it out of the tab strip (an
 | ⌘K | Search the sidebar: as you type it shows only matching groups, tabs and sessions, then (from 3 letters) conversations that mention the words. Return opens the first; Esc clears |
 | ⇧⌘P | Command palette: jump to any tab or group, or run an action |
 | ⌘J | Next tab that needs you, then finished ones |
+| ⌃Tab, ⌃⇧Tab | Agents with a status (working, needs you, done), across every group, most recently used first: hold ⌃ and tap Tab to move down the list, let go to switch; Esc cancels |
 | ⌘-click, ⌥⌘-click | Open a path or link from the terminal (in the viewer / in its default app) |
 | ⌥⌘I | Show or hide the side panel |
 | ⌘D / ⌥⌘D | Split the active pane right / down |

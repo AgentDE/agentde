@@ -163,6 +163,21 @@ struct AuditFixTests {
         #expect(Tools.find("made-up-tool", environment: [:]) == nil)
     }
 
+    /// ⌃Tab lists the tab you're on, then only tabs with a status, the most recently used first; stepping wraps.
+    @Test func tabSwitcherListsRecentColoredTabs() {
+        let now = Date(), a = UUID(), b = UUID(), c = UUID(), idle = UUID(), current = UUID()
+        let order = TabSwitcherState.order(current: current, tabs: [
+            (id: a, colored: true, usedAt: now.addingTimeInterval(-300)),
+            (id: idle, colored: false, usedAt: now),
+            (id: b, colored: true, usedAt: now.addingTimeInterval(-10)),
+            (id: current, colored: false, usedAt: now),
+            (id: c, colored: true, usedAt: nil),
+        ])
+        #expect(order == [current, b, a, c])
+        let open = TabSwitcherState(ids: order, index: 1)
+        #expect(open.stepped(1).index == 2 && open.stepped(-1).index == 0 && open.stepped(3).index == 0)
+    }
+
     /// A bare file name an agent prints is a link; a domain isn't.
     @Test func bareFileNamesAreLinks() {
         let terminal = Terminal(delegate: NullTerminalDelegate(), options: TerminalOptions(cols: 80, rows: 5))

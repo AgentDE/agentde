@@ -34,6 +34,8 @@ final class Store {
     var pullRequests: [String: PullRequestStatus?] = [:]
 
     var paletteOpen = false
+    /// ⌃Tab's list of recent agents while ⌃ is held (`TabSwitcher.swift`).
+    var tabSwitcher: TabSwitcherState?
     var searchOpen = false
     /// The version installed on disk, when it's newer than the one running ("0.2.0 (41)").
     var updateInstalled: String?
