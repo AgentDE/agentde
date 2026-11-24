@@ -151,7 +151,7 @@ The selected file is remembered across relaunches.
 **The sidebar's box (⌘K) is the quick way:** type and the sidebar narrows to the groups, tabs and Recent or Older sessions whose names match (including sessions that ran in a worktree or subfolder of a group's folder, listed under the group whose folder is the closest match), then lists the conversations (open tabs and Recent) that mention every word, with the line. Return opens the first match; Esc clears the box. It reads the same index as ⌘⇧F below.
 
 **⌘⇧F searches across your sessions.** It covers every open tab:
-- **Claude and Codex tabs:** the session's whole conversation (your prompts and the agent's replies), including history that scrolled out of the terminal or was compacted away. Tool output isn't searched. A Codex tab needs its thread id, which a resumed tab has and a new one gets from the status hook (`make register-agent-status`).
+- **Claude and Codex tabs:** the session's whole conversation (your prompts and the agent's replies), including history that scrolled out of the terminal or was compacted away. Tool output isn't searched for words, but a file path or link (no spaces, with a `/`) is: it finds the sessions that wrote, read, opened or published it in a tool call, in any of the forms a link rule knows (an artifact's view and raw links). A Codex tab needs its thread id, which a resumed tab has and a new one gets from the status hook (`make register-agent-status`).
 - **Shell tabs:** the terminal's scrollback.
 
 Tick **Include recent sessions** to also search each group's Recent list, Claude and Codex.

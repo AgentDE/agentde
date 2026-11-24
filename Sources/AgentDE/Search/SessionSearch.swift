@@ -70,6 +70,8 @@ final class SessionSearch {
         generation += 1
         let gen = generation
         let terms = SearchMatch.terms(query)
+        // A path or link also finds the sessions whose tool calls touched it, not only their messages.
+        let needles = SearchMatch.locatorNeedles(query)
         guard terms.contains(where: { $0.count >= 2 }) else {
             sections = []
             progress = nil
@@ -107,7 +109,7 @@ final class SessionSearch {
             var found: [Section] = []
             for (i, source) in sources.enumerated() {
                 if self.isStale(gen) { return }
-                if let section = self.search(source, terms) { found.append(section) }
+                if let section = self.search(source, terms, needles: needles) { found.append(section) }
                 let snapshot = found.sorted { ($0.newest ?? .distantPast) > ($1.newest ?? .distantPast) }
                 let done = i + 1
                 // Stream results as each session finishes.
@@ -133,10 +135,16 @@ final class SessionSearch {
         DispatchQueue.main.sync { generation != gen }
     }
 
-    private func search(_ source: Source, _ terms: [String]) -> Section? {
+    private func search(_ source: Source, _ terms: [String], needles: [String] = []) -> Section? {
         var matches: [SearchEntry] = []
         if let sessionId = source.sessionId, let format = source.agent?.transcript {
             matches = index.entries(sessionId: sessionId, cwd: source.cwd, format: format).filter { SearchMatch.matches($0, terms) }
+            // Not in any message: maybe in a tool call or its result (a file written, a page published).
+            if matches.isEmpty, !needles.isEmpty, let url = index.url(session: sessionId, cwd: source.cwd, format: format),
+               let found = TranscriptIndex.rawContains(url, needles) {
+                let text = "Touched or mentioned in a tool call: " + found
+                matches = [SearchEntry(role: .agent, text: text, lower: text.lowercased(), timestamp: nil, order: 0)]
+            }
         } else if let lines = source.scrollback {
             for (i, line) in lines.enumerated() where !line.isEmpty {
                 let lower = line.lowercased()

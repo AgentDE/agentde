@@ -52,6 +52,25 @@ final class TranscriptIndex {
 
     static let chunkBytes: UInt64 = 4 << 20
 
+    /// The first of `needles` anywhere in the file's bytes (tool calls and results included), read in chunks that
+    /// overlap by the longest needle so one split across two chunks is still found. Nil if none is there.
+    static func rawContains(_ url: URL, _ needles: [String]) -> String? {
+        let patterns = needles.map { ($0, Data($0.utf8)) }.filter { !$0.1.isEmpty }
+        guard let longest = patterns.map(\.1.count).max(), let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        var carry = Data()
+        while true {
+            let found: String?? = autoreleasepool {
+                guard let chunk = try? handle.read(upToCount: Int(chunkBytes)), !chunk.isEmpty else { return .some(nil) }
+                let window = carry + chunk
+                if let hit = patterns.first(where: { window.range(of: $0.1) != nil }) { return .some(hit.0) }
+                carry = window.suffix(longest - 1)
+                return nil
+            }
+            if let found { return found }
+        }
+    }
+
     /// Drops everything: search runs again from the files when it's next used.
     func clear() {
         files = [:]
@@ -105,6 +124,19 @@ final class TranscriptIndex {
 
 /// Matching shared by every source: all words must appear (case-insensitive); the snippet centers on the first.
 enum SearchMatch {
+    /// For a query that's a path or link (no spaces, has a slash), the forms to look for in raw transcripts: as
+    /// typed, with `~` expanded, and the canonical and loading forms a link rule gives (an artifact's view and raw
+    /// links). Empty for any other query.
+    static func locatorNeedles(_ query: String) -> [String] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard q.count >= 4, !q.contains(where: \.isWhitespace), q.contains("/") else { return [] }
+        var forms = [q]
+        if q.hasPrefix("~") { forms.append((q as NSString).expandingTildeInPath) }
+        if let canonical = ViewerLinks.canonical(q) { forms += [canonical, ViewerLinks.openURL(canonical)] }
+        var seen = Set<String>()
+        return forms.filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
+
     static func terms(_ query: String) -> [String] {
         query.lowercased().split(whereSeparator: \.isWhitespace).map(String.init).filter { !$0.isEmpty }
     }

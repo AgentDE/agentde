@@ -78,6 +78,19 @@ struct TranscriptIndexTests {
         #expect(entries.map(\.text) == (0..<20).map { "message \($0)" })
     }
 
+    /// A path or link finds the session that touched it in a tool call, even across a chunk boundary.
+    @Test func pathsAndLinksAreFoundInRawTranscripts() throws {
+        #expect(SearchMatch.locatorNeedles("gbdt eval").isEmpty)
+        #expect(SearchMatch.locatorNeedles("https://example.com/report.html").contains("https://example.com/report.html"))
+        #expect(SearchMatch.locatorNeedles("~/notes/plan.md").contains((("~/notes/plan.md") as NSString).expandingTildeInPath))
+        let url = try transcript()
+        let link = "https://example.com/artifacts/raw?key=by/someone/card-tags-proposal.html"
+        let pad = Int(TranscriptIndex.chunkBytes) - 20   // the link starts 20 bytes before the first chunk ends
+        try (String(repeating: "x", count: pad) + link + "\n").write(to: url, atomically: true, encoding: .utf8)
+        #expect(TranscriptIndex.rawContains(url, [link]) == link)
+        #expect(TranscriptIndex.rawContains(url, ["https://example.com/other"]) == nil)
+    }
+
     @Test func skipsHarnessTextAndToolOutput() throws {
         let url = try transcript()
         let toolResult = "{\"type\":\"user\",\"message\":{\"content\":[{\"type\":\"tool_result\",\"content\":\"secret output\"}]}}\n"
