@@ -44,7 +44,7 @@ Runs on macOS 14 or later, on Apple silicon and Intel. Tabs need `claude` or `co
 brew install --cask agentde/tap/agentde
 ```
 
-Or download `AgentDE-<version>.zip` from the [latest release](https://github.com/AgentDE/agentde/releases/latest) (signed and notarized), unzip it, and drag AgentDE to Applications. Then, once, register the workstream MCP server and hooks for Claude Code and Codex (without `--yes` it only shows what it would change):
+Or download `AgentDE-<version>.zip` from the [latest release](https://github.com/AgentDE/agentde/releases/latest) (signed and notarized), unzip it, and drag AgentDE to Applications. On first launch the Workstream panel offers to connect Claude Code and Codex to the workstream MCP server (it shows the changes first). Or do it from a terminal (without `--yes` it only shows what it would change):
 
 ```bash
 /Applications/AgentDE.app/Contents/Resources/register-workstream.sh --yes

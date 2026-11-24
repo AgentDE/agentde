@@ -8,7 +8,7 @@ How it works inside: [ARCHITECTURE.md](ARCHITECTURE.md). Writing extensions and 
 
 ## Install
 
-**Download.** `brew install --cask agentde/tap/agentde`, or the zip from the [latest release](https://github.com/AgentDE/agentde/releases/latest): a universal app (Apple silicon and Intel), signed with a Developer ID and notarized by Apple, so it opens without warnings. Drag it to Applications, then register workstreams once with the script inside the app: `/Applications/AgentDE.app/Contents/Resources/register-workstream.sh --yes` (without `--yes` it shows what it would change). Updates: `brew upgrade --cask agentde`, or a newer zip.
+**Download.** `brew install --cask agentde/tap/agentde`, or the zip from the [latest release](https://github.com/AgentDE/agentde/releases/latest): a universal app (Apple silicon and Intel), signed with a Developer ID and notarized by Apple, so it opens without warnings. Drag it to Applications. On first launch the Workstream panel offers **Connect…** for Claude Code and Codex (also in Settings → Extensions → Workstreams): it shows what it would change, then registers workstreams on your OK. The same from a terminal: `/Applications/AgentDE.app/Contents/Resources/register-workstream.sh --yes` (without `--yes` it shows what it would change). Updates: `brew upgrade --cask agentde`, or a newer zip.
 
 **Build from source** (to change it, or to follow `main`):
 
