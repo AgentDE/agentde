@@ -3,6 +3,12 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(Store.self) private var store
 
+    /// One picker over a kind's two saved flags: its banner and Termi.
+    private func alert(_ banner: WritableKeyPath<AgentDESettings, Bool>, _ termi: WritableKeyPath<AgentDESettings, Bool>) -> Binding<AlertStyle> {
+        Binding(get: { AlertStyle(banner: store.settings[keyPath: banner], termi: store.settings[keyPath: termi]) },
+                set: { store.settings[keyPath: banner] = $0.banner; store.settings[keyPath: termi] = $0.termi })
+    }
+
     var body: some View {
         @Bindable var store = store
         TabView {
@@ -67,7 +73,6 @@ struct SettingsView: View {
             Form {
                 Toggle("Animate status dots", isOn: $store.settings.animations)
                 Toggle("Termi hangs out in the tab strip", isOn: $store.settings.termi)
-                Toggle("Termi pops up beside notifications", isOn: $store.settings.termiPopup)
                 Toggle("Sparkle when a long turn finishes", isOn: $store.settings.sparkles)
                 Stepper("Long turn means \(Int(store.settings.sparkleAfterSeconds))s or more",
                         value: $store.settings.sparkleAfterSeconds, in: 5...600, step: 15)
@@ -77,8 +82,12 @@ struct SettingsView: View {
 
             Form {
                 Section("Notifications") {
-                    Toggle("When an agent needs you", isOn: $store.settings.notifyNeedsYou)
-                    Toggle("When an agent finishes and you're elsewhere", isOn: $store.settings.notifyDone)
+                    Picker("When an agent needs you", selection: alert(\.notifyNeedsYou, \.termiNeedsYou)) {
+                        ForEach(AlertStyle.allCases) { Text($0.title).tag($0) }
+                    }
+                    Picker("When an agent finishes and you're elsewhere", selection: alert(\.notifyDone, \.termiDone)) {
+                        ForEach(AlertStyle.allCases) { Text($0.title).tag($0) }
+                    }
                     Toggle("Play a sound", isOn: $store.settings.notificationSound)
                 }
                 Section("Pull requests") {

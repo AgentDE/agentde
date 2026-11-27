@@ -262,12 +262,22 @@ private struct CommitRow: View {
 struct NotificationsPanel: View {
     @Environment(Store.self) private var store
     @Environment(\.theme) private var theme
+    /// nil shows every kind.
+    @State private var kind: Notifier.Kind?
 
     var body: some View {
+        let shown = store.notices.filter { kind == nil || $0.kind == kind }
         VStack(spacing: 0) {
             HStack(spacing: 6) {
-                Text(store.notices.isEmpty ? "" : "\(store.notices.count)")
-                    .font(.system(size: 11)).foregroundStyle(theme.muted)
+                Picker("Show", selection: $kind) {
+                    Text("All").tag(Notifier.Kind?.none)
+                    Text("Needs you").tag(Notifier.Kind?.some(.needsYou))
+                    Text("Done").tag(Notifier.Kind?.some(.done))
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .controlSize(.small)
+                .fixedSize()
                 Spacer(minLength: 0)
                 Button("Clear") { store.clearNotices() }
                     .buttonStyle(.plain)
@@ -277,8 +287,9 @@ struct NotificationsPanel: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 30)
-            if store.notices.isEmpty {
-                Text("Agents that need you or finish show up here.")
+            if shown.isEmpty {
+                Text(kind == nil ? "Agents that need you or finish show up here."
+                     : kind == .needsYou ? "No agent has needed you yet." : "No agent has finished yet.")
                     .font(.system(size: 12)).foregroundStyle(theme.muted)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -286,7 +297,7 @@ struct NotificationsPanel: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(store.notices) { notice in
+                        ForEach(shown) { notice in
                             NoticeRow(notice: notice, exists: store.tab(notice.tab) != nil) { store.selectTab(notice.tab) }
                         }
                     }

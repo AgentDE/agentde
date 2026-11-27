@@ -34,3 +34,14 @@ struct NoticeTests {
         #expect(TermiPopup.stay(.needsYou) > TermiPopup.stay(.done))
     }
 }
+
+@Suite("Alert style")
+struct AlertStyleTests {
+    @Test func eachChoiceRoundTripsThroughItsTwoFlags() {
+        for style in AlertStyle.allCases {
+            #expect(AlertStyle(banner: style.banner, termi: style.termi) == style)
+        }
+        #expect(AlertStyle(banner: true, termi: false) == .banner)
+        #expect(AlertStyle(banner: false, termi: true) == .termi)
+    }
+}

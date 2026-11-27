@@ -3,6 +3,24 @@ import Foundation
 enum Appearance: String, Codable, CaseIterable { case system, light, dark }
 enum Density: String, Codable, CaseIterable { case compact, comfortable }
 
+/// How you hear about one kind of notification (needs you, done): a macOS banner, Termi popping up, both or
+/// neither. Saved as two flags per kind (`notifyNeedsYou` + `termiNeedsYou`, `notifyDone` + `termiDone`).
+enum AlertStyle: CaseIterable, Identifiable {
+    case off, banner, termi, both
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .off: "Off"
+        case .banner: "Banner"
+        case .termi: "Termi"
+        case .both: "Banner and Termi"
+        }
+    }
+    init(banner: Bool, termi: Bool) { self = banner ? (termi ? .both : .banner) : (termi ? .termi : .off) }
+    var banner: Bool { self == .banner || self == .both }
+    var termi: Bool { self == .termi || self == .both }
+}
+
 struct AgentDESettings: Codable, Equatable {
     /// The theme a new install starts with.
     static let defaultTheme = "highContrast"
@@ -19,8 +37,9 @@ struct AgentDESettings: Codable, Equatable {
     var sparkles: Bool = true
     /// Termi, the mascot, hangs out in the tab strip's free space (`TermiStrip`).
     var termi: Bool = false
-    /// Termi pops up beside each notification banner (`TermiPopup`).
-    var termiPopup: Bool = false
+    /// Termi pops up for an agent that needs you, or one that's done (`TermiPopup`); with or without a banner.
+    var termiNeedsYou: Bool = false
+    var termiDone: Bool = false
     var sidebarWidth: Double = 224
     /// What New tab starts: an agent's id, or "shell".
     var defaultAgent: String = ClaudeAgent.id

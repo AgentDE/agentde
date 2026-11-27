@@ -17,11 +17,12 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     enum Kind: Equatable { case needsYou, done }
 
-    /// Records the event in the Notifications feed, and, when that kind's banners are on, posts the banner
-    /// (and Termi pops up beside it, if he's allowed to).
+    /// Records the event in the Notifications feed, then alerts as that kind's setting says: a banner, Termi
+    /// popping up, both or neither.
     func notify(_ kind: Kind, tab: TabModel, title tabTitle: String, groupName: String, waitingFor: String?) {
         guard let settings = store?.settings else { return }
         let banner = kind == .needsYou ? settings.notifyNeedsYou : settings.notifyDone
+        let termi = kind == .needsYou ? settings.termiNeedsYou : settings.termiDone
         let sound = settings.notificationSound
         queue.async { [weak self] in
             let title: String, body: String
@@ -48,7 +49,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             DispatchQueue.main.async {
                 guard let self, let store = self.store else { return }
                 store.recordNotice(AgentNotice(tab: tab.id, kind: kind, title: title, group: groupName, body: body))
-                if banner, store.settings.termiPopup { self.popup.show(kind, tab: tab.id, animated: store.animations) }
+                if termi { self.popup.show(kind, tab: tab.id, animated: store.animations) }
             }
         }
     }

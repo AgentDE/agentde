@@ -99,9 +99,15 @@ struct AgentDECommands: Commands {
             Button("Reopen Closed Tab") { store.reopenClosedTab() }.keyboardShortcut("t", modifiers: [.command, .option, .shift])
                 .disabled(store.closedTabs.isEmpty)
             Button("Rename Tab") { if let id = store.activeTab?.id { store.beginRenamingTab(id) } }.keyboardShortcut("r")
+        }
+        // The agent in the active tab: its conversation, and the tab's life.
+        CommandMenu("Agent") {
             Button("Fork Session into New Tab") { store.runTool("fork") }.keyboardShortcut("f", modifiers: [.command, .option])
             Button("Rewind to an Earlier Message") { store.runTool("rewind") }.keyboardShortcut("z", modifiers: [.command, .option])
             Button("Compact Conversation") { store.runTool("compact") }
+            Divider()
+            Button("Send Tab to Background") { if let id = store.activeTab?.id { store.sendToBackground(id) } }
+                .disabled(store.activeTab == nil)
         }
         CommandGroup(replacing: .textEditing) {
             Button("Find in Tab…") { store.findInTab() }
