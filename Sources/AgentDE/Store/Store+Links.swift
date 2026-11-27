@@ -408,7 +408,7 @@ extension Store {
         scheduleSave()
     }
 
-    /// Shows the side panel on its `index`th tab (⌃⌘1–3: Workstream, Files, Changes when Workstreams is there).
+    /// Shows the side panel on its `index`th tab (⌃⌘1–4: Workstream, Files, Changes, Notifications when Workstreams is there).
     func showPanelTab(_ index: Int) {
         guard let tab = activeTab, let (g, t) = locate(tab.id) else { return }
         let tabs = sidePanelTabs(for: tab)

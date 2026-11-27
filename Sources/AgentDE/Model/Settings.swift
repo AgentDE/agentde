@@ -19,6 +19,8 @@ struct AgentDESettings: Codable, Equatable {
     var sparkles: Bool = true
     /// Termi, the mascot, hangs out in the tab strip's free space (`TermiStrip`).
     var termi: Bool = false
+    /// Termi pops up beside each notification banner (`TermiPopup`).
+    var termiPopup: Bool = false
     var sidebarWidth: Double = 224
     /// What New tab starts: an agent's id, or "shell".
     var defaultAgent: String = ClaudeAgent.id

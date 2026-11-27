@@ -15,39 +15,56 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    enum Kind { case needsYou, done }
+    enum Kind: Equatable { case needsYou, done }
 
+    /// Records the event in the Notifications feed, and, when that kind's banners are on, posts the banner
+    /// (and Termi pops up beside it, if he's allowed to).
     func notify(_ kind: Kind, tab: TabModel, title tabTitle: String, groupName: String, waitingFor: String?) {
         guard let settings = store?.settings else { return }
-        switch kind {
-        case .needsYou: guard settings.notifyNeedsYou else { return }
-        case .done: guard settings.notifyDone else { return }
-        }
+        let banner = kind == .needsYou ? settings.notifyNeedsYou : settings.notifyDone
         let sound = settings.notificationSound
         queue.async { [weak self] in
-            let content = UNMutableNotificationContent()
-            content.userInfo = ["tab": tab.id.uuidString]
-            content.threadIdentifier = tab.id.uuidString
-            content.subtitle = groupName
+            let title: String, body: String
             switch kind {
             case .needsYou:
-                content.title = "Needs you · \(tabTitle)"
-                content.body = waitingFor.map(Self.describeWaiting) ?? "Waiting for your input"
-                if sound { content.sound = UNNotificationSound(named: UNNotificationSoundName("Ping")) }
+                title = "Needs you · \(tabTitle)"
+                body = waitingFor.map(Self.describeWaiting) ?? "Waiting for your input"
             case .done:
-                content.title = "Done · \(tabTitle)"
-                content.body = tab.agentSession.flatMap { session in Agents.of(tab)?.lastReply(session: session, cwd: tab.cwd) }
+                title = "Done · \(tabTitle)"
+                body = tab.agentSession.flatMap { session in Agents.of(tab)?.lastReply(session: session, cwd: tab.cwd) }
                     ?? "Turn finished"
-                if sound { content.sound = UNNotificationSound(named: UNNotificationSoundName("Glass")) }
             }
-            // One banner per tab: a newer one replaces the previous.
-            let request = UNNotificationRequest(identifier: tab.id.uuidString, content: content, trigger: nil)
-            self?.center.add(request)
+            if banner {
+                let content = UNMutableNotificationContent()
+                content.userInfo = ["tab": tab.id.uuidString]
+                content.threadIdentifier = tab.id.uuidString
+                content.subtitle = groupName
+                content.title = title
+                content.body = body
+                if sound { content.sound = UNNotificationSound(named: UNNotificationSoundName(kind == .needsYou ? "Ping" : "Glass")) }
+                // One banner per tab: a newer one replaces the previous.
+                self?.center.add(UNNotificationRequest(identifier: tab.id.uuidString, content: content, trigger: nil))
+            }
+            DispatchQueue.main.async {
+                guard let self, let store = self.store else { return }
+                store.recordNotice(AgentNotice(tab: tab.id, kind: kind, title: title, group: groupName, body: body))
+                if banner, store.settings.termiPopup { self.popup.show(kind, tab: tab.id, animated: store.animations) }
+            }
         }
+    }
+
+    /// Termi beside the banner (Settings → Fun). A click on him goes to the tab, like a click on the banner.
+    private lazy var popup = TermiPopup { [weak self] id in self?.open(id) }
+
+    private func open(_ id: UUID?) {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.windows.first { $0.isVisible && $0.canBecomeMain }?.makeKeyAndOrderFront(nil)
+        if let id, store?.tab(id) != nil { store?.selectTab(id) }
     }
 
     func clear(tab: UUID) {
         center.removeDeliveredNotifications(withIdentifiers: [tab.uuidString])
+        popup.hide(tab: tab)
     }
 
     /// Turns registry `waitingFor` values like `permission_prompt` into a readable phrase.
@@ -66,10 +83,33 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let id = (response.notification.request.content.userInfo["tab"] as? String).flatMap(UUID.init(uuidString:))
         DispatchQueue.main.async { [weak self] in
-            NSApp.activate(ignoringOtherApps: true)
-            NSApp.windows.first { $0.isVisible && $0.canBecomeMain }?.makeKeyAndOrderFront(nil)
-            if let id, self?.store?.tab(id) != nil { self?.store?.selectTab(id) }
+            self?.open(id)
             completionHandler()
         }
     }
+}
+
+/// One entry in the Notifications feed: what the banner said (or would have, with banners off), and when.
+struct AgentNotice: Identifiable, Equatable {
+    let id = UUID()
+    let tab: UUID
+    let kind: Notifier.Kind
+    let title: String
+    let group: String
+    let body: String
+    var date = Date()
+}
+
+extension Store {
+    /// The feed keeps this many, newest first, for this run of the app.
+    static let noticeLimit = 100
+
+    func recordNotice(_ notice: AgentNotice) { notices = Self.adding(notice, to: notices) }
+
+    /// The feed with `notice` on top, trimmed to `noticeLimit`.
+    static func adding(_ notice: AgentNotice, to feed: [AgentNotice]) -> [AgentNotice] {
+        Array(([notice] + feed).prefix(noticeLimit))
+    }
+
+    func clearNotices() { notices.removeAll() }
 }

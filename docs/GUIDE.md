@@ -209,7 +209,7 @@ A tab's icon (Claude's is a small pixel critter, Codex's a knot) takes the color
 - **Termi** (Settings → Fun, off by default): the mascot hangs out in the free end of the tab strip. Amber and hopping while an agent waits on you, green and typing while agents work, blue and wandering otherwise, and asleep after two quiet minutes. Clicks pass through him.
 - **Dock badge:** how many tabs are waiting on you. **⌘J** jumps to the next waiting tab, then to finished ones. **⇧⌘P** (the command palette) with an empty query lists tabs by urgency.
 - **Why it's waiting:** when Claude reports it, in the tab's tooltip, the status bar and the command palette (⇧⌘P).
-- **Notifications:** a macOS banner when an agent needs you, or finishes while you're elsewhere; a click brings AgentDE forward on that tab. Turn either, or the sound, off in Settings → Agents.
+- **Notifications:** a macOS banner when an agent needs you, or finishes while you're elsewhere; a click brings AgentDE forward on that tab. Turn either, or the sound, off in Settings → Agents. The side panel's **Notifications** tab lists every one from this run, from all tabs, newest first (even with banners off); a click goes to the tab. With **Termi pops up beside notifications** on (Settings → Fun), the mascot appears next to each banner, amber with a "?" or blue with a thumbs up; click him to go to the tab.
 
 **Codex and other agents.** Any agent with hooks can report its state. Each tab's environment has `AGENTDE_STATUS_FILE`, and a hook writes one line to it: `working`, `needs-you` or `idle`, then the agent's pid (`$PPID` in a hook), then optionally what it's waiting for. A second line, `session <id>`, names the agent's session: that's how a new Codex tab learns which thread to resume after a reboot (the registered hooks read it from the hook's input). AgentDE trusts a line only while that pid runs inside the tab, so a status never outlives its agent. Outside AgentDE the variable isn't set and the hook does nothing.
 
@@ -284,7 +284,7 @@ Right-click a tab → **Send to Background** to take it out of the tab strip (an
 | ⌘D / ⌥⌘D | Split the active pane right / down |
 | ⌥⌘← / ⌥⌘→ | Previous / next pane |
 | ⌥⌘W | Take the active pane out of the split |
-| ⌃⌘1–3 | Show the side panel on its first, second or third tab (Workstream, Files, Changes) |
+| ⌃⌘1–4 | Show the side panel on its first to fourth tab (Workstream, Files, Changes, Notifications) |
 | ⌘[, ⌘] | Viewer: back and forward through what it showed (⌘[ reopens a closed viewer) |
 | ⌘⇧D | Side panel on Changes |
 | ⌘⇧O | Open the tab's folder in Finder |
@@ -303,7 +303,7 @@ Open with ⌘, or the sliders icon at the bottom of the sidebar.
 |---|---|
 | Look | Light, dark or match system; theme (High contrast by default; Claude warm, Graphite cool, Midnight, Forest, Ember, Ocean, Solarized, Code (modeled on VS Code's defaults), plus extensions' and plugins'); group colors (Soft, Vivid, Pastel, plus extensions' and plugins'); density; sidebar width |
 | Terminal | Font, size, scrollback (default 10,000 lines), startup command, ask for a name when starting a Claude or Codex tab (on by default; Claude's session takes it with `--name`, a Codex tab as its title), recent sessions (on/off, Codex too, how many days), what new tabs start (any agent, or a shell), `open` shows files and pages in the viewer, let terminal programs read the clipboard (OSC 52; off by default, since any program in a tab, including one over SSH, could read what you copied) |
-| Fun | Animated status icons, the finish sparkle and how long a turn must run to earn one, Termi in the tab strip |
+| Fun | Animated status icons, the finish sparkle and how long a turn must run to earn one, Termi in the tab strip and beside notifications |
 | Agents | Notifications (needs you, done, sound), PR status (on/off, open in GitHub or Graphite) |
 | Extensions | Each loaded extension's own settings |
 | Icon | The Dock icon; shown only when the build ships more than one |

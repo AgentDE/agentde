@@ -6,7 +6,8 @@ import SwiftUI
 /// otherwise, asleep after a quiet couple of minutes. Drawn from the same rectangles as the mascot art and
 /// animated with Core Animation, so he costs next to nothing while the app is idle. Clicks pass through him.
 enum TermiMood: Equatable {
-    case needsYou, working, wandering, asleep
+    /// `done` (blue, thumbs up) is only for the popup beside a Done banner; the strip never picks it.
+    case needsYou, working, wandering, asleep, done
 
     /// Any agent waiting wins, then any working; with nothing going on for `sleepAfter` seconds he sleeps.
     static func of(_ states: [AgentState], quietFor: TimeInterval, sleepAfter: TimeInterval = 120) -> TermiMood {
@@ -29,8 +30,8 @@ struct TermiStrip: NSViewRepresentable {
 }
 
 final class TermiView: NSView {
-    private static let unit: CGFloat = 0.17          // points per unit of the 200-unit mascot drawing
-    private static let size = CGSize(width: 160 * unit, height: 140 * unit)
+    let unit: CGFloat          // points per unit of the 200-unit mascot drawing
+    let size: CGSize
 
     /// Turning animations off (or Reduce Motion on) stops his loops at once; on again, they restart.
     var animated = true { didSet { if animated != oldValue, let shown { draw(shown) } } }
@@ -43,16 +44,18 @@ final class TermiView: NSView {
     var lastBusy = Date()   // when an agent last worked or waited; tests set it
     private var sleepCheck: DispatchWorkItem?
 
-    override init(frame: NSRect) {
-        super.init(frame: frame)
+    init(unit: CGFloat = 0.17) {
+        self.unit = unit
+        size = CGSize(width: 160 * unit, height: 140 * unit)
+        super.init(frame: .zero)
         wantsLayer = true
         layer?.masksToBounds = false
         figure.isGeometryFlipped = true
-        figure.bounds = CGRect(origin: .zero, size: Self.size)
+        figure.bounds = CGRect(origin: .zero, size: self.size)
         func rect(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ r: CGFloat, _ l: CALayer = CALayer()) -> CALayer {
             // Mascot units, offset so the drawing's left edge (x 20) and top (y 36) sit at the figure's corner.
-            l.frame = CGRect(x: (x - 20) * Self.unit, y: (y - 36) * Self.unit, width: w * Self.unit, height: h * Self.unit)
-            l.cornerRadius = r * Self.unit
+            l.frame = CGRect(x: (x - 20) * self.unit, y: (y - 36) * self.unit, width: w * self.unit, height: h * self.unit)
+            l.cornerRadius = r * self.unit
             return l
         }
         legs = [rect(68, 146, 20, 28, 4), rect(112, 146, 20, 28, 4)]
@@ -77,7 +80,7 @@ final class TermiView: NSView {
         super.layout()
         // On the strip's floor, at the left of the free space until he walks.
         if figure.animation(forKey: "walk") == nil {
-            figure.position = CGPoint(x: min(bounds.width, Self.size.width / 2 + 6), y: Self.size.height / 2 + 4)
+            figure.position = CGPoint(x: min(bounds.width, self.size.width / 2 + 6), y: self.size.height / 2 + 4)
         }
         if let mood = shown, mood == .wandering, figure.animation(forKey: "walk") == nil { startWalking() }
     }
@@ -114,13 +117,14 @@ final class TermiView: NSView {
         let (main, dark, glow): (UInt32, UInt32, UInt32) = switch mood {
         case .needsYou: (0xEF9F27, 0xB9700F, 0xFFD089)
         case .working: (0x1D9E75, 0x127256, 0x6FD9B2)
-        case .wandering, .asleep: (0x378ADD, 0x215F9F, 0x9CCBF5)
+        case .wandering, .asleep, .done: (0x378ADD, 0x215F9F, 0x9CCBF5)
         }
+        arms[1].opacity = mood == .done ? 0 : 1
         body.backgroundColor = NSColor(hex: main).cgColor
         (legs + arms + [shade]).forEach { $0.backgroundColor = NSColor(hex: dark).cgColor }
         func pixel(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ color: UInt32, in parent: CALayer? = nil) -> CALayer {
             let l = CALayer()
-            l.frame = CGRect(x: (x - 20) * Self.unit, y: (y - 36) * Self.unit, width: w * Self.unit, height: h * Self.unit)
+            l.frame = CGRect(x: (x - 20) * self.unit, y: (y - 36) * self.unit, width: w * self.unit, height: h * self.unit)
             l.backgroundColor = NSColor(hex: color).cgColor
             (parent ?? face).addSublayer(l)
             return l
@@ -138,6 +142,12 @@ final class TermiView: NSView {
         case .asleep:     // closed eyes
             for x: CGFloat in [64, 112] { _ = pixel(x, 100, 24, 5, glow) }
             _ = pixel(92, 120, 16, 4, glow)
+        case .done:       // ^ ^ eyes, a smile, and a thumbs up: a fist with a short thumb and two finger lines
+            for x: CGFloat in [64, 112] { _ = pixel(x, 97, 8, 6, glow); _ = pixel(x + 8, 92, 8, 6, glow); _ = pixel(x + 16, 97, 8, 6, glow) }
+            _ = pixel(82, 114, 6, 5, glow); _ = pixel(88, 119, 24, 6, glow); _ = pixel(112, 114, 6, 5, glow)
+            pixel(160, 98, 26, 24, dark, in: extras).cornerRadius = 8 * unit
+            pixel(165, 84, 12, 20, dark, in: extras).cornerRadius = 6 * unit
+            for y: CGFloat in [106, 113] { pixel(165, y, 16, 3, main, in: extras).cornerRadius = 1.5 * unit }
         }
         CATransaction.commit()
         guard animated else { return }
@@ -149,7 +159,7 @@ final class TermiView: NSView {
         case .working:
             // A keyboard on his lap, keys blinking as he types.
             let board = pixel(40, 150, 120, 14, 0x23272E, in: extras)
-            board.cornerRadius = 3 * Self.unit
+            board.cornerRadius = 3 * self.unit
             for (i, x) in [52.0, 76, 100, 124].enumerated() {
                 let key = pixel(x, 154, 18, 6, glow, in: extras)
                 let blink = Self.keyframes("opacity", [1, 0.25, 1], duration: 0.5)
@@ -163,6 +173,8 @@ final class TermiView: NSView {
             }
         case .wandering:
             startWalking()
+        case .done:
+            figure.add(Self.keyframes("transform.translation.y", [0, -4, 0, 0], duration: 1.2), forKey: "hop")
         case .asleep:
             figure.opacity = 0.85
             figure.add(Self.keyframes("transform.scale.y", [1, 0.97, 1], duration: 3), forKey: "breathe")
@@ -173,7 +185,7 @@ final class TermiView: NSView {
                 z.fontSize = 9
                 z.foregroundColor = NSColor(hex: 0x9CCBF5).cgColor
                 z.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
-                z.frame = CGRect(x: Self.size.width - 6, y: -4, width: 10, height: 12)
+                z.frame = CGRect(x: self.size.width - 6, y: -4, width: 10, height: 12)
                 z.opacity = 0
                 let rise = CAAnimationGroup()
                 rise.animations = [Self.keyframes("transform.translation.y", [0, -10], duration: 2.4),
@@ -191,7 +203,7 @@ final class TermiView: NSView {
     /// Back and forth along the free end of the strip, legs stepping, about 14 points a second.
     private func startWalking() {
         guard animated, shown == .wandering else { return }
-        let margin = Self.size.width / 2 + 6
+        let margin = self.size.width / 2 + 6
         let room = bounds.width - 2 * margin
         guard room > 20 else { return }
         let walk = CABasicAnimation(keyPath: "position.x")

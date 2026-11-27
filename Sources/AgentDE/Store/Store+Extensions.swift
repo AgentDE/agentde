@@ -135,6 +135,7 @@ extension Store: AgentDEHost {
         return extensions.flatMap { $0.sidePanelTabs(for: info) } + [
             SidePanelTab(id: "files", title: "Files", symbol: "folder", view: AnyView(FilesPanel(tab: tab))),
             SidePanelTab(id: "changes", title: "Changes", symbol: "plusminus", view: AnyView(ChangesPanel(tab: tab))),
+            SidePanelTab(id: "notifications", title: "Notifications", symbol: "bell", view: AnyView(NotificationsPanel())),
         ]
     }
 

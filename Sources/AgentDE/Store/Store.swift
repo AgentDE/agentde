@@ -70,6 +70,8 @@ final class Store {
     @ObservationIgnored let extensions: [AgentDEExtension] = AgentDEMain.extensions + [JSONPlugins()]
     @ObservationIgnored let terminals = TerminalRegistry()
     @ObservationIgnored var notifier: Notifier?
+    /// The Notifications feed (`AgentNotice`), newest first; not saved.
+    var notices: [AgentNotice] = []
     @ObservationIgnored let search = SessionSearch()
     /// The sidebar's search box: filters groups, tabs and sessions by name as you type, and finds the query in
     /// conversations (`sidebarSearch`, which includes Recent).

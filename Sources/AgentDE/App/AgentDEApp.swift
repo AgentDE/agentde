@@ -151,7 +151,7 @@ struct AgentDECommands: Commands {
             Button("Close Pane") { if let id = store.activeTab?.id { store.removePane(id) } }
                 .keyboardShortcut("w", modifiers: [.command, .option])
             Button("Unsplit") { store.unsplit() }
-            ForEach(1...3, id: \.self) { n in
+            ForEach(1...4, id: \.self) { n in
                 Button("Side Panel Tab \(n)") { store.showPanelTab(n - 1) }.keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: [.command, .control])
             }
             Button("Show Changes") { store.showChanges() }.keyboardShortcut("d", modifiers: [.command, .shift])

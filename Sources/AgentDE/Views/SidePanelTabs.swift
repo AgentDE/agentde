@@ -256,3 +256,82 @@ private struct CommitRow: View {
         .accessibilityAction { action() }
     }
 }
+
+/// The side panel's Notifications tab: every needs-you and done event from this run, from all tabs, newest
+/// first (`Store.notices`), whether or not its banner was shown. A click goes to the tab.
+struct NotificationsPanel: View {
+    @Environment(Store.self) private var store
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Text(store.notices.isEmpty ? "" : "\(store.notices.count)")
+                    .font(.system(size: 11)).foregroundStyle(theme.muted)
+                Spacer(minLength: 0)
+                Button("Clear") { store.clearNotices() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.muted)
+                    .disabled(store.notices.isEmpty)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            if store.notices.isEmpty {
+                Text("Agents that need you or finish show up here.")
+                    .font(.system(size: 12)).foregroundStyle(theme.muted)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer(minLength: 0)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(store.notices) { notice in
+                            NoticeRow(notice: notice, exists: store.tab(notice.tab) != nil) { store.selectTab(notice.tab) }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+    }
+}
+
+private struct NoticeRow: View {
+    let notice: AgentNotice
+    let exists: Bool
+    let action: () -> Void
+    @Environment(\.theme) private var theme
+    @State private var hovering = false
+    private static let ago: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .abbreviated
+        return f
+    }()
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle().fill(notice.kind == .needsYou ? Theme.needsYou : Theme.doneUnseen)
+                .frame(width: 7, height: 7)
+                .padding(.top, 5)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(notice.title).font(.system(size: 12, weight: .medium)).foregroundStyle(theme.text).lineLimit(1)
+                Text(notice.body).font(.system(size: 11.5)).foregroundStyle(theme.secondary).lineLimit(2)
+                Text("\(notice.group) · \(Date().timeIntervalSince(notice.date) < 60 ? "now" : Self.ago.localizedString(for: notice.date, relativeTo: Date()))")
+                    .font(.system(size: 10.5)).foregroundStyle(theme.muted).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .opacity(exists ? 1 : 0.5)
+        .background(Rectangle().fill(hovering && exists ? theme.hover : .clear))
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
+        .onTapGesture { if exists { action() } }
+        .help(exists ? notice.body : "This tab was closed")
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { if exists { action() } }
+    }
+}

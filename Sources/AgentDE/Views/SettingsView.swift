@@ -67,6 +67,7 @@ struct SettingsView: View {
             Form {
                 Toggle("Animate status dots", isOn: $store.settings.animations)
                 Toggle("Termi hangs out in the tab strip", isOn: $store.settings.termi)
+                Toggle("Termi pops up beside notifications", isOn: $store.settings.termiPopup)
                 Toggle("Sparkle when a long turn finishes", isOn: $store.settings.sparkles)
                 Stepper("Long turn means \(Int(store.settings.sparkleAfterSeconds))s or more",
                         value: $store.settings.sparkleAfterSeconds, in: 5...600, step: 15)
